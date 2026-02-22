@@ -332,6 +332,8 @@ html, body {
 }
 
 .terminal-btn {
+    -webkit-appearance: none;
+    appearance: none;
     background: transparent;
     border: 1px solid var(--green-tertiary);
     border-radius: 2px;
@@ -357,6 +359,7 @@ html, body {
 .upgrade-btn {
     width: 100%;
     min-height: 30px;
+    font-family: 'Orbitron', 'Share Tech Mono', monospace;
     font-size: 11px;
     letter-spacing: 0.08em;
     padding: 6px 8px;

@@ -234,6 +234,7 @@ class Game {
         // Initialize
         this.spawnWave();
         this.queueIncomingWavePreview(this.level + 1);
+        this.notify();
     }
 
     get WORLD_HEIGHT() { return this.config.WORLD_HEIGHT; }
@@ -909,6 +910,7 @@ class Game {
         this.incomingAliens = [];
         this.spawnWave();
         this.queueIncomingWavePreview(this.level + 1);
+        this.notify();
     }
 
     applyExplosionDamage(explosion) {
