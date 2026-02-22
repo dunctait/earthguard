@@ -267,7 +267,7 @@ class Renderer {
         const theta = (-angleRad + Math.PI / 2);
         const recoilOffset = this.cannonRecoil * 4;
         const localX = 0;
-        const localY = -32 + recoilOffset;
+        const localY = -38 + recoilOffset;
         return {
             x: x + (localX * Math.cos(theta)) - (localY * Math.sin(theta)),
             y: y + (localX * Math.sin(theta)) + (localY * Math.cos(theta))
@@ -832,24 +832,6 @@ class Renderer {
         const c = this.colors;
         const recoilOffset = this.cannonRecoil * 4;
 
-        // Base with layered glow
-        this.setGlow(c.secondaryGlow, 15);
-
-        // Trapezoid base
-        ctx.fillStyle = c.tertiary;
-        ctx.beginPath();
-        ctx.moveTo(x - 20, y + 10);
-        ctx.lineTo(x + 20, y + 10);
-        ctx.lineTo(x + 14, y);
-        ctx.lineTo(x - 14, y);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.strokeStyle = c.secondary;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        this.clearGlow();
-
         // Ground glow under cannon
         const groundGlow = ctx.createRadialGradient(x, y + 10, 0, x, y + 10, 28);
         groundGlow.addColorStop(0, 'rgba(0, 255, 102, 0.08)');
@@ -859,48 +841,155 @@ class Renderer {
         ctx.ellipse(x, y + 11, 28, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
+        // Chassis / mount (outline-heavy, less filled geometry)
+        this.setGlow(c.secondaryGlow, 10);
+        ctx.fillStyle = 'rgba(0, 22, 8, 0.88)';
+        ctx.beginPath();
+        ctx.moveTo(x - 22, y + 10);
+        ctx.lineTo(x + 22, y + 10);
+        ctx.lineTo(x + 15, y + 1);
+        ctx.lineTo(x + 8, y + 1);
+        ctx.lineTo(x + 4, y - 5);
+        ctx.lineTo(x - 4, y - 5);
+        ctx.lineTo(x - 8, y + 1);
+        ctx.lineTo(x - 15, y + 1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = c.secondary;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 22, y + 10);
+        ctx.lineTo(x + 22, y + 10);
+        ctx.lineTo(x + 15, y + 1);
+        ctx.lineTo(x + 8, y + 1);
+        ctx.lineTo(x + 4, y - 5);
+        ctx.lineTo(x - 4, y - 5);
+        ctx.lineTo(x - 8, y + 1);
+        ctx.lineTo(x - 15, y + 1);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Mount panel lines
+        ctx.strokeStyle = c.tertiary;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - 12, y + 6);
+        ctx.lineTo(x + 12, y + 6);
+        ctx.moveTo(x - 6, y + 1);
+        ctx.lineTo(x + 6, y + 1);
+        ctx.stroke();
+        this.clearGlow();
+
         // Turret
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(-angleRad + Math.PI / 2);
         ctx.translate(0, recoilOffset);
 
-        // Turret base
         this.setGlow(c.primaryGlow, 12);
-        ctx.fillStyle = c.tertiary;
+
+        // Turret pivot (octagonal outline)
+        ctx.fillStyle = 'rgba(0, 28, 10, 0.92)';
         ctx.beginPath();
-        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.moveTo(-8, -3);
+        ctx.lineTo(-5, -8);
+        ctx.lineTo(5, -8);
+        ctx.lineTo(8, -3);
+        ctx.lineTo(8, 3);
+        ctx.lineTo(5, 8);
+        ctx.lineTo(-5, 8);
+        ctx.lineTo(-8, 3);
+        ctx.closePath();
         ctx.fill();
         ctx.strokeStyle = c.primary;
         ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-8, -3);
+        ctx.lineTo(-5, -8);
+        ctx.lineTo(5, -8);
+        ctx.lineTo(8, -3);
+        ctx.lineTo(8, 3);
+        ctx.lineTo(5, 8);
+        ctx.lineTo(-5, 8);
+        ctx.lineTo(-8, 3);
+        ctx.closePath();
         ctx.stroke();
 
-        // Barrel
-        ctx.fillStyle = c.tertiary;
-        ctx.fillRect(-4, -30, 8, 26);
-        ctx.strokeStyle = c.primary;
+        // Barrel body (tapered outline)
+        ctx.fillStyle = 'rgba(0, 24, 9, 0.9)';
+        ctx.beginPath();
+        ctx.moveTo(-5, -6);
+        ctx.lineTo(-4, -31);
+        ctx.lineTo(4, -31);
+        ctx.lineTo(5, -6);
+        ctx.closePath();
+        ctx.fill();
         ctx.lineWidth = 2;
-        ctx.strokeRect(-4, -30, 8, 26);
+        ctx.beginPath();
+        ctx.moveTo(-5, -6);
+        ctx.lineTo(-4, -31);
+        ctx.lineTo(4, -31);
+        ctx.lineTo(5, -6);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Barrel rails
+        ctx.strokeStyle = c.secondary;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-2.5, -8);
+        ctx.lineTo(-2.5, -30);
+        ctx.moveTo(2.5, -8);
+        ctx.lineTo(2.5, -30);
+        ctx.stroke();
 
         // Barrel segment lines for mechanical feel
         ctx.strokeStyle = c.secondary;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(-4, -22);
-        ctx.lineTo(4, -22);
-        ctx.moveTo(-4, -14);
-        ctx.lineTo(4, -14);
+        ctx.moveTo(-4.2, -23);
+        ctx.lineTo(4.2, -23);
+        ctx.moveTo(-4.6, -15);
+        ctx.lineTo(4.6, -15);
         ctx.stroke();
 
-        // Barrel tip
-        ctx.fillRect(-5, -35, 10, 6);
-        ctx.strokeRect(-5, -35, 10, 6);
+        // Muzzle / tip (fork-like outline)
+        ctx.fillStyle = 'rgba(0, 20, 7, 0.9)';
+        ctx.beginPath();
+        ctx.moveTo(-5, -31);
+        ctx.lineTo(-5, -38);
+        ctx.lineTo(5, -38);
+        ctx.lineTo(5, -31);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = c.primary;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-5, -31);
+        ctx.lineTo(-5, -38);
+        ctx.lineTo(-1.8, -38);
+        ctx.moveTo(5, -31);
+        ctx.lineTo(5, -38);
+        ctx.lineTo(1.8, -38);
+        ctx.stroke();
+
+        // Muzzle bridge (dimmer)
+        ctx.strokeStyle = c.tertiary;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-1.6, -35.5);
+        ctx.lineTo(1.6, -35.5);
+        ctx.stroke();
 
         // Inner detail
         ctx.strokeStyle = c.secondary;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.arc(0, 0, 4.2, 0, Math.PI * 2);
+        ctx.moveTo(-3, 0);
+        ctx.lineTo(3, 0);
+        ctx.moveTo(0, -3);
+        ctx.lineTo(0, 3);
         ctx.stroke();
 
         ctx.restore();

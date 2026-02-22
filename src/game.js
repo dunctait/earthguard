@@ -11,8 +11,8 @@ const GameConfig = {
     // Launcher
     LAUNCHER_Y: 5,
     MISSILE_LAUNCH_TIP_OFFSET: 4.8, // World units from launcher pivot to barrel tip
-    MIN_ANGLE: -60,      // Max left
-    MAX_ANGLE: 60,       // Max right
+    MIN_ANGLE: -80,      // Max left
+    MAX_ANGLE: 80,       // Max right
     START_ANGLE: 0,      // Straight up
 
     // Missiles
@@ -293,14 +293,15 @@ class Game {
         return {
             level,
             alienCount: Math.min(2 + Math.floor((level - 1) / 2), 8),
-            speed: this.config.BASE_ALIEN_SPEED + (level * this.config.ALIEN_SPEED_PER_LEVEL)
+            speed: this.config.BASE_ALIEN_SPEED + (level * this.config.ALIEN_SPEED_PER_LEVEL),
+            activeTopY: level === 1 ? 78 : (this.config.ALIEN_ACTIVE_SPAWN_TOP_Y || (this.config.WORLD_HEIGHT - 5))
         };
     }
 
     createAliensFromWaveSpec(spec, incoming = false) {
         const aliens = [];
         const spacing = this.config.ALIEN_WAVE_VERTICAL_SPACING || 8;
-        const activeTopY = this.config.ALIEN_ACTIVE_SPAWN_TOP_Y || (this.config.WORLD_HEIGHT - 5);
+        const activeTopY = spec.activeTopY ?? this.config.ALIEN_ACTIVE_SPAWN_TOP_Y ?? (this.config.WORLD_HEIGHT - 5);
         // Ensure incoming wave never vertically overlaps the highest possible active-wave enemy:
         // incoming lowest enemy sits above activeTopY by a fixed gap.
         const incomingLowestY = activeTopY + (this.config.ALIEN_INCOMING_WAVE_GAP || 4);
