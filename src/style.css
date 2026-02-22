@@ -7,11 +7,20 @@
     user-select: none;
 }
 
+:root {
+    --green-bright: #00ff41;
+    --green-mid: #00cc33;
+    --green-dim: #00661a;
+    --green-glow: rgba(0, 255, 65, 0.6);
+    --bg-black: #000000;
+    --bg-dark: #0a0a0a;
+}
+
 html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #0a0a1a;
+    background: var(--bg-black);
     font-family: 'Courier New', monospace;
 }
 
@@ -26,7 +35,7 @@ html, body {
 #game-canvas {
     flex: 1;
     width: 100%;
-    background: linear-gradient(to bottom, #0a0a2e 0%, #1a1a3e 100%);
+    background: var(--bg-black);
 }
 
 #ui-overlay {
@@ -41,18 +50,18 @@ html, body {
 #status {
     display: flex;
     justify-content: space-between;
-    color: #4a9;
+    color: var(--green-bright);
     font-size: 14px;
-    text-shadow: 0 0 10px rgba(68, 170, 153, 0.5);
+    text-shadow: 0 0 10px var(--green-glow);
 }
 
 #controls {
-    background: #111;
+    background: var(--bg-black);
     padding: 10px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    border-top: 2px solid #333;
+    border-top: 1px solid var(--green-dim);
 }
 
 /* Rotation controls */
@@ -69,13 +78,16 @@ html, body {
 }
 
 .rot-btn {
-    background: #333;
-    border: 1px solid #555;
-    border-radius: 5px;
-    color: #4a9;
+    background: transparent;
+    border: 1px solid var(--green-mid);
+    border-radius: 3px;
+    color: var(--green-bright);
     font-family: inherit;
     font-weight: bold;
     cursor: pointer;
+    text-shadow: 0 0 5px var(--green-glow);
+    box-shadow: 0 0 5px var(--green-dim);
+    transition: all 0.1s;
 }
 
 .rot-btn.big {
@@ -91,16 +103,17 @@ html, body {
 }
 
 .rot-btn:active {
-    background: #4a9;
-    color: #111;
+    background: var(--green-dim);
+    box-shadow: 0 0 15px var(--green-glow);
 }
 
 #angle-display {
     width: 60px;
     text-align: center;
-    color: #4a9;
+    color: var(--green-bright);
     font-size: 18px;
     font-weight: bold;
+    text-shadow: 0 0 10px var(--green-glow);
 }
 
 /* Action controls */
@@ -118,87 +131,91 @@ html, body {
 
 #power-bar-container {
     height: 15px;
-    background: #222;
+    background: var(--bg-black);
     border-radius: 3px;
     overflow: hidden;
-    border: 1px solid #444;
+    border: 1px solid var(--green-dim);
 }
 
 #power-bar {
     height: 100%;
     width: 0%;
-    background: linear-gradient(to right, #4a9, #f84);
+    background: var(--green-bright);
+    box-shadow: 0 0 10px var(--green-glow);
     transition: width 0.05s linear;
 }
 
 #fire-btn {
     height: 50px;
-    background: #c44;
-    border: none;
-    border-radius: 8px;
-    color: white;
+    background: transparent;
+    border: 1px solid var(--green-mid);
+    border-radius: 5px;
+    color: var(--green-bright);
     font-size: 14px;
     font-weight: bold;
     font-family: inherit;
     cursor: pointer;
-    box-shadow: 0 3px 0 #922;
+    text-shadow: 0 0 5px var(--green-glow);
+    box-shadow: 0 0 5px var(--green-dim);
+    transition: all 0.1s;
 }
 
-#fire-btn:active {
-    transform: translateY(2px);
-    box-shadow: 0 1px 0 #922;
-}
-
+#fire-btn:active,
 #fire-btn.charging {
-    background: #f84;
-    box-shadow: 0 3px 0 #a52;
+    background: var(--green-dim);
+    box-shadow: 0 0 20px var(--green-glow);
 }
 
 #fire-btn.charged {
-    background: #4a9;
-    box-shadow: 0 3px 0 #287;
+    background: var(--green-mid);
+    box-shadow: 0 0 15px var(--green-glow);
 }
 
 #advance-btn {
     width: 100px;
     height: 70px;
-    background: #36a;
-    border: none;
-    border-radius: 8px;
-    color: white;
+    background: transparent;
+    border: 1px solid var(--green-mid);
+    border-radius: 5px;
+    color: var(--green-bright);
     font-size: 16px;
     font-weight: bold;
     font-family: inherit;
     cursor: pointer;
-    box-shadow: 0 3px 0 #247;
+    text-shadow: 0 0 5px var(--green-glow);
+    box-shadow: 0 0 5px var(--green-dim);
+    transition: all 0.1s;
 }
 
 #advance-btn:active {
-    transform: translateY(2px);
-    box-shadow: 0 1px 0 #247;
+    background: var(--green-dim);
+    box-shadow: 0 0 20px var(--green-glow);
 }
 
 #advance-btn:disabled {
-    background: #444;
-    box-shadow: 0 3px 0 #333;
-    color: #666;
+    border-color: var(--green-dim);
+    color: var(--green-dim);
+    box-shadow: none;
+    text-shadow: none;
 }
 
 /* Landscape warning */
 @media (orientation: landscape) {
     #game-container::before {
-        content: 'Please rotate to portrait mode';
+        content: '[ ROTATE TO PORTRAIT ]';
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: #0a0a1a;
-        color: #4a9;
+        background: var(--bg-black);
+        color: var(--green-bright);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 18px;
+        text-shadow: 0 0 10px var(--green-glow);
         z-index: 1000;
+        letter-spacing: 2px;
     }
 }

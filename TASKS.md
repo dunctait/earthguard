@@ -14,7 +14,6 @@
 
 ### Visual Polish
 - [ ] **T5** - Reduce enemy size
-- [ ] **T6** - Retro visual overhaul: black background, green LCD/vector style (Missile Command/Star Wars aesthetic)
 - [ ] **T11** - Non-flat terrain: 2D hills/mountains silhouette for ground
 - [ ] **T13** - Alien entry animation: FTL drop-in effect (zoom in, sudden deceleration)
 - [ ] **T18** - Wave announcer: "WAVE 3" text fades in/out between waves
@@ -72,4 +71,6 @@
 ---
 
 ## Completed
+
+- [x] **T6** - Retro visual overhaul: black background, green LCD/vector style (Missile Command/Star Wars aesthetic)
 
