@@ -392,7 +392,7 @@ class Renderer {
                 title: event.title,
                 subtitle: event.subtitle || '',
                 age: 0,
-                maxAge: 85
+                maxAge: 125
             });
         }
     }
@@ -523,8 +523,9 @@ class Renderer {
         ctx.save();
         ctx.translate(camX, camY);
 
-        const cannonX = w / 2;
-        const cannonY = this.hillTopY - 5;
+        const launcherScreen = this.worldToScreen(this.game.WORLD_WIDTH / 2, this.game.config.LAUNCHER_Y);
+        const cannonX = launcherScreen.x;
+        const cannonY = launcherScreen.y;
         const angleRad = this.gameAngleToRad(this.game.launcherAngle);
         const cannonTip = this.getCannonTipPosition(cannonX, cannonY, angleRad);
 

@@ -58,7 +58,7 @@ class EarthGuardUI {
         if (typeof prevValue === 'number' && nextValue > prevValue) {
             this.hudDeltaFx[key] = {
                 text: `+${prefix === '$' ? '$' : ''}${nextValue - prevValue}`,
-                until: Date.now() + 850
+                until: Date.now() + 1400
             };
         }
         this.prevHudValues[key] = nextValue;
@@ -85,9 +85,10 @@ class EarthGuardUI {
     }
 
     renderHud(game) {
-        const displayedCycle = Math.max(1, game.levelCycles || 0);
+        // HUD shows the upcoming decision cycle (the cycle the player is about to spend).
+        const displayedCycle = Math.max(1, (game.levelCycles || 0) + 1);
         const liveBonus = game.getWaveClearSpeedBonus(displayedCycle, game.level);
-        this.el.level.innerHTML = `<span class="hud-line"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-line"><span class="hud-label">CYCLE</span><span class="hud-value">${displayedCycle}</span></span><span class="hud-line"><span class="hud-label">BONUS</span><span class="hud-value">+$${liveBonus}</span></span>`;
+        this.el.level.innerHTML = `<span class="hud-line"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-line"><span class="hud-label">CYCLE</span><span class="hud-value">${displayedCycle}</span></span><span class="hud-line"><span class="hud-label">BONUS</span><span class="hud-value hud-value-hypo">+$${liveBonus}</span></span>`;
         this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
         this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${game.missileEnergy}/${game.config.MISSILE_ENERGY_MAX}</span>${this.getHudDeltaMarkup('energy')}`;
         this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${game.money}</span>${this.getHudDeltaMarkup('money')}`;

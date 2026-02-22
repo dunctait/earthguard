@@ -35,6 +35,9 @@ const GameConfig = {
     ALIEN_SPEED_PER_LEVEL: 1.0,
     ALIEN_RADIUS: 3,
     ALIEN_DAMAGE: 10,
+    ALIEN_WAVE_VERTICAL_SPACING: 8,
+    ALIEN_ACTIVE_SPAWN_TOP_Y: 95,
+    ALIEN_INCOMING_WAVE_GAP: 4,
     MONEY_PER_KILL: 10,
     EXACT_HIT_MONEY_MULTIPLIER: 2,
     EXACT_HIT_RADIUS_FACTOR: 0.35,
@@ -296,11 +299,17 @@ class Game {
 
     createAliensFromWaveSpec(spec, incoming = false) {
         const aliens = [];
-        const startY = incoming ? (this.config.WORLD_HEIGHT + 3) : (this.config.WORLD_HEIGHT - 5);
+        const spacing = this.config.ALIEN_WAVE_VERTICAL_SPACING || 8;
+        const activeTopY = this.config.ALIEN_ACTIVE_SPAWN_TOP_Y || (this.config.WORLD_HEIGHT - 5);
+        // Ensure incoming wave never vertically overlaps the highest possible active-wave enemy:
+        // incoming lowest enemy sits above activeTopY by a fixed gap.
+        const incomingLowestY = activeTopY + (this.config.ALIEN_INCOMING_WAVE_GAP || 4);
+        const incomingStartY = incomingLowestY + ((spec.alienCount - 1) * spacing);
+        const startY = incoming ? incomingStartY : activeTopY;
         for (let i = 0; i < spec.alienCount; i++) {
             aliens.push({
                 x: 10 + Math.random() * (this.config.WORLD_WIDTH - 20),
-                y: startY - (i * 8),
+                y: startY - (i * spacing),
                 speed: spec.speed,
                 hp: 1,
                 damage: this.config.ALIEN_DAMAGE,
@@ -796,7 +805,12 @@ class Game {
     hasInevitableEarthBreach() {
         if (this.isAnimating || this.pendingMissiles.length > 0 || this.missiles.length > 0) return false;
         if (!this.aliens.length) return false;
-        return this.aliens.some((alien) => !this.canAlienBeHitNextCycle(alien));
+        return this.aliens.some((alien) => {
+            if (!this.isAlienDamageable(alien)) return false;
+            const willTouchEarthNextCycle = (alien.y - alien.speed - alien.radius) <= this.config.LAUNCHER_Y;
+            if (!willTouchEarthNextCycle) return false;
+            return !this.canAlienBeHitNextCycle(alien);
+        });
     }
 
     triggerGameOver(reason = 'EARTH BREACHED') {
