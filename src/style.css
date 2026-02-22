@@ -258,6 +258,26 @@ html, body {
     margin: 0;
 }
 
+.game-over-modal {
+    width: min(360px, calc(100% - 20px));
+    margin: 0;
+}
+
+.game-over-subtitle {
+    color: var(--green-secondary);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin: 4px 0 10px;
+    text-transform: uppercase;
+}
+
+.game-over-modal .ui-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .upgrade-list {
     display: flex;
     flex-direction: column;

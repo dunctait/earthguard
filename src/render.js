@@ -599,9 +599,10 @@ class Renderer {
         // before ADVANCE resolves the cycle, so the player gets instant visual confirmation.
         for (const missile of (this.game.pendingMissiles || [])) {
             const endPos = this.worldToScreen(missile.targetX, missile.targetY);
+            const startPos = this.worldToScreen(missile.startX ?? (this.game.WORLD_WIDTH / 2), missile.startY ?? this.game.config.LAUNCHER_Y);
             const launchProgress = this.game.config.MISSILE_LAUNCH_START_PROGRESS || 0.10;
-            const currentX = cannonTip.x + (endPos.x - cannonTip.x) * launchProgress;
-            const currentY = cannonTip.y + (endPos.y - cannonTip.y) * launchProgress;
+            const currentX = startPos.x + (endPos.x - startPos.x) * launchProgress;
+            const currentY = startPos.y + (endPos.y - startPos.y) * launchProgress;
             const missileAlpha = this.getDepthBrightness(currentY) * 0.9;
 
             this.setGlow(c.primaryGlow, 16);
@@ -619,7 +620,7 @@ class Renderer {
             ctx.strokeStyle = `rgba(0, 170, 68, ${Math.max(0.25, missileAlpha * 0.45)})`;
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.moveTo(cannonTip.x, cannonTip.y);
+            ctx.moveTo(startPos.x, startPos.y);
             ctx.lineTo(currentX, currentY);
             ctx.stroke();
         }
@@ -629,8 +630,9 @@ class Renderer {
             if (missile.exploded) continue;
 
             const endPos = this.worldToScreen(missile.targetX, missile.targetY);
-            const currentX = cannonTip.x + (endPos.x - cannonTip.x) * missile.progress;
-            const currentY = cannonTip.y + (endPos.y - cannonTip.y) * missile.progress;
+            const startPos = this.worldToScreen(missile.startX ?? (this.game.WORLD_WIDTH / 2), missile.startY ?? this.game.config.LAUNCHER_Y);
+            const currentX = startPos.x + (endPos.x - startPos.x) * missile.progress;
+            const currentY = startPos.y + (endPos.y - startPos.y) * missile.progress;
             const missileAlpha = this.getDepthBrightness(currentY);
 
             // Missile with layered glow
@@ -654,8 +656,8 @@ class Renderer {
             ctx.beginPath();
             ctx.moveTo(currentX, currentY);
             ctx.lineTo(
-                cannonTip.x + (endPos.x - cannonTip.x) * trailProgress,
-                cannonTip.y + (endPos.y - cannonTip.y) * trailProgress
+                startPos.x + (endPos.x - startPos.x) * trailProgress,
+                startPos.y + (endPos.y - startPos.y) * trailProgress
             );
             ctx.stroke();
 

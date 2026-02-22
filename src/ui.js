@@ -27,7 +27,12 @@ class EarthGuardUI {
             'upgrade-menu',
             'upgrade-menu-title',
             'upgrade-menu-close-btn',
-            'upgrade-list'
+            'upgrade-list',
+            'game-over-overlay',
+            'game-over-modal',
+            'game-over-title',
+            'game-over-subtitle',
+            'play-again-btn'
         ]) : {};
     }
 
@@ -40,6 +45,7 @@ class EarthGuardUI {
         this.renderPower(game);
         this.renderButtons(game);
         this.renderUpgrades(game);
+        this.renderGameOver(game);
     }
 
     trackHudDeltas(game) {
@@ -113,11 +119,11 @@ class EarthGuardUI {
             fireBtn.className = (!game.isAnimating && missilesLeft > 0) ? 'terminal-btn pulse' : 'terminal-btn';
         }
 
-        const canFire = game.isCharging || game.canCharge();
+        const canFire = !game.isGameOver && (game.isCharging || game.canCharge());
         fireBtn.disabled = !canFire;
 
-        advanceBtn.disabled = game.isAnimating;
-        advanceBtn.classList.toggle('is-disabled', game.isAnimating);
+        advanceBtn.disabled = game.isAnimating || game.isGameOver;
+        advanceBtn.classList.toggle('is-disabled', game.isAnimating || game.isGameOver);
     }
 
     renderUpgrades(game) {
@@ -134,7 +140,7 @@ class EarthGuardUI {
             overlayEl: overlay,
             modalEl: menu,
             titleEl: this.el['upgrade-menu-title'],
-            isOpen: game.isUpgradeMenuOpen,
+            isOpen: game.isUpgradeMenuOpen && !game.isGameOver,
             titleText: 'UPGRADES'
         });
         menuBtn.className = game.isUpgradeMenuOpen ? 'terminal-btn upgrade-btn owned' : 'terminal-btn upgrade-btn';
@@ -142,7 +148,7 @@ class EarthGuardUI {
             ? `CLOSE UPGRADES (${availableUpgradeCount})`
             : `UPGRADES (${availableUpgradeCount})`;
 
-        list.innerHTML = Object.values(game.upgrades).map((upgrade) => {
+        list.innerHTML = game.getOrderedUpgrades().map((upgrade) => {
             const nextTier = game.getNextUpgradeTier(upgrade.key);
             const isOwnedOut = (upgrade.maxLevel !== null) && (upgrade.level >= upgrade.maxLevel);
             const canBuy = game.canPurchaseUpgrade(upgrade.key);
@@ -165,6 +171,22 @@ class EarthGuardUI {
                 </div>
             `;
         }).join('');
+    }
+
+    renderGameOver(game) {
+        const overlay = this.el['game-over-overlay'];
+        const modal = this.el['game-over-modal'];
+        if (!overlay || !modal) return;
+        this.renderModal({
+            overlayEl: overlay,
+            modalEl: modal,
+            titleEl: this.el['game-over-title'],
+            isOpen: !!game.isGameOver,
+            titleText: 'GAME OVER'
+        });
+        if (this.el['game-over-subtitle']) {
+            this.el['game-over-subtitle'].textContent = game.gameOverReason || 'EARTH BREACHED';
+        }
     }
 
     renderModal({ overlayEl, modalEl, titleEl, isOpen, titleText }) {

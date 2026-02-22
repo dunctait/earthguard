@@ -10,6 +10,7 @@ const GameConfig = {
 
     // Launcher
     LAUNCHER_Y: 5,
+    MISSILE_LAUNCH_TIP_OFFSET: 4.8, // World units from launcher pivot to barrel tip
     MIN_ANGLE: -60,      // Max left
     MAX_ANGLE: 60,       // Max right
     START_ANGLE: 0,      // Straight up
@@ -21,7 +22,7 @@ const GameConfig = {
     EXPLOSION_RADIUS: 6.4,          // 80% of original 8
     MAX_MISSILE_RANGE: 85,          // % of world height
     MISSILE_ENERGY_MAX: 100,
-    MISSILE_ENERGY_REGEN_PER_TURN: 2,
+    MISSILE_ENERGY_REGEN_PER_TURN: 4,
     MISSILE_MIN_ENERGY_COST: 10,
     TRAJECTORY_FADE_STRENGTH: 2.4,
 
@@ -391,6 +392,16 @@ class Game {
         };
     }
 
+    getMissileLaunchOrigin() {
+        const launcher = this.getLauncherOrigin();
+        const mathAngle = (90 - this.launcherAngle) * Math.PI / 180;
+        const offset = this.config.MISSILE_LAUNCH_TIP_OFFSET || 0;
+        return {
+            x: launcher.x + Math.cos(mathAngle) * offset,
+            y: launcher.y + Math.sin(mathAngle) * offset
+        };
+    }
+
     getTargetForPower(power = this.power) {
         if (power <= 0) return null;
 
@@ -448,7 +459,7 @@ class Game {
                 this.notify();
                 return;
             }
-            const launcher = this.getLauncherOrigin();
+            const launcher = this.getMissileLaunchOrigin();
             const target = this.getTargetForPower(this.power);
 
             this.pendingMissiles.push({
@@ -527,6 +538,23 @@ class Game {
             if (this.canPurchaseUpgrade(key)) count++;
         }
         return count;
+    }
+
+    getUpgradeInitialCostScore(upgrade) {
+        if (!upgrade) return Number.POSITIVE_INFINITY;
+        const firstTier = (typeof upgrade.getTierForLevel === 'function')
+            ? upgrade.getTierForLevel(0, { game: this, upgrade })
+            : (upgrade.tiers?.[0] || null);
+        if (!firstTier) return Number.POSITIVE_INFINITY;
+        return (firstTier.moneyCost || 0) + (firstTier.energyCost || 0);
+    }
+
+    getOrderedUpgrades() {
+        return Object.values(this.upgrades).sort((a, b) => {
+            if (a.key === 'energyResupply' && b.key !== 'energyResupply') return -1;
+            if (b.key === 'energyResupply' && a.key !== 'energyResupply') return 1;
+            return this.getUpgradeInitialCostScore(a) - this.getUpgradeInitialCostScore(b);
+        });
     }
 
     getUpgradeTierLabel(key, tier, fallback = 'NEXT') {
