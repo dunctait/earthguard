@@ -6,7 +6,24 @@
 class Renderer {
     constructor(game) {
         this.game = game;
-        this.canvas = document.getElementById('game-canvas');
+        this.utils = window.EarthGuardUtils || {
+            lerp: (a, b, t) => a + (b - a) * t,
+            distance: (dx, dy) => Math.sqrt((dx * dx) + (dy * dy)),
+            bindHoldAction: () => {},
+            bindPressHandlers: () => {},
+            cacheDom: () => ({})
+        };
+        this.dom = this.utils.cacheDom([
+            'game-canvas',
+            'controls',
+            'rot-left-big',
+            'rot-left-small',
+            'rot-right-small',
+            'rot-right-big',
+            'fire-btn',
+            'advance-btn'
+        ]);
+        this.canvas = this.dom['game-canvas'];
         this.ctx = this.canvas.getContext('2d');
         this.theme = window.EarthGuardTheme || null;
 
@@ -58,7 +75,6 @@ class Renderer {
         this.lastMissileCount = 0;
         this.lastExplosionCount = 0;
         this.cannonRecoil = 0;
-        this.cannonRecoilVelocity = 0;
         this.impactFlash = 0;
 
         this.generateStars();
@@ -91,7 +107,7 @@ class Renderer {
 
     resize() {
         const container = this.canvas.parentElement;
-        const controlsHeight = document.getElementById('controls').offsetHeight || 150;
+        const controlsHeight = this.dom.controls.offsetHeight || 150;
         const availableWidth = container.clientWidth;
         const availableHeight = container.clientHeight - controlsHeight;
 
@@ -147,43 +163,20 @@ class Renderer {
     }
 
     setupInput() {
-        const setupHoldButton = (element, action, initialDelay = 300, repeatDelay = 50) => {
-            let timeout, interval;
-            const start = (e) => {
-                e.preventDefault();
-                action();
-                timeout = setTimeout(() => {
-                    interval = setInterval(action, repeatDelay);
-                }, initialDelay);
-            };
-            const stop = () => {
-                clearTimeout(timeout);
-                clearInterval(interval);
-            };
-            element.addEventListener('mousedown', start);
-            element.addEventListener('mouseup', stop);
-            element.addEventListener('mouseleave', stop);
-            element.addEventListener('touchstart', start);
-            element.addEventListener('touchend', stop);
-            element.addEventListener('touchcancel', stop);
-        };
+        this.utils.bindHoldAction(this.dom['rot-left-big'], () => this.game.rotateLeft(10));
+        this.utils.bindHoldAction(this.dom['rot-left-small'], () => this.game.rotateLeft(1));
+        this.utils.bindHoldAction(this.dom['rot-right-small'], () => this.game.rotateRight(1));
+        this.utils.bindHoldAction(this.dom['rot-right-big'], () => this.game.rotateRight(10));
 
-        setupHoldButton(document.getElementById('rot-left-big'), () => this.game.rotateLeft(10));
-        setupHoldButton(document.getElementById('rot-left-small'), () => this.game.rotateLeft(1));
-        setupHoldButton(document.getElementById('rot-right-small'), () => this.game.rotateRight(1));
-        setupHoldButton(document.getElementById('rot-right-big'), () => this.game.rotateRight(10));
-
-        const fireBtn = document.getElementById('fire-btn');
+        const fireBtn = this.dom['fire-btn'];
         let chargeInterval = null;
 
-        const startCharge = (e) => {
-            e.preventDefault();
+        const startCharge = () => {
             this.game.startCharging();
             chargeInterval = setInterval(() => this.game.updateCharge(), this.game.config.POWER_UPDATE_INTERVAL);
         };
 
-        const stopCharge = (e) => {
-            e.preventDefault();
+        const stopCharge = () => {
             if (chargeInterval) {
                 clearInterval(chargeInterval);
                 chargeInterval = null;
@@ -191,14 +184,9 @@ class Renderer {
             this.game.stopCharging();
         };
 
-        fireBtn.addEventListener('mousedown', startCharge);
-        fireBtn.addEventListener('mouseup', stopCharge);
-        fireBtn.addEventListener('mouseleave', stopCharge);
-        fireBtn.addEventListener('touchstart', startCharge);
-        fireBtn.addEventListener('touchend', stopCharge);
-        fireBtn.addEventListener('touchcancel', stopCharge);
+        this.utils.bindPressHandlers(fireBtn, { onStart: startCharge, onEnd: stopCharge });
 
-        document.getElementById('advance-btn').addEventListener('click', () => this.game.advance());
+        this.dom['advance-btn'].addEventListener('click', () => this.game.advance());
     }
 
     animate() {
@@ -274,23 +262,13 @@ class Renderer {
         }, coreColor, glowColor, coreWidth, 10, 20, alpha);
     }
 
-    lerp(a, b, t) {
-        return a + (b - a) * t;
-    }
-
-    // Distance-based opacity (further = dimmer)
-    getDistanceAlpha(y, minAlpha = 0.5) {
-        const normalizedY = y / this.canvas.height;
-        return minAlpha + (1 - minAlpha) * (1 - normalizedY * 0.5);
-    }
-
     getDepthBrightness(y) {
         const h = this.canvas.height || 1;
         const t = Math.max(0, Math.min(1, y / h));
         if (t < 0.5) {
-            return this.lerp(0.7, 0.85, t / 0.5);
+            return this.utils.lerp(0.7, 0.85, t / 0.5);
         }
-        return this.lerp(0.85, 1, (t - 0.5) / 0.5);
+        return this.utils.lerp(0.85, 1, (t - 0.5) / 0.5);
     }
 
     updateVisualEffects() {
@@ -545,7 +523,7 @@ class Renderer {
         const ctx = this.ctx;
         const dx = x2 - x1;
         const dy = y2 - y1;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const dist = this.utils.distance(dx, dy);
         const dotSpacing = 12;
         const dotCount = Math.floor(dist / dotSpacing);
         const animOffset = (this.frameCount * 0.5) % dotSpacing;

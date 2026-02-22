@@ -41,6 +41,11 @@ const GameConfig = {
 class Game {
     constructor() {
         this.config = GameConfig;
+        this.utils = window.EarthGuardUtils || {
+            clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
+            distance: (dx, dy) => Math.sqrt((dx * dx) + (dy * dy))
+        };
+        this.ui = window.EarthGuardUI ? new window.EarthGuardUI() : null;
 
         // Launcher state
         this.launcherAngle = this.config.START_ANGLE;
@@ -89,12 +94,12 @@ class Game {
 
     // Angle: 0 = up, negative = left, positive = right
     rotateLeft(degrees) {
-        this.launcherAngle = Math.max(this.config.MIN_ANGLE, this.launcherAngle - degrees);
+        this.launcherAngle = this.utils.clamp(this.launcherAngle - degrees, this.config.MIN_ANGLE, this.config.MAX_ANGLE);
         this.notify();
     }
 
     rotateRight(degrees) {
-        this.launcherAngle = Math.min(this.config.MAX_ANGLE, this.launcherAngle + degrees);
+        this.launcherAngle = this.utils.clamp(this.launcherAngle + degrees, this.config.MIN_ANGLE, this.config.MAX_ANGLE);
         this.notify();
     }
 
@@ -102,6 +107,26 @@ class Game {
         return !this.isAnimating &&
                !this.isCharging &&
                this.missilesLockedThisTurn < this.config.MISSILES_PER_TURN;
+    }
+
+    getLauncherOrigin() {
+        return {
+            x: this.config.WORLD_WIDTH / 2,
+            y: this.config.LAUNCHER_Y
+        };
+    }
+
+    getTargetForPower(power = this.power) {
+        if (power <= 0) return null;
+
+        const mathAngle = (90 - this.launcherAngle) * Math.PI / 180;
+        const distance = (power / 100) * (this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100);
+        const launcher = this.getLauncherOrigin();
+
+        return {
+            x: launcher.x + Math.cos(mathAngle) * distance,
+            y: launcher.y + Math.sin(mathAngle) * distance
+        };
     }
 
     startCharging() {
@@ -113,7 +138,7 @@ class Game {
 
     updateCharge() {
         if (!this.isCharging) return;
-        this.power = Math.min(100, this.power + this.config.POWER_CHARGE_RATE);
+        this.power = this.utils.clamp(this.power + this.config.POWER_CHARGE_RATE, 0, 100);
         this.notify();
     }
 
@@ -122,19 +147,14 @@ class Game {
         this.isCharging = false;
 
         if (this.power > 5) {
-            // Lock in missile
-            // Angle conversion: 0 = up (90° in math), positive = right
-            const mathAngle = (90 - this.launcherAngle) * Math.PI / 180;
-            const distance = (this.power / 100) * (this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100);
-
-            const launcherX = this.config.WORLD_WIDTH / 2;
-            const launcherY = this.config.LAUNCHER_Y;
+            const launcher = this.getLauncherOrigin();
+            const target = this.getTargetForPower(this.power);
 
             this.pendingMissiles.push({
-                startX: launcherX,
-                startY: launcherY,
-                targetX: launcherX + Math.cos(mathAngle) * distance,
-                targetY: launcherY + Math.sin(mathAngle) * distance,
+                startX: launcher.x,
+                startY: launcher.y,
+                targetX: target.x,
+                targetY: target.y,
                 progress: 0,
                 exploded: false
             });
@@ -154,17 +174,12 @@ class Game {
     }
 
     getPrediction() {
-        if (this.power === 0) return null;
-
-        const mathAngle = (90 - this.launcherAngle) * Math.PI / 180;
-        const distance = (this.power / 100) * (this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100);
-
-        const launcherX = this.config.WORLD_WIDTH / 2;
-        const launcherY = this.config.LAUNCHER_Y;
+        const target = this.getTargetForPower(this.power);
+        if (!target) return null;
 
         return {
-            x: launcherX + Math.cos(mathAngle) * distance,
-            y: launcherY + Math.sin(mathAngle) * distance,
+            x: target.x,
+            y: target.y,
             radius: this.config.EXPLOSION_RADIUS
         };
     }
@@ -291,7 +306,7 @@ class Game {
         for (const alien of this.aliens) {
             const dx = alien.x - explosion.x;
             const dy = alien.y - explosion.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            const dist = this.utils.distance(dx, dy);
 
             if (dist < explosion.radius + alien.radius) {
                 alien.hp -= 1;
@@ -305,28 +320,9 @@ class Game {
     }
 
     updateUI() {
-        document.getElementById('level').innerHTML = `<span class="hud-label">LEVEL</span><span class="hud-value">${this.level}</span>`;
-        document.getElementById('hp').innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, this.baseHP)}</span>`;
-        document.getElementById('angle-display').textContent = `${this.launcherAngle}°`;
-        document.getElementById('power-bar').style.width = `${this.power}%`;
-
-        const fireBtn = document.getElementById('fire-btn');
-        const missilesLeft = this.config.MISSILES_PER_TURN - this.missilesLockedThisTurn;
-
-        if (this.isCharging) {
-            fireBtn.textContent = 'CHARGING...';
-            fireBtn.className = 'charging';
-        } else if (missilesLeft === 0) {
-            fireBtn.textContent = 'LAUNCHING...';
-            fireBtn.className = 'charged';
-        } else {
-            fireBtn.textContent = `FIRE (${missilesLeft} left)`;
-            fireBtn.className = (!this.isAnimating && missilesLeft > 0) ? 'pulse' : '';
+        if (this.ui) {
+            this.ui.update(this);
         }
-
-        const advanceBtn = document.getElementById('advance-btn');
-        advanceBtn.disabled = this.isAnimating;
-        advanceBtn.classList.toggle('is-disabled', this.isAnimating);
     }
 
     // ==================== TEST HELPERS ====================
@@ -355,7 +351,7 @@ class Game {
         // Convert math angle to game angle (0 = up)
         const mathAngle = Math.atan2(dy, dx) * 180 / Math.PI;
         const gameAngle = Math.round(90 - mathAngle);
-        this.launcherAngle = Math.max(this.config.MIN_ANGLE, Math.min(this.config.MAX_ANGLE, gameAngle));
+        this.launcherAngle = this.utils.clamp(gameAngle, this.config.MIN_ANGLE, this.config.MAX_ANGLE);
         this.notify();
         this.updateUI();
         return { angle: this.launcherAngle, alien: { x: alien.x, y: alien.y } };
@@ -363,7 +359,7 @@ class Game {
 
     chargeTo(powerPercent) {
         if (this.missilesLockedThisTurn >= this.config.MISSILES_PER_TURN || this.isAnimating) return false;
-        this.power = Math.max(0, Math.min(100, powerPercent));
+        this.power = this.utils.clamp(powerPercent, 0, 100);
         this.isCharging = true;
         this.stopCharging();
         return true;
