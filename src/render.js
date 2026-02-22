@@ -363,24 +363,23 @@ class Renderer {
             const depth = this.getDepthBrightness(pos.y);
             const coreColor = isEnemy ? c.enemy : c.primary;
             const glowColor = isEnemy ? c.enemyGlow : c.primaryGlow;
+            if (!isEnemy) {
+                this.drawBloomCircle(
+                    pos.x,
+                    pos.y,
+                    radius * (0.35 + progress * 0.9),
+                    coreColor,
+                    glowColor,
+                    3,
+                    alpha * depth * 0.9
+                );
 
-            this.drawBloomCircle(
-                pos.x,
-                pos.y,
-                radius * (0.35 + progress * 0.9),
-                coreColor,
-                glowColor,
-                isEnemy ? 2 : 3,
-                alpha * depth * (isEnemy ? 0.8 : 0.9)
-            );
-
-            ctx.strokeStyle = isEnemy
-                ? `rgba(255, 80, 90, ${alpha * 0.55 * depth})`
-                : `rgba(0, 255, 102, ${alpha * 0.45 * depth})`;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, radius * (0.6 + progress * 1.4), 0, Math.PI * 2);
-            ctx.stroke();
+                ctx.strokeStyle = `rgba(0, 255, 102, ${alpha * 0.45 * depth})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, radius * (0.6 + progress * 1.4), 0, Math.PI * 2);
+                ctx.stroke();
+            }
 
             const sparkCount = isEnemy ? 10 : 14;
             for (let i = 0; i < sparkCount; i++) {
@@ -389,11 +388,33 @@ class Renderer {
                 const sx = pos.x + Math.cos(seed + progress * 2.2) * travel;
                 const sy = pos.y + Math.sin(seed + progress * 2.2) * travel;
                 const sparkAlpha = alpha * (isEnemy ? 0.5 : 0.35);
+                if (isEnemy) {
+                    // Debris-like shard strokes instead of circular blast rings.
+                    const len = 3 + (i % 4) + progress * 4;
+                    const ang = seed + progress * 1.7;
+                    const ex = sx + Math.cos(ang) * len;
+                    const ey = sy + Math.sin(ang) * len;
+                    ctx.strokeStyle = `rgba(255, 70, 70, ${sparkAlpha * depth})`;
+                    ctx.lineWidth = 1 + ((i % 2) * 0.4);
+                    this.setGlow(c.enemyGlow, 6);
+                    ctx.beginPath();
+                    ctx.moveTo(sx, sy);
+                    ctx.lineTo(ex, ey);
+                    ctx.stroke();
+                    this.clearGlow();
+                }
                 ctx.fillStyle = isEnemy
                     ? `rgba(255, 70, 70, ${sparkAlpha * depth})`
                     : `rgba(180, 255, 210, ${sparkAlpha * depth})`;
                 ctx.beginPath();
-                ctx.arc(sx, sy, isEnemy ? 1.4 : 1.1, 0, Math.PI * 2);
+                ctx.arc(sx, sy, isEnemy ? 1.0 : 1.1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            if (isEnemy && alpha > 0.2) {
+                ctx.fillStyle = `rgba(255, 120, 120, ${alpha * 0.12 * depth})`;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, radius * (0.4 + progress * 0.4), 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -638,20 +659,25 @@ class Renderer {
             const radius = this.worldToScreenSize(residue.radius);
             const depth = this.getDepthBrightness(pos.y);
 
-            ctx.strokeStyle = `rgba(0, 170, 68, ${0.28 * depth})`;
+            const isRedResidue = residue.color === 'red';
+            ctx.strokeStyle = isRedResidue
+                ? `rgba(255, 80, 90, ${0.24 * depth})`
+                : `rgba(0, 170, 68, ${0.28 * depth})`;
             ctx.lineWidth = 1;
             ctx.setLineDash([2, 4]);
             ctx.beginPath();
-            ctx.arc(pos.x, pos.y, radius * 0.9, 0, Math.PI * 2);
+            ctx.arc(pos.x, pos.y, radius * (isRedResidue ? 0.65 : 0.9), 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
 
             for (const p of residue.particles) {
                 const px = pos.x + this.worldToScreenSize(p.x);
                 const py = pos.y - this.worldToScreenSize(p.y);
-                ctx.fillStyle = `rgba(0, 255, 102, ${Math.min(0.55, p.alpha * 1.8) * depth})`;
+                ctx.fillStyle = isRedResidue
+                    ? `rgba(255, 80, 90, ${Math.min(0.5, p.alpha * 1.7) * depth})`
+                    : `rgba(0, 255, 102, ${Math.min(0.55, p.alpha * 1.8) * depth})`;
                 ctx.beginPath();
-                ctx.arc(px, py, p.size + 0.4, 0, Math.PI * 2);
+                ctx.arc(px, py, p.size + (isRedResidue ? 0.2 : 0.4), 0, Math.PI * 2);
                 ctx.fill();
             }
         }

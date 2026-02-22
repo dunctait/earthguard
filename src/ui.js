@@ -32,7 +32,7 @@ class EarthGuardUI {
     }
 
     renderHud(game) {
-        this.el.level.innerHTML = `<span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span>`;
+        this.el.level.innerHTML = `<span class="hud-stack"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-stack"><span class="hud-label">CYCLE</span><span class="hud-value">${Math.max(1, game.levelCycles || 0)}</span></span>`;
         this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
         this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${game.missileEnergy}/${game.config.MISSILE_ENERGY_MAX}</span>`;
         this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${game.money}</span>`;

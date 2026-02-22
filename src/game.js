@@ -20,7 +20,7 @@ const GameConfig = {
     EXPLOSION_RADIUS: 6.4,          // 80% of original 8
     MAX_MISSILE_RANGE: 85,          // % of world height
     MISSILE_ENERGY_MAX: 100,
-    MISSILE_ENERGY_REGEN_PER_TURN: 10,
+    MISSILE_ENERGY_REGEN_PER_TURN: 2,
     MISSILE_MIN_ENERGY_COST: 10,
     TRAJECTORY_FADE_STRENGTH: 2.4,
 
@@ -36,6 +36,9 @@ const GameConfig = {
     MONEY_PER_KILL: 10,
     EXACT_HIT_MONEY_MULTIPLIER: 2,
     EXACT_HIT_RADIUS_FACTOR: 0.35,
+    WAVE_CLEAR_BONUS_BASE: 40,
+    WAVE_CLEAR_BONUS_DECAY_PER_CYCLE: 8,
+    WAVE_CLEAR_BONUS_MIN: 5,
 
     // Player
     STARTING_HP: 100,
@@ -68,6 +71,8 @@ class Game {
         this.baseHP = this.config.STARTING_HP;
         this.isAnimating = false;
         this.money = 0;
+        this.levelCycles = 0;
+        this.lastWaveClearBonus = 0;
         this.isUpgradeMenuOpen = false;
         this.upgrades = {
             targetAreas: {
@@ -100,6 +105,7 @@ class Game {
     get WORLD_WIDTH() { return this.config.WORLD_WIDTH; }
 
     spawnWave() {
+        this.levelCycles = 0;
         const alienCount = Math.min(2 + Math.floor((this.level - 1) / 2), 8);
         const speed = this.config.BASE_ALIEN_SPEED + (this.level * this.config.ALIEN_SPEED_PER_LEVEL);
 
@@ -170,6 +176,13 @@ class Game {
 
     getCurrentExplosionRadius() {
         return this.getExplosionRadiusForLevel(this.level);
+    }
+
+    getWaveClearSpeedBonus(cycles = this.levelCycles, level = this.level) {
+        const raw = this.config.WAVE_CLEAR_BONUS_BASE - ((Math.max(1, cycles) - 1) * this.config.WAVE_CLEAR_BONUS_DECAY_PER_CYCLE);
+        const clamped = Math.max(this.config.WAVE_CLEAR_BONUS_MIN, raw);
+        // Mild level scaling to keep bonuses meaningful without exploding economy.
+        return Math.round(clamped * (1 + ((Math.max(1, level) - 1) * 0.1)));
     }
 
     startCharging() {
@@ -351,22 +364,36 @@ class Game {
             radius: alien.radius * (exactHit ? 1.6 : 1.2),
             exactHit
         });
+        this.createBlastResidue(
+            { x: alien.x, y: alien.y, radius: alien.radius * (exactHit ? 1.5 : 1.2) },
+            {
+                color: 'red',
+                spreadMin: 0.1,
+                spreadMax: 0.42,
+                sizeMin: 0.4,
+                sizeRange: 1.0,
+                alphaMin: exactHit ? 0.22 : 0.18,
+                alphaRange: exactHit ? 0.28 : 0.2
+            }
+        );
         if (this.enemyDeathFxEvents.length > 100) {
             this.enemyDeathFxEvents.shift();
         }
     }
 
-    createBlastResidue(explosion) {
+    createBlastResidue(explosion, options = {}) {
         const particleCount = 10;
         const particles = [];
+        const spreadMin = options.spreadMin ?? 0.16;
+        const spreadMax = options.spreadMax ?? 0.48;
         for (let i = 0; i < particleCount; i++) {
             const angle = (i / particleCount) * Math.PI * 2 + (Math.random() * 0.35);
-            const r = explosion.radius * (0.35 + Math.random() * 0.75);
+            const r = explosion.radius * (spreadMin + Math.random() * (spreadMax - spreadMin));
             particles.push({
                 x: Math.cos(angle) * r,
                 y: Math.sin(angle) * r,
-                size: 0.5 + Math.random() * 1.3,
-                alpha: 0.15 + Math.random() * 0.2
+                size: (options.sizeMin ?? 0.5) + Math.random() * (options.sizeRange ?? 1.3),
+                alpha: (options.alphaMin ?? 0.15) + Math.random() * (options.alphaRange ?? 0.2)
             });
         }
         this.blastResidue.push({
@@ -374,7 +401,8 @@ class Game {
             y: explosion.y,
             radius: explosion.radius,
             turnsRemaining: 1,
-            particles
+            particles,
+            color: options.color || 'green'
         });
     }
 
@@ -383,6 +411,8 @@ class Game {
     }
 
     finishTurn() {
+        this.levelCycles += 1;
+
         // Age and remove prior-turn residue markers.
         for (const residue of this.blastResidue) {
             residue.turnsRemaining -= 1;
@@ -395,7 +425,7 @@ class Game {
                 this.applyExplosionDamage(explosion);
                 explosion.damageApplied = true;
             }
-            this.createBlastResidue(explosion);
+            this.createBlastResidue(explosion, { color: 'green', spreadMin: 0.16, spreadMax: 0.48 });
         }
 
         // Check aliens reaching Earth
@@ -411,8 +441,12 @@ class Game {
 
         // Check wave complete
         if (this.aliens.length === 0) {
+            this.lastWaveClearBonus = this.getWaveClearSpeedBonus(this.levelCycles, this.level);
+            this.money += this.lastWaveClearBonus;
             this.level++;
             this.spawnWave();
+        } else {
+            this.lastWaveClearBonus = 0;
         }
 
         // Check game over
@@ -439,6 +473,8 @@ class Game {
         this.missilesLockedThisTurn = 0;
         this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
         this.money = 0;
+        this.levelCycles = 0;
+        this.lastWaveClearBonus = 0;
         this.isUpgradeMenuOpen = false;
         for (const upgrade of Object.values(this.upgrades)) {
             upgrade.level = 0;
@@ -493,6 +529,8 @@ class Game {
             power: this.power,
             missileEnergy: this.missileEnergy,
             money: this.money,
+            levelCycles: this.levelCycles,
+            lastWaveClearBonus: this.lastWaveClearBonus,
             missilesLocked: this.missilesLockedThisTurn,
             missilesInFlight: this.missiles.length,
             blastResidue: this.blastResidue.length,
