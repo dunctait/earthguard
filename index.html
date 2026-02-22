@@ -15,25 +15,37 @@
             <div id="status">
                 <span id="level">Level 1</span>
                 <span id="hp">HP: 100</span>
-                <span id="energy">Energy: 100</span>
             </div>
         </div>
         <div id="controls">
-            <div id="fuse-control">
-                <label for="fuse-slider">Fuse</label>
-                <input type="range" id="fuse-slider" min="1" max="3" step="0.1" value="1">
+            <div id="rotation-controls">
+                <div class="rotation-group">
+                    <button class="rot-btn big" id="rot-left-big">&lt;&lt;</button>
+                    <button class="rot-btn small" id="rot-left-small">&lt;</button>
+                </div>
+                <div id="angle-display">90°</div>
+                <div class="rotation-group">
+                    <button class="rot-btn small" id="rot-right-small">&gt;</button>
+                    <button class="rot-btn big" id="rot-right-big">&gt;&gt;</button>
+                </div>
             </div>
-            <button id="fire-btn">FIRE</button>
+            <div id="action-controls">
+                <div id="fire-container">
+                    <div id="power-bar-container">
+                        <div id="power-bar"></div>
+                    </div>
+                    <button id="fire-btn">HOLD TO CHARGE</button>
+                </div>
+                <button id="advance-btn">ADVANCE</button>
+            </div>
         </div>
     </div>
     <script src="src/game.js"></script>
     <script src="src/render.js"></script>
     <script>
-        // Initialize game when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
             const game = new Game();
             const renderer = new Renderer(game);
-            game.start();
         });
     </script>
 </body>
