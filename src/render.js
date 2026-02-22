@@ -16,6 +16,7 @@ class Renderer {
         this.dom = this.utils.cacheDom([
             'game-canvas',
             'controls',
+            'upgrade-target-flag-btn',
             'rot-left-big',
             'rot-left-small',
             'rot-right-small',
@@ -187,6 +188,9 @@ class Renderer {
         this.utils.bindPressHandlers(fireBtn, { onStart: startCharge, onEnd: stopCharge });
 
         this.dom['advance-btn'].addEventListener('click', () => this.game.advance());
+        if (this.dom['upgrade-target-flag-btn']) {
+            this.dom['upgrade-target-flag-btn'].addEventListener('click', () => this.game.purchaseUpgrade('targetFlags'));
+        }
     }
 
     animate() {
@@ -393,6 +397,9 @@ class Renderer {
             ctx.setLineDash([4, 4]);
             this.drawBloomCircle(predScreen.x, predScreen.y, predRadius, c.secondary, c.secondaryGlow, 1, this.getDepthBrightness(predScreen.y));
             ctx.setLineDash([]);
+            if (this.game.hasUpgrade('targetFlags')) {
+                this.drawTargetFlag(predScreen.x, predScreen.y, this.getDepthBrightness(predScreen.y), false);
+            }
         }
 
         // Current charging prediction
@@ -407,6 +414,9 @@ class Renderer {
 
             // Animated trajectory dots
             this.drawAnimatedTrajectory(cannonX, cannonY, predScreen.x, predScreen.y);
+            if (this.game.hasUpgrade('targetFlags')) {
+                this.drawTargetFlag(predScreen.x, predScreen.y, this.getDepthBrightness(predScreen.y), true);
+            }
         }
 
         // Aiming guide (animated dots)
@@ -626,6 +636,42 @@ class Renderer {
         this.clearGlow();
     }
 
+    drawTargetFlag(x, y, alpha = 1, active = false) {
+        const ctx = this.ctx;
+        const c = this.colors;
+        const poleH = active ? 16 : 12;
+        const flagW = active ? 10 : 8;
+        const flagH = active ? 7 : 6;
+        const color = active ? c.cyan : c.secondary;
+        const glow = active ? 'rgba(51, 230, 255, 0.35)' : c.secondaryGlow;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        this.setGlow(glow, active ? 10 : 6);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y + 3);
+        ctx.lineTo(x, y - poleH);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x, y - poleH);
+        ctx.lineTo(x + flagW, y - poleH + 2);
+        ctx.lineTo(x, y - poleH + flagH);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Small base marker ring to tie it to the target zone
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+        this.clearGlow();
+    }
+
     drawUFO(x, y, size, alpha = 1) {
         const ctx = this.ctx;
         const c = this.colors;
@@ -633,58 +679,48 @@ class Renderer {
         const bobY = Math.sin(time + x * 0.015) * 4;
         const drawY = y + bobY;
 
-        const width = size * 3.5;
-        const height = size * 0.9;
-        const domeHeight = size * 1.3;
+        const width = size * 3.1;
+        const height = size * 0.95;
+        const bodyInset = size * 2.0;
 
         // Slight rotation drift
         ctx.save();
         ctx.translate(x, drawY);
-        ctx.rotate(Math.sin(time + x * 0.01) * 0.05);
+        ctx.rotate(Math.sin(time + x * 0.01) * 0.035);
         ctx.translate(-x, -drawY);
 
-        // Outer glow
-        this.setGlow(`rgba(255, 51, 68, ${0.4 * alpha})`, 15);
-
-        // Main body
+        this.setGlow(`rgba(255, 51, 68, ${0.3 * alpha})`, 10);
         ctx.strokeStyle = `rgba(255, 51, 68, ${alpha})`;
         ctx.lineWidth = 2;
+
+        // 2D outline saucer (angular, no fill) to match cannon line-art
         ctx.beginPath();
-        ctx.ellipse(x, drawY, width, height, 0, 0, Math.PI * 2);
+        ctx.moveTo(x - width, drawY);
+        ctx.lineTo(x - bodyInset, drawY - height);
+        ctx.lineTo(x + bodyInset, drawY - height);
+        ctx.lineTo(x + width, drawY);
+        ctx.lineTo(x + bodyInset * 0.8, drawY + height * 0.75);
+        ctx.lineTo(x - bodyInset * 0.8, drawY + height * 0.75);
+        ctx.closePath();
         ctx.stroke();
 
-        // Inner body detail
-        ctx.strokeStyle = `rgba(255, 51, 68, ${alpha * 0.5})`;
+        // Inner frame
+        ctx.strokeStyle = `rgba(255, 51, 68, ${alpha * 0.55})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.ellipse(x, drawY, width * 0.7, height * 0.5, 0, 0, Math.PI * 2);
+        ctx.moveTo(x - bodyInset * 0.65, drawY - height * 0.3);
+        ctx.lineTo(x + bodyInset * 0.65, drawY - height * 0.3);
+        ctx.lineTo(x + bodyInset * 0.45, drawY + height * 0.35);
+        ctx.lineTo(x - bodyInset * 0.45, drawY + height * 0.35);
+        ctx.closePath();
         ctx.stroke();
 
-        // Dome
-        ctx.strokeStyle = `rgba(255, 51, 68, ${alpha})`;
-        ctx.lineWidth = 2;
+        // Center emitter dot + scan pulse
+        const pulse = 0.45 + Math.sin(time * 5) * 0.25;
+        ctx.fillStyle = `rgba(255, 51, 68, ${alpha * pulse})`;
         ctx.beginPath();
-        ctx.ellipse(x, drawY - height * 0.4, width * 0.35, domeHeight, 0, Math.PI, Math.PI * 2);
-        ctx.stroke();
-
-        // Bottom ridge
-        ctx.beginPath();
-        ctx.ellipse(x, drawY + height * 0.4, width * 0.5, height * 0.3, 0, 0, Math.PI);
-        ctx.stroke();
-
-        // Animated lights
-        const lightCount = 5;
-        for (let i = 0; i < lightCount; i++) {
-            const angle = (i / lightCount) * Math.PI * 2 + time;
-            const lx = x + Math.cos(angle) * width * 0.6;
-            const ly = drawY + Math.sin(angle) * height * 0.3;
-            const pulse = 0.5 + Math.sin(time * 4 + i) * 0.5;
-
-            ctx.fillStyle = `rgba(255, 51, 68, ${alpha * pulse})`;
-            ctx.beginPath();
-            ctx.arc(lx, ly, 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        ctx.arc(x, drawY, 1.8, 0, Math.PI * 2);
+        ctx.fill();
 
         // Scan pulse
         const pulseRadius = (time % 2) * width;

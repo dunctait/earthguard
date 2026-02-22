@@ -8,10 +8,12 @@ class EarthGuardUI {
         this.el = utils ? utils.cacheDom([
             'level',
             'hp',
+            'upgrade-points',
             'angle-display',
             'power-bar',
             'fire-btn',
-            'advance-btn'
+            'advance-btn',
+            'upgrade-target-flag-btn'
         ]) : {};
     }
 
@@ -22,6 +24,7 @@ class EarthGuardUI {
         this.renderAngle(game);
         this.renderPower(game);
         this.renderButtons(game);
+        this.renderUpgrades(game);
     }
 
     renderHud(game) {
@@ -55,6 +58,25 @@ class EarthGuardUI {
 
         advanceBtn.disabled = game.isAnimating;
         advanceBtn.classList.toggle('is-disabled', game.isAnimating);
+    }
+
+    renderUpgrades(game) {
+        const upgradePoints = this.el['upgrade-points'];
+        const flagBtn = this.el['upgrade-target-flag-btn'];
+        if (!upgradePoints || !flagBtn) return;
+
+        upgradePoints.innerHTML = `<span class="hud-label">UP</span><span class="hud-value">${game.upgradePoints}</span>`;
+
+        const targetFlag = game.upgrades.targetFlags;
+        if (targetFlag.level > 0) {
+            flagBtn.textContent = 'TARGET FLAG: ONLINE';
+            flagBtn.className = 'upgrade-btn owned';
+            flagBtn.disabled = true;
+        } else {
+            flagBtn.textContent = `UNLOCK TARGET FLAG [${targetFlag.cost} UP]`;
+            flagBtn.className = 'upgrade-btn';
+            flagBtn.disabled = game.upgradePoints < targetFlag.cost;
+        }
     }
 }
 

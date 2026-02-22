@@ -123,6 +123,48 @@ html, body {
         0 -8px 24px rgba(0, 255, 102, 0.04);
 }
 
+#upgrade-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.upgrade-btn {
+    width: 100%;
+    min-height: 30px;
+    background: transparent;
+    border: 1px solid var(--green-tertiary);
+    color: var(--green-secondary);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: all 0.1s ease-out;
+    box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.02);
+}
+
+.upgrade-btn:hover:not(:disabled) {
+    border-color: var(--cyan-friendly);
+    color: var(--cyan-friendly);
+    box-shadow: 0 0 12px rgba(51, 230, 255, 0.18), inset 0 0 10px rgba(51, 230, 255, 0.05);
+}
+
+.upgrade-btn:active:not(:disabled) {
+    transform: scale(0.99);
+}
+
+.upgrade-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.upgrade-btn.owned {
+    border-color: var(--cyan-friendly);
+    color: var(--cyan-friendly);
+    box-shadow: inset 0 0 10px rgba(51, 230, 255, 0.06);
+}
+
 /* Corner brackets for controls */
 #controls::before,
 #controls::after {
@@ -379,7 +421,8 @@ html, body {
 }
 
 #fire-btn:disabled,
-.rot-btn:disabled {
+.rot-btn:disabled,
+.upgrade-btn:disabled {
     opacity: 0.4;
     box-shadow: none;
     cursor: default;

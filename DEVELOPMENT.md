@@ -15,6 +15,9 @@ EarthGuard uses GitHub Pages for hosting. There is no build step - vanilla HTML/
 ## Commands
 
 ```bash
+# Pre-deploy validation (recommended)
+powershell -ExecutionPolicy Bypass -File scripts/predeploy-check.ps1
+
 # Stage and commit
 git add -A
 git commit -m "Description of changes"
@@ -61,3 +64,4 @@ earthguard/
 - No dependencies - everything is vanilla
 - Portrait mode only - landscape shows rotation prompt
 - Touch-first design, mouse works too
+- `.nojekyll` is present so GitHub Pages serves raw files (important when symlinks like `AGENTS.md` exist)

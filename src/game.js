@@ -25,8 +25,8 @@ const GameConfig = {
     POWER_UPDATE_INTERVAL: 30,      // ms between charge updates
 
     // Aliens
-    BASE_ALIEN_SPEED: 3,
-    ALIEN_SPEED_PER_LEVEL: 0.5,
+    BASE_ALIEN_SPEED: 6,
+    ALIEN_SPEED_PER_LEVEL: 1.0,
     ALIEN_RADIUS: 3,
     ALIEN_DAMAGE: 10,
 
@@ -59,6 +59,16 @@ class Game {
         this.level = 1;
         this.baseHP = this.config.STARTING_HP;
         this.isAnimating = false;
+        this.upgradePoints = 0;
+        this.upgrades = {
+            targetFlags: {
+                key: 'targetFlags',
+                name: 'Target Flags',
+                level: 0,
+                maxLevel: 1,
+                cost: 1
+            }
+        };
 
         // Entities
         this.aliens = [];
@@ -192,6 +202,26 @@ class Game {
         }));
     }
 
+    hasUpgrade(key) {
+        return Boolean(this.upgrades[key] && this.upgrades[key].level > 0);
+    }
+
+    canPurchaseUpgrade(key) {
+        const upgrade = this.upgrades[key];
+        if (!upgrade) return false;
+        if (upgrade.level >= upgrade.maxLevel) return false;
+        return this.upgradePoints >= upgrade.cost;
+    }
+
+    purchaseUpgrade(key) {
+        if (!this.canPurchaseUpgrade(key)) return false;
+        const upgrade = this.upgrades[key];
+        this.upgradePoints -= upgrade.cost;
+        upgrade.level += 1;
+        this.notify();
+        return true;
+    }
+
     advance() {
         if (this.isAnimating) return;
 
@@ -274,6 +304,7 @@ class Game {
 
         // Check wave complete
         if (this.aliens.length === 0) {
+            this.upgradePoints += 1;
             this.level++;
             this.spawnWave();
         }
@@ -295,6 +326,10 @@ class Game {
         this.launcherAngle = this.config.START_ANGLE;
         this.power = 0;
         this.missilesLockedThisTurn = 0;
+        this.upgradePoints = 0;
+        for (const upgrade of Object.values(this.upgrades)) {
+            upgrade.level = 0;
+        }
         this.aliens = [];
         this.missiles = [];
         this.pendingMissiles = [];
