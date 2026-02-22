@@ -59,17 +59,6 @@ class Renderer {
         setupHoldButton(document.getElementById('rot-right-small'), () => this.game.rotateRight(1));
         setupHoldButton(document.getElementById('rot-right-big'), () => this.game.rotateRight(10));
 
-        // Angle input
-        const angleInput = document.getElementById('angle-input');
-        angleInput.addEventListener('change', () => {
-            const val = parseInt(angleInput.value, 10);
-            if (!isNaN(val)) {
-                this.game.launcherAngle = Math.max(this.game.MIN_ANGLE, Math.min(this.game.MAX_ANGLE, val));
-                this.game.notify();
-                this.game.updateUI();
-            }
-        });
-
         // Fire button - hold to charge
         const fireBtn = document.getElementById('fire-btn');
         let chargeInterval = null;
@@ -77,7 +66,7 @@ class Renderer {
         const startCharge = (e) => {
             e.preventDefault();
             this.game.startCharging();
-            chargeInterval = setInterval(() => this.game.updateCharge(), 30);
+            chargeInterval = setInterval(() => this.game.updateCharge(), this.game.config.POWER_UPDATE_INTERVAL);
         };
 
         const stopCharge = (e) => {
@@ -106,7 +95,7 @@ class Renderer {
         const scaleY = this.canvas.height / this.game.WORLD_HEIGHT;
         return {
             x: x * scaleX,
-            y: this.canvas.height - (y * scaleY) // Flip Y so 0 is bottom
+            y: this.canvas.height - (y * scaleY)
         };
     }
 
@@ -114,10 +103,16 @@ class Renderer {
         return size * (this.canvas.width / this.game.WORLD_WIDTH);
     }
 
+    // Convert game angle (0=up, +=right, -=left) to math radians
+    gameAngleToRad(angle) {
+        return (90 - angle) * Math.PI / 180;
+    }
+
     render() {
         const ctx = this.ctx;
         const w = this.canvas.width;
         const h = this.canvas.height;
+        const config = this.game.config;
 
         // Clear with gradient sky
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
@@ -142,14 +137,16 @@ class Renderer {
         ctx.fillStyle = groundGrad;
         ctx.fillRect(0, h - groundHeight, w, groundHeight);
 
-        // Draw prediction (before other entities so it's behind)
-        const prediction = this.game.getPrediction();
-        if (prediction && !this.game.isAnimating) {
-            const predScreen = this.worldToScreen(prediction.x, prediction.y);
-            const predRadius = this.worldToScreenSize(prediction.radius);
+        const launcherPos = this.worldToScreen(config.WORLD_WIDTH / 2, config.LAUNCHER_Y);
+        const angleRad = this.gameAngleToRad(this.game.launcherAngle);
 
-            // Prediction circle
-            ctx.strokeStyle = this.game.hasCharged ? '#4a9' : '#f8444488';
+        // Draw locked missiles predictions (green circles)
+        const lockedPredictions = this.game.getLockedMissilesPredictions();
+        for (const pred of lockedPredictions) {
+            const predScreen = this.worldToScreen(pred.x, pred.y);
+            const predRadius = this.worldToScreenSize(pred.radius);
+
+            ctx.strokeStyle = '#4a9';
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
@@ -157,12 +154,28 @@ class Renderer {
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // Fill with transparent color
-            ctx.fillStyle = this.game.hasCharged ? '#4a944422' : '#f8444422';
+            ctx.fillStyle = '#4a944422';
+            ctx.fill();
+        }
+
+        // Draw current charging prediction (red/orange circle)
+        const prediction = this.game.getPrediction();
+        if (prediction && !this.game.isAnimating) {
+            const predScreen = this.worldToScreen(prediction.x, prediction.y);
+            const predRadius = this.worldToScreenSize(prediction.radius);
+
+            ctx.strokeStyle = '#f8444488';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(predScreen.x, predScreen.y, predRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#f8444422';
             ctx.fill();
 
-            // Trajectory line
-            const launcherPos = this.worldToScreen(this.game.WORLD_WIDTH / 2, 5);
+            // Trajectory line to current prediction
             ctx.strokeStyle = '#ffffff44';
             ctx.lineWidth = 1;
             ctx.setLineDash([3, 3]);
@@ -173,13 +186,8 @@ class Renderer {
             ctx.setLineDash([]);
         }
 
-        // Draw launcher
-        const launcherPos = this.worldToScreen(this.game.WORLD_WIDTH / 2, 5);
-        const launcherLength = 35;
-        const angleRad = this.game.launcherAngle * Math.PI / 180;
-
-        // Aiming guide line (shows direction before charging)
-        if (!this.game.isAnimating && !this.game.hasCharged) {
+        // Aiming guide line (shows direction when not charging)
+        if (!this.game.isAnimating && !prediction) {
             ctx.strokeStyle = '#ffffff22';
             ctx.lineWidth = 1;
             ctx.setLineDash([5, 10]);
@@ -200,6 +208,7 @@ class Renderer {
         ctx.fill();
 
         // Launcher barrel
+        const launcherLength = 35;
         ctx.strokeStyle = '#888';
         ctx.lineWidth = 10;
         ctx.lineCap = 'round';
@@ -215,7 +224,7 @@ class Renderer {
         for (const missile of this.game.missiles) {
             if (missile.exploded) continue;
 
-            const startPos = this.worldToScreen(this.game.WORLD_WIDTH / 2, 5);
+            const startPos = this.worldToScreen(missile.startX, missile.startY);
             const endPos = this.worldToScreen(missile.targetX, missile.targetY);
 
             const currentX = startPos.x + (endPos.x - startPos.x) * missile.progress;
@@ -232,9 +241,23 @@ class Renderer {
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(currentX, currentY);
-            ctx.lineTo(startPos.x + (endPos.x - startPos.x) * Math.max(0, missile.progress - 0.1),
-                       startPos.y + (endPos.y - startPos.y) * Math.max(0, missile.progress - 0.1));
+            const trailProgress = Math.max(0, missile.progress - 0.1);
+            ctx.lineTo(
+                startPos.x + (endPos.x - startPos.x) * trailProgress,
+                startPos.y + (endPos.y - startPos.y) * trailProgress
+            );
             ctx.stroke();
+
+            // Show explosion zone where missile will detonate
+            const targetScreen = this.worldToScreen(missile.targetX, missile.targetY);
+            const radius = this.worldToScreenSize(config.EXPLOSION_RADIUS);
+            ctx.strokeStyle = '#ff884444';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.arc(targetScreen.x, targetScreen.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
         }
 
         // Draw explosions
@@ -259,7 +282,6 @@ class Renderer {
             const pos = this.worldToScreen(alien.x, alien.y);
             const size = this.worldToScreenSize(alien.radius);
 
-            // Alien body (inverted triangle)
             ctx.fillStyle = '#c44';
             ctx.beginPath();
             ctx.moveTo(pos.x, pos.y - size * 1.5);
@@ -268,7 +290,6 @@ class Renderer {
             ctx.closePath();
             ctx.fill();
 
-            // Glow effect
             ctx.shadowColor = '#f44';
             ctx.shadowBlur = 10;
             ctx.fill();

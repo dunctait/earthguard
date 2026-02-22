@@ -95,24 +95,12 @@ html, body {
     color: #111;
 }
 
-#angle-input {
-    width: 50px;
+#angle-display {
+    width: 60px;
     text-align: center;
     color: #4a9;
     font-size: 18px;
     font-weight: bold;
-    background: #222;
-    border: 1px solid #444;
-    border-radius: 4px;
-    padding: 5px;
-    font-family: inherit;
-    -moz-appearance: textfield;
-}
-
-#angle-input::-webkit-outer-spin-button,
-#angle-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
 }
 
 /* Action controls */
