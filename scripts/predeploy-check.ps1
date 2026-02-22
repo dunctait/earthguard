@@ -26,10 +26,10 @@ foreach ($file in $requiredFiles) {
     }
 }
 
-Write-Host "[predeploy] Checking for symlinks (GitHub Pages/Jekyll can fail without .nojekyll)..."
+Write-Host "[predeploy] Checking for tracked symlinks (GitHub Pages/Jekyll build fails on these)..."
 $gitLinks = git ls-files -s | Select-String "120000"
-if ($gitLinks -and -not (Test-Path ".nojekyll")) {
-    throw "Symlink detected in repo but .nojekyll is missing."
+if ($gitLinks) {
+    throw "Tracked symlink(s) detected in repo. Remove them from git history/index (keep local + .gitignore if needed)."
 }
 
 Write-Host "[predeploy] Verifying HTML script load order..."

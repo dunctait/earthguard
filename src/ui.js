@@ -8,6 +8,7 @@ class EarthGuardUI {
         this.el = utils ? utils.cacheDom([
             'level',
             'hp',
+            'energy',
             'upgrade-points',
             'angle-display',
             'power-bar',
@@ -18,7 +19,7 @@ class EarthGuardUI {
     }
 
     update(game) {
-        if (!game || !this.el.fireBtn) return;
+        if (!game || !this.el['fire-btn']) return;
 
         this.renderHud(game);
         this.renderAngle(game);
@@ -30,6 +31,7 @@ class EarthGuardUI {
     renderHud(game) {
         this.el.level.innerHTML = `<span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span>`;
         this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
+        this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${game.missileEnergy}/${game.config.MISSILE_ENERGY_MAX}</span>`;
     }
 
     renderAngle(game) {
@@ -52,9 +54,12 @@ class EarthGuardUI {
             fireBtn.textContent = 'LAUNCHING...';
             fireBtn.className = 'charged';
         } else {
-            fireBtn.textContent = `FIRE (${missilesLeft} left)`;
+            fireBtn.textContent = `FIRE (${missilesLeft} | EN ${game.missileEnergy})`;
             fireBtn.className = (!game.isAnimating && missilesLeft > 0) ? 'pulse' : '';
         }
+
+        const canFire = game.isCharging || game.canCharge();
+        fireBtn.disabled = !canFire;
 
         advanceBtn.disabled = game.isAnimating;
         advanceBtn.classList.toggle('is-disabled', game.isAnimating);

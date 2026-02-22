@@ -19,6 +19,9 @@ const GameConfig = {
     MISSILE_TRAVEL_PER_TURN: 0.5,  // 50% of target distance per advance
     EXPLOSION_RADIUS: 6.4,          // 80% of original 8
     MAX_MISSILE_RANGE: 85,          // % of world height
+    MISSILE_ENERGY_MAX: 200,
+    MISSILE_ENERGY_REGEN_PER_TURN: 100,
+    MISSILE_MIN_ENERGY_COST: 10,
 
     // Power/Charging
     POWER_CHARGE_RATE: 4,           // Per update tick (was 2, now faster)
@@ -54,6 +57,7 @@ class Game {
         this.power = 0;
         this.isCharging = false;
         this.missilesLockedThisTurn = 0;
+        this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
 
         // Game state
         this.level = 1;
@@ -87,7 +91,7 @@ class Game {
     get WORLD_WIDTH() { return this.config.WORLD_WIDTH; }
 
     spawnWave() {
-        const alienCount = Math.min(1 + Math.floor((this.level - 1) / 2), 8);
+        const alienCount = Math.min(2 + Math.floor((this.level - 1) / 2), 8);
         const speed = this.config.BASE_ALIEN_SPEED + (this.level * this.config.ALIEN_SPEED_PER_LEVEL);
 
         for (let i = 0; i < alienCount; i++) {
@@ -116,7 +120,18 @@ class Game {
     canCharge() {
         return !this.isAnimating &&
                !this.isCharging &&
-               this.missilesLockedThisTurn < this.config.MISSILES_PER_TURN;
+               this.missilesLockedThisTurn < this.config.MISSILES_PER_TURN &&
+               this.missileEnergy >= this.config.MISSILE_MIN_ENERGY_COST;
+    }
+
+    getMissileEnergyCostForPower(power = this.power) {
+        if (power <= 0) return 0;
+        return this.utils.clamp(Math.ceil(power), this.config.MISSILE_MIN_ENERGY_COST, this.config.MISSILE_ENERGY_MAX);
+    }
+
+    getMaxChargePowerForEnergy(energy = this.missileEnergy) {
+        if (energy < this.config.MISSILE_MIN_ENERGY_COST) return 0;
+        return this.utils.clamp(Math.floor(energy), this.config.MISSILE_MIN_ENERGY_COST, 100);
     }
 
     getLauncherOrigin() {
@@ -142,13 +157,15 @@ class Game {
     startCharging() {
         if (!this.canCharge()) return;
         this.isCharging = true;
-        this.power = 0;
+        // Start at minimum lockable charge so energy budget is visible/predictable.
+        this.power = Math.min(this.config.MISSILE_MIN_ENERGY_COST, this.getMaxChargePowerForEnergy());
         this.notify();
     }
 
     updateCharge() {
         if (!this.isCharging) return;
-        this.power = this.utils.clamp(this.power + this.config.POWER_CHARGE_RATE, 0, 100);
+        const maxPowerByEnergy = this.getMaxChargePowerForEnergy();
+        this.power = this.utils.clamp(this.power + this.config.POWER_CHARGE_RATE, this.config.MISSILE_MIN_ENERGY_COST, maxPowerByEnergy);
         this.notify();
     }
 
@@ -157,6 +174,12 @@ class Game {
         this.isCharging = false;
 
         if (this.power > 5) {
+            const energyCost = this.getMissileEnergyCostForPower(this.power);
+            if (energyCost > this.missileEnergy) {
+                this.power = 0;
+                this.notify();
+                return;
+            }
             const launcher = this.getLauncherOrigin();
             const target = this.getTargetForPower(this.power);
 
@@ -170,6 +193,7 @@ class Game {
             });
 
             this.missilesLockedThisTurn++;
+            this.missileEnergy = this.utils.clamp(this.missileEnergy - energyCost, 0, this.config.MISSILE_ENERGY_MAX);
             this.power = 0;
 
             // Auto-advance when all missiles locked
@@ -317,6 +341,11 @@ class Game {
         }
 
         this.isAnimating = false;
+        this.missileEnergy = this.utils.clamp(
+            this.missileEnergy + this.config.MISSILE_ENERGY_REGEN_PER_TURN,
+            0,
+            this.config.MISSILE_ENERGY_MAX
+        );
         this.notify();
     }
 
@@ -326,6 +355,7 @@ class Game {
         this.launcherAngle = this.config.START_ANGLE;
         this.power = 0;
         this.missilesLockedThisTurn = 0;
+        this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
         this.upgradePoints = 0;
         for (const upgrade of Object.values(this.upgrades)) {
             upgrade.level = 0;
@@ -368,6 +398,7 @@ class Game {
             hp: this.baseHP,
             angle: this.launcherAngle,
             power: this.power,
+            missileEnergy: this.missileEnergy,
             missilesLocked: this.missilesLockedThisTurn,
             missilesInFlight: this.missiles.length,
             isAnimating: this.isAnimating,
@@ -393,8 +424,10 @@ class Game {
     }
 
     chargeTo(powerPercent) {
-        if (this.missilesLockedThisTurn >= this.config.MISSILES_PER_TURN || this.isAnimating) return false;
-        this.power = this.utils.clamp(powerPercent, 0, 100);
+        if (!this.canCharge()) return false;
+        const maxPowerByEnergy = this.getMaxChargePowerForEnergy();
+        if (maxPowerByEnergy < this.config.MISSILE_MIN_ENERGY_COST) return false;
+        this.power = this.utils.clamp(powerPercent, this.config.MISSILE_MIN_ENERGY_COST, maxPowerByEnergy);
         this.isCharging = true;
         this.stopCharging();
         return true;
@@ -409,9 +442,9 @@ class Game {
             }
 
             // If we still have missiles to fire, fire at first alien
-            while (this.missilesLockedThisTurn < this.config.MISSILES_PER_TURN && this.aliens.length > 0) {
+            while (this.canCharge() && this.missilesLockedThisTurn < this.config.MISSILES_PER_TURN && this.aliens.length > 0) {
                 this.aimAtAlien(0);
-                this.chargeTo(100);
+                if (!this.chargeTo(100)) break;
             }
 
             // Wait for auto-advance or manually advance

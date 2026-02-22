@@ -81,6 +81,13 @@ class Renderer {
         this.generateStars();
         this.resize();
         window.addEventListener('resize', () => this.resize());
+        if (typeof ResizeObserver !== 'undefined' && this.dom.controls) {
+            this.controlsResizeObserver = new ResizeObserver(() => this.resize());
+            this.controlsResizeObserver.observe(this.dom.controls);
+        }
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => this.resize()).catch(() => {});
+        }
 
         this.setupInput();
 
@@ -88,6 +95,8 @@ class Renderer {
             this.render();
             this.game.updateUI();
         };
+
+        this.game.updateUI();
 
         // Start animation loop for continuous motion
         this.animate();
@@ -108,9 +117,9 @@ class Renderer {
 
     resize() {
         const container = this.canvas.parentElement;
-        const controlsHeight = this.dom.controls.offsetHeight || 150;
+        const controlsHeight = Math.ceil(this.dom.controls.getBoundingClientRect().height || this.dom.controls.offsetHeight || 150);
         const availableWidth = container.clientWidth;
-        const availableHeight = container.clientHeight - controlsHeight;
+        const availableHeight = Math.max(120, container.clientHeight - controlsHeight);
 
         // Target aspect ratio (portrait - taller than wide)
         const targetAspect = 9 / 16; // width / height
@@ -130,8 +139,11 @@ class Renderer {
         this.canvas.width = canvasWidth;
         this.canvas.height = canvasHeight;
 
-        // Center the canvas
-        this.canvas.style.marginLeft = `${(availableWidth - canvasWidth) / 2}px`;
+        // Center and size the displayed canvas to match the internal buffer.
+        this.canvas.style.width = `${canvasWidth}px`;
+        this.canvas.style.height = `${canvasHeight}px`;
+        this.canvas.style.marginLeft = `${Math.max(0, (availableWidth - canvasWidth) / 2)}px`;
+        this.canvas.style.marginRight = `${Math.max(0, (availableWidth - canvasWidth) / 2)}px`;
 
         this.generateTerrain();
         this.render();

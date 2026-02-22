@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "smoke": "node scripts/playwright-smoke.js",
+    "smoke:layout": "node scripts/playwright-layout-check.js",
+    "smoke:headed": "node scripts/playwright-smoke.js --headed --slowmo=120"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.2"
+  }
+}

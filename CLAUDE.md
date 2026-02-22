@@ -17,6 +17,16 @@ EarthGuard is a five minute, portrait mode, continuous space, turn-based missile
 - Mobile-first, portrait orientation
 - Touch controls primary, mouse secondary
 
+## Agent Testing Notes
+
+- Codex can test the UI/game programmatically using local Playwright scripts in this repo:
+  - `npm run smoke`
+  - `npm run smoke:headed`
+  - `npm run smoke:layout`
+- This supports scripted clicks/holds, screenshots, and layout checks (including headed Chromium runs).
+- Codex does **not** use Claude's native `/chrome` integration here.
+- Claude can use its native `/chrome` integration when available; Codex uses the Playwright scripts instead.
+
 ## Key Constraints
 
 - **No build tools** - must work directly from GitHub Pages
