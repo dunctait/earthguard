@@ -22,7 +22,7 @@ const GameConfig = {
     EXPLOSION_RADIUS: 6.4,          // 80% of original 8
     MAX_MISSILE_RANGE: 85,          // % of world height
     MISSILE_ENERGY_MAX: 100,
-    MISSILE_ENERGY_REGEN_PER_TURN: 4,
+    MISSILE_ENERGY_REGEN_PER_TURN: 5,
     MISSILE_MIN_ENERGY_COST: 10,
     TRAJECTORY_FADE_STRENGTH: 2.4,
 
@@ -649,7 +649,6 @@ class Game {
             upgrade.onPurchase({ game: this, upgrade, tier: nextTier, level: upgrade.level });
         }
         this.rebuildUpgradeEffects();
-        this.isUpgradeMenuOpen = false;
         this.notify();
         return true;
     }

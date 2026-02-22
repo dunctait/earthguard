@@ -84,19 +84,6 @@ class EarthGuardUI {
         return `BUY [${parts.join(' | ')}]`;
     }
 
-    getUpgradeDisabledReason(game, upgrade, tier) {
-        if (!tier) return 'UNAVAILABLE';
-        const needsMoney = game.money < (tier.moneyCost ?? 0);
-        const needsEnergy = game.missileEnergy < (tier.energyCost ?? 0);
-        if (needsMoney && needsEnergy) return 'NEED $ + EN';
-        if (needsMoney) return 'NEED $';
-        if (needsEnergy) return 'NEED EN';
-        if (upgrade.key === 'energyResupply' && game.missileEnergy >= game.config.MISSILE_ENERGY_MAX) {
-            return 'EN FULL';
-        }
-        return 'LOCKED';
-    }
-
     renderHud(game) {
         // HUD shows the upcoming decision cycle (the cycle the player is about to spend).
         const displayedCycle = Math.max(1, (game.levelCycles || 0) + 1);
@@ -170,7 +157,7 @@ class EarthGuardUI {
             const effectText = game.getUpgradeNextTierText(upgrade.key);
             const costText = isOwnedOut
                 ? 'OWNED'
-                : (canBuy ? this.formatUpgradeCostText(nextTier) : this.getUpgradeDisabledReason(game, upgrade, nextTier));
+                : this.formatUpgradeCostText(nextTier);
             const btnClass = isOwnedOut ? 'terminal-btn upgrade-btn owned' : 'terminal-btn upgrade-btn';
             const disabledAttr = (isOwnedOut || !canBuy) ? 'disabled' : '';
 
