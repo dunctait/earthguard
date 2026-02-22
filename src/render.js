@@ -20,6 +20,8 @@ class Renderer {
             'upgrade-modal-overlay',
             'upgrade-menu',
             'upgrade-menu-close-btn',
+            'game-over-overlay',
+            'play-again-btn',
             'rot-left-big',
             'rot-left-small',
             'rot-right-small',
@@ -233,6 +235,9 @@ class Renderer {
                 }
             });
         }
+        if (this.dom['play-again-btn']) {
+            this.dom['play-again-btn'].addEventListener('click', () => this.game.reset());
+        }
     }
 
     animate() {
@@ -256,6 +261,17 @@ class Renderer {
 
     gameAngleToRad(angle) {
         return (90 - angle) * Math.PI / 180;
+    }
+
+    getCannonTipPosition(x, y, angleRad) {
+        const theta = (-angleRad + Math.PI / 2);
+        const recoilOffset = this.cannonRecoil * 4;
+        const localX = 0;
+        const localY = -32 + recoilOffset;
+        return {
+            x: x + (localX * Math.cos(theta)) - (localY * Math.sin(theta)),
+            y: y + (localX * Math.sin(theta)) + (localY * Math.cos(theta))
+        };
     }
 
     // Layered glow: core + medium halo + large halo
@@ -510,6 +526,7 @@ class Renderer {
         const cannonX = w / 2;
         const cannonY = this.hillTopY - 5;
         const angleRad = this.gameAngleToRad(this.game.launcherAngle);
+        const cannonTip = this.getCannonTipPosition(cannonX, cannonY, angleRad);
 
         // Terrain with glow
         if (this.terrainPoints && this.terrainPoints.length > 0) {
@@ -563,23 +580,16 @@ class Renderer {
         const prediction = this.game.getPrediction();
         if (prediction && !this.game.isAnimating) {
             const predScreen = this.worldToScreen(prediction.x, prediction.y);
-            const predRadius = this.worldToScreenSize(prediction.radius);
-
-            if (this.game.hasUpgrade('targetAreas')) {
-                ctx.setLineDash([4, 4]);
-                this.drawBloomCircle(predScreen.x, predScreen.y, predRadius, c.amber, c.amberGlow, 1, this.getDepthBrightness(predScreen.y));
-                ctx.setLineDash([]);
-            }
 
             // Animated trajectory dots
-            this.drawAnimatedTrajectory(cannonX, cannonY, predScreen.x, predScreen.y);
+            this.drawAnimatedTrajectory(cannonTip.x, cannonTip.y, predScreen.x, predScreen.y);
         }
 
         // Aiming guide (animated dots)
         if (!this.game.isAnimating && !prediction) {
-            const endX = cannonX + Math.cos(angleRad) * h;
-            const endY = cannonY - Math.sin(angleRad) * h;
-            this.drawAnimatedTrajectory(cannonX, cannonY, endX, endY, true);
+            const endX = cannonTip.x + Math.cos(angleRad) * h;
+            const endY = cannonTip.y - Math.sin(angleRad) * h;
+            this.drawAnimatedTrajectory(cannonTip.x, cannonTip.y, endX, endY, true);
         }
 
         // Cannon
@@ -590,8 +600,8 @@ class Renderer {
         for (const missile of (this.game.pendingMissiles || [])) {
             const endPos = this.worldToScreen(missile.targetX, missile.targetY);
             const launchProgress = this.game.config.MISSILE_LAUNCH_START_PROGRESS || 0.10;
-            const currentX = cannonX + (endPos.x - cannonX) * launchProgress;
-            const currentY = cannonY + (endPos.y - cannonY) * launchProgress;
+            const currentX = cannonTip.x + (endPos.x - cannonTip.x) * launchProgress;
+            const currentY = cannonTip.y + (endPos.y - cannonTip.y) * launchProgress;
             const missileAlpha = this.getDepthBrightness(currentY) * 0.9;
 
             this.setGlow(c.primaryGlow, 16);
@@ -609,7 +619,7 @@ class Renderer {
             ctx.strokeStyle = `rgba(0, 170, 68, ${Math.max(0.25, missileAlpha * 0.45)})`;
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.moveTo(cannonX, cannonY);
+            ctx.moveTo(cannonTip.x, cannonTip.y);
             ctx.lineTo(currentX, currentY);
             ctx.stroke();
         }
@@ -619,8 +629,8 @@ class Renderer {
             if (missile.exploded) continue;
 
             const endPos = this.worldToScreen(missile.targetX, missile.targetY);
-            const currentX = cannonX + (endPos.x - cannonX) * missile.progress;
-            const currentY = cannonY + (endPos.y - cannonY) * missile.progress;
+            const currentX = cannonTip.x + (endPos.x - cannonTip.x) * missile.progress;
+            const currentY = cannonTip.y + (endPos.y - cannonTip.y) * missile.progress;
             const missileAlpha = this.getDepthBrightness(currentY);
 
             // Missile with layered glow
@@ -644,8 +654,8 @@ class Renderer {
             ctx.beginPath();
             ctx.moveTo(currentX, currentY);
             ctx.lineTo(
-                cannonX + (endPos.x - cannonX) * trailProgress,
-                cannonY + (endPos.y - cannonY) * trailProgress
+                cannonTip.x + (endPos.x - cannonTip.x) * trailProgress,
+                cannonTip.y + (endPos.y - cannonTip.y) * trailProgress
             );
             ctx.stroke();
 

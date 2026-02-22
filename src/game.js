@@ -16,8 +16,8 @@ const GameConfig = {
 
     // Missiles
     MISSILES_PER_TURN: 2,
-    MISSILE_TRAVEL_PER_TURN: 0.4,  // 40% of target distance per advance (after visible launch offset)
-    MISSILE_LAUNCH_START_PROGRESS: 0.20,
+    MISSILE_TRAVEL_PER_TURN: 0.75,  // 75% of target distance per advance (after visible launch offset)
+    MISSILE_LAUNCH_START_PROGRESS: 0.25,
     EXPLOSION_RADIUS: 6.4,          // 80% of original 8
     MAX_MISSILE_RANGE: 85,          // % of world height
     MISSILE_ENERGY_MAX: 100,
@@ -58,7 +58,7 @@ const UpgradeDefinitions = {
         description: 'Shows predicted impact circles for locked missiles.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 50, energyCost: 20, label: 'Unlock preview' }
+            { moneyCost: 140, energyCost: 35, label: 'Unlock preview' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -210,6 +210,8 @@ class Game {
         this.levelCycles = 0;
         this.lastWaveClearBonus = 0;
         this.isUpgradeMenuOpen = false;
+        this.isGameOver = false;
+        this.gameOverReason = '';
         this.upgrades = this.createUpgradeState();
         this.upgradeEffects = this.getDefaultUpgradeEffects();
         this.rebuildUpgradeEffects();
@@ -352,17 +354,20 @@ class Game {
 
     // Angle: 0 = up, negative = left, positive = right
     rotateLeft(degrees) {
+        if (this.isGameOver) return;
         this.launcherAngle = this.utils.clamp(this.launcherAngle - degrees, this.config.MIN_ANGLE, this.config.MAX_ANGLE);
         this.notify();
     }
 
     rotateRight(degrees) {
+        if (this.isGameOver) return;
         this.launcherAngle = this.utils.clamp(this.launcherAngle + degrees, this.config.MIN_ANGLE, this.config.MAX_ANGLE);
         this.notify();
     }
 
     canCharge() {
         return !this.isAnimating &&
+               !this.isGameOver &&
                !this.isCharging &&
                this.missilesLockedThisTurn < this.getMissilesPerTurn() &&
                this.missileEnergy >= this.config.MISSILE_MIN_ENERGY_COST;
@@ -564,6 +569,7 @@ class Game {
     }
 
     toggleUpgradeMenu() {
+        if (this.isGameOver) return;
         this.isUpgradeMenuOpen = !this.isUpgradeMenuOpen;
         this.notify();
     }
@@ -610,7 +616,7 @@ class Game {
     }
 
     advance() {
-        if (this.isAnimating) return;
+        if (this.isAnimating || this.isGameOver) return;
 
         // Move pending missiles to active
         this.missilesLaunchedThisCycle = this.pendingMissiles.length;
@@ -743,6 +749,37 @@ class Game {
         return alien.waveLevel === this.level;
     }
 
+    canAlienBeHitNextCycle(alien) {
+        if (!this.isAlienDamageable(alien)) return false;
+        const nextY = alien.y - alien.speed;
+        const launcher = this.getLauncherOrigin();
+        const dx = alien.x - launcher.x;
+        const dy = nextY - launcher.y;
+        const dist = this.utils.distance(dx, dy);
+        const maxTargetDistance = this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100;
+        const maxHitDistance = maxTargetDistance + this.getCurrentExplosionRadius() + alien.radius;
+        if (dist > maxHitDistance) return false;
+        const mathAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+        const gameAngle = 90 - mathAngle;
+        return gameAngle >= this.config.MIN_ANGLE && gameAngle <= this.config.MAX_ANGLE;
+    }
+
+    hasInevitableEarthBreach() {
+        if (this.isAnimating || this.pendingMissiles.length > 0 || this.missiles.length > 0) return false;
+        if (!this.aliens.length) return false;
+        return this.aliens.some((alien) => !this.canAlienBeHitNextCycle(alien));
+    }
+
+    triggerGameOver(reason = 'EARTH BREACHED') {
+        this.isAnimating = false;
+        this.isCharging = false;
+        this.power = 0;
+        this.isUpgradeMenuOpen = false;
+        this.isGameOver = true;
+        this.gameOverReason = reason;
+        this.notify();
+    }
+
     finishTurn() {
         this.levelCycles += 1;
 
@@ -763,10 +800,11 @@ class Game {
 
         // Check aliens reaching Earth
         const reachedEarth = this.aliens.filter(a => this.alienTouchesEarthLine(a));
-        for (const alien of reachedEarth) {
-            this.baseHP -= alien.damage;
+        if (reachedEarth.length > 0) {
+            this.baseHP = 0;
+            this.triggerGameOver('EARTH BREACHED');
+            return;
         }
-        this.aliens = this.aliens.filter(a => !this.alienTouchesEarthLine(a));
 
         // Remove exploded missiles and old explosions
         this.missiles = this.missiles.filter(m => !m.exploded);
@@ -797,12 +835,6 @@ class Game {
         }
 
         // Check game over
-        if (this.baseHP <= 0) {
-            this.baseHP = 0;
-            alert('Game Over! Reached level ' + this.level);
-            this.reset();
-        }
-
         this.isAnimating = false;
         const regenMultiplier = this.missilesLaunchedThisCycle === 0 ? 2 : 1;
         this.missileEnergy = this.utils.clamp(
@@ -811,6 +843,13 @@ class Game {
             this.config.MISSILE_ENERGY_MAX
         );
         this.missilesLaunchedThisCycle = 0;
+
+        if (this.hasInevitableEarthBreach()) {
+            this.baseHP = 0;
+            this.triggerGameOver('BREACH INEVITABLE');
+            return;
+        }
+
         this.notify();
     }
 
@@ -826,6 +865,8 @@ class Game {
         this.levelCycles = 0;
         this.lastWaveClearBonus = 0;
         this.isUpgradeMenuOpen = false;
+        this.isGameOver = false;
+        this.gameOverReason = '';
         for (const upgrade of Object.values(this.upgrades)) {
             upgrade.level = 0;
         }
@@ -882,6 +923,8 @@ class Game {
             power: this.power,
             missileEnergy: this.missileEnergy,
             money: this.money,
+            isGameOver: this.isGameOver,
+            gameOverReason: this.gameOverReason,
             levelCycles: this.levelCycles,
             lastWaveClearBonus: this.lastWaveClearBonus,
             missilesLocked: this.missilesLockedThisTurn,
