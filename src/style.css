@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
 * {
     margin: 0;
     padding: 0;
@@ -8,12 +10,33 @@
 }
 
 :root {
-    --green-bright: #00ff41;
-    --green-mid: #00cc33;
-    --green-dim: #00661a;
-    --green-glow: rgba(0, 255, 65, 0.6);
+    /* Fallback values. Runtime theme module (`src/theme.js`) overrides these. */
+    --green-primary: #00ff66;
+    --green-secondary: #00aa44;
+    --green-tertiary: #004422;
+    --green-ui-cool: #00d67a;
+
+    --green-glow-strong: rgba(0, 255, 102, 0.6);
+    --green-glow-medium: rgba(0, 170, 68, 0.4);
+    --green-glow-subtle: rgba(0, 68, 34, 0.2);
+
+    /* Accent colors */
+    --red-enemy: #ff3344;
+    --red-glow: rgba(255, 51, 68, 0.5);
+    --amber-warning: #ffaa00;
+    --amber-glow: rgba(255, 170, 0, 0.45);
+    --cyan-friendly: #00ffff;
+
     --bg-black: #000000;
-    --bg-dark: #0a0a0a;
+    --bg-gradient-top: #000a00;
+    --bg-gradient-bottom: #001a00;
+    --hud-grid: rgba(0, 255, 102, 0.05);
+    --scanline-color: rgba(0, 20, 0, 0.05);
+    --line-primary: 3px;
+    --line-secondary: 2px;
+    --line-tertiary: 1px;
+    --tracking-label: 0.24em;
+    --tracking-value: 0.12em;
 }
 
 html, body {
@@ -21,7 +44,7 @@ html, body {
     height: 100%;
     overflow: hidden;
     background: var(--bg-black);
-    font-family: 'Courier New', monospace;
+    font-family: 'Orbitron', 'Courier New', monospace;
 }
 
 #game-container {
@@ -30,12 +53,15 @@ html, body {
     display: flex;
     flex-direction: column;
     position: relative;
+    background:
+        radial-gradient(circle at 50% 105%, rgba(0, 255, 102, 0.05), transparent 45%),
+        linear-gradient(to bottom, rgba(0, 24, 10, 0.25), rgba(0, 0, 0, 0.15));
 }
 
 #game-canvas {
     flex: 1;
     width: 100%;
-    background: var(--bg-black);
+    background: linear-gradient(to bottom, var(--bg-gradient-top), var(--bg-gradient-bottom));
 }
 
 #ui-overlay {
@@ -43,25 +69,81 @@ html, body {
     top: 0;
     left: 0;
     right: 0;
-    padding: 10px;
+    padding: 12px 15px;
     pointer-events: none;
 }
 
 #status {
     display: flex;
     justify-content: space-between;
-    color: var(--green-bright);
+    color: var(--green-ui-cool);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    text-shadow: 0 0 10px var(--green-glow-medium);
+}
+
+#status span {
+    display: flex;
+    gap: 5px;
+    align-items: baseline;
+    animation: hudBreath 4s ease-in-out infinite;
+}
+
+.hud-label {
+    color: var(--green-secondary);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: var(--tracking-label);
+    opacity: 0.85;
+}
+
+.hud-value {
+    color: var(--green-primary);
     font-size: 14px;
-    text-shadow: 0 0 10px var(--green-glow);
+    font-weight: 700;
+    letter-spacing: var(--tracking-value);
+    text-shadow:
+        0 0 2px rgba(0, 255, 102, 0.9),
+        0 0 8px var(--green-glow-medium),
+        0 0 16px rgba(0, 255, 102, 0.12);
 }
 
 #controls {
     background: var(--bg-black);
-    padding: 10px;
+    padding: 10px 12px 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    border-top: 1px solid var(--green-dim);
+    gap: 8px;
+    border-top: 1px solid var(--green-tertiary);
+    position: relative;
+    box-shadow:
+        inset 0 1px 0 rgba(0, 255, 102, 0.06),
+        0 -8px 24px rgba(0, 255, 102, 0.04);
+}
+
+/* Corner brackets for controls */
+#controls::before,
+#controls::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--green-secondary);
+    border-style: solid;
+}
+
+#controls::before {
+    top: 5px;
+    left: 5px;
+    border-width: 2px 0 0 2px;
+}
+
+#controls::after {
+    top: 5px;
+    right: 5px;
+    border-width: 2px 2px 0 0;
 }
 
 /* Rotation controls */
@@ -69,134 +151,265 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .rotation-group {
     display: flex;
-    gap: 5px;
+    gap: 4px;
 }
 
 .rot-btn {
     background: transparent;
-    border: 1px solid var(--green-mid);
-    border-radius: 3px;
-    color: var(--green-bright);
+    border: 1px solid var(--green-tertiary);
+    border-radius: 2px;
+    color: var(--green-secondary);
     font-family: inherit;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
-    text-shadow: 0 0 5px var(--green-glow);
-    box-shadow: 0 0 5px var(--green-dim);
-    transition: all 0.1s;
+    text-shadow: 0 0 5px var(--green-glow-subtle);
+    transition: all 0.1s ease-out;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(0, 255, 102, 0.02);
 }
 
 .rot-btn.big {
-    width: 50px;
-    height: 50px;
-    font-size: 18px;
+    width: 48px;
+    height: 48px;
+    font-size: 16px;
 }
 
 .rot-btn.small {
-    width: 35px;
-    height: 50px;
-    font-size: 14px;
+    width: 32px;
+    height: 48px;
+    font-size: 12px;
 }
 
 .rot-btn:active {
-    background: var(--green-dim);
-    box-shadow: 0 0 15px var(--green-glow);
+    transform: scale(0.95);
+    background: var(--green-tertiary);
+    border-color: var(--green-secondary);
+    color: var(--green-primary);
+    box-shadow: 0 0 15px var(--green-glow-medium), inset 0 0 10px var(--green-glow-subtle);
+}
+
+.rot-btn:hover:not(:disabled),
+#advance-btn:hover:not(:disabled),
+#fire-btn:hover:not(:disabled) {
+    border-color: var(--green-secondary);
+    color: var(--green-primary);
+    transform: scale(1.03);
+    box-shadow:
+        inset 0 0 12px rgba(0, 255, 102, 0.06),
+        0 0 10px var(--green-glow-subtle);
 }
 
 #angle-display {
-    width: 60px;
+    width: 70px;
     text-align: center;
-    color: var(--green-bright);
-    font-size: 18px;
-    font-weight: bold;
-    text-shadow: 0 0 10px var(--green-glow);
+    color: var(--green-primary);
+    font-size: 20px;
+    font-weight: 700;
+    text-shadow: 0 0 15px var(--green-glow-strong);
+    letter-spacing: var(--tracking-value);
+    position: relative;
+}
+
+#angle-display::before {
+    content: 'ANGLE';
+    position: absolute;
+    top: -11px;
+    left: 0;
+    right: 0;
+    font-size: 8px;
+    font-weight: 400;
+    color: var(--green-secondary);
+    letter-spacing: var(--tracking-label);
+    opacity: 0.8;
 }
 
 /* Action controls */
 #action-controls {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
 
 #fire-container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
 }
 
 #power-bar-container {
-    height: 15px;
+    height: 12px;
     background: var(--bg-black);
-    border-radius: 3px;
+    border: 1px solid var(--green-tertiary);
+    position: relative;
     overflow: hidden;
-    border: 1px solid var(--green-dim);
+    box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.03);
+}
+
+/* Tick marks on power bar */
+#power-bar-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 25%;
+    width: 1px;
+    height: 100%;
+    background: var(--green-tertiary);
+}
+
+#power-bar-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: 100%;
+    background: var(--green-tertiary);
 }
 
 #power-bar {
     height: 100%;
     width: 0%;
-    background: var(--green-bright);
-    box-shadow: 0 0 10px var(--green-glow);
+    background: linear-gradient(90deg, var(--green-secondary), var(--cyan-friendly), var(--green-primary));
+    box-shadow:
+        0 0 4px var(--green-glow-medium),
+        0 0 14px rgba(0, 255, 102, 0.15);
     transition: width 0.05s linear;
 }
 
-#fire-btn {
-    height: 50px;
+#fire-btn,
+#advance-btn {
+    height: 52px;
     background: transparent;
-    border: 1px solid var(--green-mid);
-    border-radius: 5px;
-    color: var(--green-bright);
-    font-size: 14px;
-    font-weight: bold;
+    border: 1px solid var(--green-tertiary);
+    color: var(--green-secondary);
+    font-size: 11px;
+    font-weight: 700;
     font-family: inherit;
+    letter-spacing: 2px;
     cursor: pointer;
-    text-shadow: 0 0 5px var(--green-glow);
-    box-shadow: 0 0 5px var(--green-dim);
-    transition: all 0.1s;
+    transition: all 0.1s ease-out;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 12px rgba(0, 255, 102, 0.03);
+}
+
+/* Idle pulse animation */
+@keyframes buttonPulse {
+    0%, 100% { box-shadow: inset 0 0 12px rgba(0, 255, 102, 0.03), 0 0 4px var(--green-glow-subtle); }
+    50% { box-shadow: inset 0 0 14px rgba(0, 255, 102, 0.06), 0 0 18px var(--green-glow-medium); }
+}
+
+#fire-btn.pulse {
+    animation: buttonPulse 2s ease-in-out infinite;
 }
 
 #fire-btn:active,
 #fire-btn.charging {
-    background: var(--green-dim);
-    box-shadow: 0 0 20px var(--green-glow);
+    transform: scale(0.98);
+    background: var(--green-tertiary);
+    border-color: var(--green-primary);
+    color: var(--green-primary);
+    box-shadow: 0 0 20px var(--green-glow-strong);
+    animation: none;
 }
 
 #fire-btn.charged {
-    background: var(--green-mid);
-    box-shadow: 0 0 15px var(--green-glow);
+    background: var(--green-tertiary);
+    border-color: var(--green-secondary);
+    color: var(--green-primary);
+    box-shadow: 0 0 10px var(--green-glow-medium);
+    animation: none;
+}
+
+#fire-btn {
+    border-color: var(--green-secondary);
+    color: var(--green-primary);
+    text-shadow:
+        0 0 2px rgba(0, 255, 102, 0.9),
+        0 0 8px rgba(0, 255, 102, 0.2);
+}
+
+/* Scan sweep effect */
+@keyframes scanSweep {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+#fire-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--green-glow-subtle), transparent);
+    animation: scanSweep 5s ease-in-out infinite;
 }
 
 #advance-btn {
-    width: 100px;
-    height: 70px;
-    background: transparent;
-    border: 1px solid var(--green-mid);
-    border-radius: 5px;
-    color: var(--green-bright);
-    font-size: 16px;
-    font-weight: bold;
-    font-family: inherit;
-    cursor: pointer;
-    text-shadow: 0 0 5px var(--green-glow);
-    box-shadow: 0 0 5px var(--green-dim);
-    transition: all 0.1s;
+    width: 90px;
+    height: 66px;
+    font-size: 11px;
+    letter-spacing: 1px;
 }
 
 #advance-btn:active {
-    background: var(--green-dim);
-    box-shadow: 0 0 20px var(--green-glow);
+    transform: scale(0.98);
+    background: var(--green-tertiary);
+    border-color: var(--green-primary);
+    color: var(--green-primary);
+    box-shadow: 0 0 20px var(--green-glow-strong);
 }
 
 #advance-btn:disabled {
-    border-color: var(--green-dim);
-    color: var(--green-dim);
+    border-color: var(--green-tertiary);
+    color: var(--green-tertiary);
     box-shadow: none;
-    text-shadow: none;
+    opacity: 0.5;
+}
+
+#advance-btn.is-disabled {
+    transform: none;
+}
+
+#fire-btn:disabled,
+.rot-btn:disabled {
+    opacity: 0.4;
+    box-shadow: none;
+    cursor: default;
+}
+
+#fire-btn::before,
+#advance-btn::before,
+.rot-btn::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: linear-gradient(180deg, rgba(0, 255, 102, 0.04), transparent 55%);
+    pointer-events: none;
+}
+
+@keyframes hudBreath {
+    0%, 100% { opacity: 0.95; }
+    50% { opacity: 1; }
+}
+
+@keyframes textFlicker {
+    0%, 100% { opacity: 1; }
+    49% { opacity: 0.98; }
+    50% { opacity: 0.93; }
+    51% { opacity: 0.99; }
+}
+
+#status,
+#angle-display {
+    animation: textFlicker 7s steps(1, end) infinite;
 }
 
 /* Landscape warning */
@@ -209,13 +422,14 @@ html, body {
         right: 0;
         bottom: 0;
         background: var(--bg-black);
-        color: var(--green-bright);
+        color: var(--green-secondary);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
-        text-shadow: 0 0 10px var(--green-glow);
+        font-size: 14px;
+        font-weight: 700;
+        text-shadow: 0 0 10px var(--green-glow-medium);
         z-index: 1000;
-        letter-spacing: 2px;
+        letter-spacing: 3px;
     }
 }

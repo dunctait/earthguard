@@ -1,0 +1,1 @@
+C:/Users/dunca/earthguard/CLAUDE.md

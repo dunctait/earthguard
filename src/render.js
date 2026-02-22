@@ -1,6 +1,6 @@
 /**
  * EarthGuard - Canvas Renderer
- * Retro vector style: green line art on black with glow
+ * Retro vector style with depth hierarchy and motion
  */
 
 class Renderer {
@@ -8,23 +8,60 @@ class Renderer {
         this.game = game;
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
+        this.theme = window.EarthGuardTheme || null;
 
-        // Retro color palette
-        this.colors = {
+        const t = this.theme;
+        this.colors = t ? {
+            primary: t.palette.greenPrimary,
+            primaryGlow: t.glow.primaryStrong,
+            primaryGlowSoft: t.glow.primaryMedium,
+            secondary: t.palette.greenSecondary,
+            secondaryGlow: t.glow.secondaryMedium,
+            tertiary: t.palette.greenTertiary,
+            tertiaryGlow: t.glow.tertiarySubtle,
+            enemy: t.palette.redEnemy,
+            enemyGlow: t.glow.enemy,
+            amber: t.palette.amberWarning,
+            amberGlow: t.glow.amber,
+            cyan: t.palette.cyanTargeting,
+            white: t.palette.whiteHot,
+            black: t.palette.bgBlack,
+            bgTop: t.palette.bgTop,
+            bgBottom: t.palette.bgBottom,
+            grid: t.palette.grid,
+            scanline: t.palette.scanline
+        } : {
+            primary: '#00ff66',
+            primaryGlow: 'rgba(0, 255, 102, 0.6)',
+            primaryGlowSoft: 'rgba(0, 255, 102, 0.35)',
+            secondary: '#00aa44',
+            secondaryGlow: 'rgba(0, 170, 68, 0.4)',
+            tertiary: '#004422',
+            tertiaryGlow: 'rgba(0, 68, 34, 0.2)',
+            enemy: '#ff3344',
+            enemyGlow: 'rgba(255, 51, 68, 0.5)',
+            amber: '#ffaa00',
+            amberGlow: 'rgba(255, 170, 0, 0.45)',
+            cyan: '#00ffff',
+            white: '#ffffff',
             black: '#000000',
-            greenBright: '#00ff41',
-            greenMid: '#00cc33',
-            greenDim: '#00661a',
-            greenGlow: 'rgba(0, 255, 65, 0.4)',
-            red: '#ff3333',
-            redGlow: 'rgba(255, 51, 51, 0.4)',
-            orange: '#ff8800',
-            orangeGlow: 'rgba(255, 136, 0, 0.4)'
+            bgTop: '#000800',
+            bgBottom: '#001a08',
+            grid: 'rgba(0, 255, 102, 0.05)',
+            scanline: 'rgba(0, 20, 0, 0.05)'
         };
 
-        // Generate terrain once
+        // Animation state
+        this.frameCount = 0;
+        this.stars = [];
         this.terrainPoints = null;
+        this.lastMissileCount = 0;
+        this.lastExplosionCount = 0;
+        this.cannonRecoil = 0;
+        this.cannonRecoilVelocity = 0;
+        this.impactFlash = 0;
 
+        this.generateStars();
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
@@ -35,42 +72,78 @@ class Renderer {
             this.game.updateUI();
         };
 
-        this.render();
-        this.game.updateUI();
+        // Start animation loop for continuous motion
+        this.animate();
+    }
+
+    generateStars() {
+        this.stars = [];
+        for (let i = 0; i < 60; i++) {
+            this.stars.push({
+                x: Math.random(),
+                y: Math.random() * 0.7,
+                size: Math.random() * 1.5 + 0.5,
+                speed: Math.random() * 0.0001 + 0.00005,
+                brightness: Math.random() * 0.3 + 0.1
+            });
+        }
     }
 
     resize() {
         const container = this.canvas.parentElement;
         const controlsHeight = document.getElementById('controls').offsetHeight || 150;
-        this.canvas.width = container.clientWidth;
-        this.canvas.height = container.clientHeight - controlsHeight;
+        const availableWidth = container.clientWidth;
+        const availableHeight = container.clientHeight - controlsHeight;
+
+        // Target aspect ratio (portrait - taller than wide)
+        const targetAspect = 9 / 16; // width / height
+
+        let canvasWidth, canvasHeight;
+
+        if (availableWidth / availableHeight > targetAspect) {
+            // Too wide - constrain by height
+            canvasHeight = availableHeight;
+            canvasWidth = canvasHeight * targetAspect;
+        } else {
+            // Too tall - constrain by width
+            canvasWidth = availableWidth;
+            canvasHeight = canvasWidth / targetAspect;
+        }
+
+        this.canvas.width = canvasWidth;
+        this.canvas.height = canvasHeight;
+
+        // Center the canvas
+        this.canvas.style.marginLeft = `${(availableWidth - canvasWidth) / 2}px`;
+
         this.generateTerrain();
         this.render();
     }
 
     generateTerrain() {
-        // Generate noisy terrain with a hill in the center
         const w = this.canvas.width;
-        const baseY = this.canvas.height - 30;
+        const baseY = this.canvas.height - 25;
         const points = [];
-        const segments = 40;
+        const segments = 50;
 
         for (let i = 0; i <= segments; i++) {
             const x = (i / segments) * w;
             const normalizedX = i / segments;
 
-            // Central hill (gaussian-ish bump)
+            // Central hill
             const distFromCenter = Math.abs(normalizedX - 0.5);
-            const hillHeight = Math.exp(-distFromCenter * distFromCenter * 20) * 25;
+            const hillHeight = Math.exp(-distFromCenter * distFromCenter * 18) * 30;
 
-            // Small noise
-            const noise = Math.sin(i * 1.5) * 3 + Math.sin(i * 3.7) * 2;
+            // Noise layers
+            const noise1 = Math.sin(i * 1.3) * 4;
+            const noise2 = Math.sin(i * 3.1) * 2;
+            const noise3 = Math.sin(i * 7.3) * 1;
 
-            points.push({ x, y: baseY - hillHeight - noise });
+            points.push({ x, y: baseY - hillHeight - noise1 - noise2 - noise3 });
         }
 
         this.terrainPoints = points;
-        this.hillTopY = baseY - 25; // Top of the central hill
+        this.hillTopY = baseY - 30;
     }
 
     setupInput() {
@@ -128,6 +201,12 @@ class Renderer {
         document.getElementById('advance-btn').addEventListener('click', () => this.game.advance());
     }
 
+    animate() {
+        this.frameCount++;
+        this.render();
+        requestAnimationFrame(() => this.animate());
+    }
+
     worldToScreen(x, y) {
         const scaleX = this.canvas.width / this.game.WORLD_WIDTH;
         const scaleY = this.canvas.height / this.game.WORLD_HEIGHT;
@@ -145,6 +224,7 @@ class Renderer {
         return (90 - angle) * Math.PI / 180;
     }
 
+    // Layered glow: core + medium halo + large halo
     setGlow(color, blur = 10) {
         this.ctx.shadowColor = color;
         this.ctx.shadowBlur = blur;
@@ -154,268 +234,549 @@ class Renderer {
         this.ctx.shadowBlur = 0;
     }
 
+    drawBloomStroke(drawPath, coreColor, glowColor, coreWidth, mediumBlur = 8, largeBlur = 16, alpha = 1) {
+        const ctx = this.ctx;
+
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.1;
+        ctx.strokeStyle = coreColor;
+        ctx.lineWidth = coreWidth + 6;
+        this.setGlow(glowColor, largeBlur);
+        drawPath();
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.strokeStyle = coreColor;
+        ctx.lineWidth = coreWidth + 2;
+        this.setGlow(glowColor, mediumBlur);
+        drawPath();
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = coreColor;
+        ctx.lineWidth = coreWidth;
+        this.setGlow(glowColor, Math.max(2, Math.round(mediumBlur * 0.5)));
+        drawPath();
+        ctx.stroke();
+        ctx.restore();
+
+        this.clearGlow();
+    }
+
+    drawBloomCircle(x, y, radius, coreColor, glowColor, coreWidth, alpha = 1) {
+        this.drawBloomStroke(() => {
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+        }, coreColor, glowColor, coreWidth, 10, 20, alpha);
+    }
+
+    lerp(a, b, t) {
+        return a + (b - a) * t;
+    }
+
+    // Distance-based opacity (further = dimmer)
+    getDistanceAlpha(y, minAlpha = 0.5) {
+        const normalizedY = y / this.canvas.height;
+        return minAlpha + (1 - minAlpha) * (1 - normalizedY * 0.5);
+    }
+
+    getDepthBrightness(y) {
+        const h = this.canvas.height || 1;
+        const t = Math.max(0, Math.min(1, y / h));
+        if (t < 0.5) {
+            return this.lerp(0.7, 0.85, t / 0.5);
+        }
+        return this.lerp(0.85, 1, (t - 0.5) / 0.5);
+    }
+
+    updateVisualEffects() {
+        const missileCount = this.game.missiles.filter((m) => !m.exploded).length;
+        const explosionCount = this.game.explosions.length;
+
+        if (missileCount > this.lastMissileCount) {
+            this.cannonRecoil = 1;
+        }
+
+        if (explosionCount > this.lastExplosionCount) {
+            this.impactFlash = 1;
+        }
+
+        this.lastMissileCount = missileCount;
+        this.lastExplosionCount = explosionCount;
+
+        this.cannonRecoil *= 0.82;
+        this.impactFlash *= 0.88;
+    }
+
     render() {
         const ctx = this.ctx;
         const w = this.canvas.width;
         const h = this.canvas.height;
         const config = this.game.config;
         const c = this.colors;
+        const time = this.frameCount * 0.02;
+        this.updateVisualEffects();
 
-        // Clear - pure black
-        ctx.fillStyle = c.black;
+        // Gradient background
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0, c.bgTop);
+        bgGrad.addColorStop(1, c.bgBottom);
+        ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, w, h);
 
-        // Scanline effect (subtle)
-        ctx.fillStyle = 'rgba(0, 20, 0, 0.08)';
-        for (let y = 0; y < h; y += 3) {
+        // Faint radar grid for depth
+        ctx.strokeStyle = c.grid;
+        ctx.lineWidth = 1;
+        for (let gy = 24; gy < h; gy += 120) {
+            ctx.beginPath();
+            ctx.moveTo(0, gy);
+            ctx.lineTo(w, gy);
+            ctx.stroke();
+        }
+        for (let gx = 24; gx < w; gx += 160) {
+            ctx.beginPath();
+            ctx.moveTo(gx, 0);
+            ctx.lineTo(gx, h);
+            ctx.stroke();
+        }
+
+        // Parallax stars with drift
+        for (const star of this.stars) {
+            const x = star.x * w;
+            const y = ((star.y + time * star.speed) % 0.7) * h;
+            const flicker = 0.7 + Math.sin(time * 3 + star.x * 100) * 0.3;
+
+            ctx.fillStyle = `rgba(0, 255, 102, ${star.brightness * flicker})`;
+            ctx.beginPath();
+            ctx.arc(x, y, star.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Subtle scanlines
+        ctx.fillStyle = c.scanline;
+        for (let y = 0; y < h; y += 4) {
             ctx.fillRect(0, y, w, 1);
         }
 
-        // Cannon position - on top of the hill
+        const camX = Math.sin(time * 0.4) * 0.5;
+        const camY = Math.cos(time * 0.33) * 0.5;
+        ctx.save();
+        ctx.translate(camX, camY);
+
         const cannonX = w / 2;
         const cannonY = this.hillTopY - 5;
         const angleRad = this.gameAngleToRad(this.game.launcherAngle);
 
-        // Draw terrain
+        // Terrain with glow
         if (this.terrainPoints && this.terrainPoints.length > 0) {
-            ctx.strokeStyle = c.greenMid;
-            ctx.lineWidth = 2;
-            this.setGlow(c.greenGlow, 8);
+            const drawTerrainPath = () => {
+                ctx.beginPath();
+                ctx.moveTo(this.terrainPoints[0].x, this.terrainPoints[0].y);
+                for (let i = 1; i < this.terrainPoints.length; i++) {
+                    ctx.lineTo(this.terrainPoints[i].x, this.terrainPoints[i].y);
+                }
+            };
+
+            // Under-shadow line for lit terrain edge
+            ctx.strokeStyle = 'rgba(0, 40, 10, 0.6)';
+            ctx.lineWidth = 3;
+            drawTerrainPath();
+            ctx.stroke();
+
+            this.drawBloomStroke(drawTerrainPath, c.secondary, c.secondaryGlow, 2, 8, 18, 0.85);
+
+            // Highlight ridge
+            ctx.strokeStyle = c.primary;
+            ctx.lineWidth = 1;
+            this.setGlow(c.primaryGlowSoft, 6);
             ctx.beginPath();
             ctx.moveTo(this.terrainPoints[0].x, this.terrainPoints[0].y);
             for (let i = 1; i < this.terrainPoints.length; i++) {
-                ctx.lineTo(this.terrainPoints[i].x, this.terrainPoints[i].y);
+                ctx.lineTo(this.terrainPoints[i].x, this.terrainPoints[i].y - 1);
             }
             ctx.stroke();
             this.clearGlow();
         }
 
-        // Draw locked missiles predictions
+        // Ground reflection glow
+        ctx.fillStyle = 'rgba(0, 170, 68, 0.06)';
+        ctx.fillRect(0, h - 40, w, 40);
+
+        // Locked missiles predictions
         const lockedPredictions = this.game.getLockedMissilesPredictions();
         for (const pred of lockedPredictions) {
             const predScreen = this.worldToScreen(pred.x, pred.y);
             const predRadius = this.worldToScreenSize(pred.radius);
 
-            ctx.strokeStyle = c.greenBright;
-            ctx.lineWidth = 1;
-            this.setGlow(c.greenGlow, 15);
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.arc(predScreen.x, predScreen.y, predRadius, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.setLineDash([4, 4]);
+            this.drawBloomCircle(predScreen.x, predScreen.y, predRadius, c.secondary, c.secondaryGlow, 1, this.getDepthBrightness(predScreen.y));
             ctx.setLineDash([]);
-            this.clearGlow();
         }
 
-        // Draw current charging prediction
+        // Current charging prediction
         const prediction = this.game.getPrediction();
         if (prediction && !this.game.isAnimating) {
             const predScreen = this.worldToScreen(prediction.x, prediction.y);
             const predRadius = this.worldToScreenSize(prediction.radius);
 
-            ctx.strokeStyle = c.orange;
-            ctx.lineWidth = 1;
-            this.setGlow(c.orangeGlow, 15);
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.arc(predScreen.x, predScreen.y, predRadius, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.setLineDash([4, 4]);
+            this.drawBloomCircle(predScreen.x, predScreen.y, predRadius, c.amber, c.amberGlow, 1, this.getDepthBrightness(predScreen.y));
             ctx.setLineDash([]);
 
-            // Trajectory line
-            ctx.strokeStyle = c.greenDim;
-            ctx.lineWidth = 1;
-            ctx.setLineDash([3, 6]);
-            ctx.beginPath();
-            ctx.moveTo(cannonX, cannonY);
-            ctx.lineTo(predScreen.x, predScreen.y);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            this.clearGlow();
+            // Animated trajectory dots
+            this.drawAnimatedTrajectory(cannonX, cannonY, predScreen.x, predScreen.y);
         }
 
-        // Aiming guide line
+        // Aiming guide (animated dots)
         if (!this.game.isAnimating && !prediction) {
-            ctx.strokeStyle = c.greenDim;
-            ctx.lineWidth = 1;
-            this.setGlow(c.greenGlow, 5);
-            ctx.setLineDash([5, 10]);
-            ctx.beginPath();
-            ctx.moveTo(cannonX, cannonY);
-            ctx.lineTo(
-                cannonX + Math.cos(angleRad) * h,
-                cannonY - Math.sin(angleRad) * h
-            );
-            ctx.stroke();
-            ctx.setLineDash([]);
-            this.clearGlow();
+            const endX = cannonX + Math.cos(angleRad) * h;
+            const endY = cannonY - Math.sin(angleRad) * h;
+            this.drawAnimatedTrajectory(cannonX, cannonY, endX, endY, true);
         }
 
-        // Draw cannon - solid shape
+        // Cannon
         this.drawCannon(cannonX, cannonY, angleRad);
 
-        // Draw missiles in flight
+        // Missiles in flight
         for (const missile of this.game.missiles) {
             if (missile.exploded) continue;
 
-            const startX = cannonX;
-            const startY = cannonY;
             const endPos = this.worldToScreen(missile.targetX, missile.targetY);
+            const currentX = cannonX + (endPos.x - cannonX) * missile.progress;
+            const currentY = cannonY + (endPos.y - cannonY) * missile.progress;
+            const missileAlpha = this.getDepthBrightness(currentY);
 
-            const currentX = startX + (endPos.x - startX) * missile.progress;
-            const currentY = startY + (endPos.y - startY) * missile.progress;
-
-            // Missile - bright dot
-            ctx.fillStyle = c.greenBright;
-            this.setGlow(c.greenGlow, 15);
+            // Missile with layered glow
+            this.setGlow(c.primaryGlow, 18);
+            ctx.fillStyle = `rgba(0, 255, 102, ${missileAlpha})`;
             ctx.beginPath();
-            ctx.arc(currentX, currentY, 3, 0, Math.PI * 2);
+            ctx.arc(currentX, currentY, 4, 0, Math.PI * 2);
             ctx.fill();
 
+            // Bright core
+            ctx.fillStyle = c.white;
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 2, 0, Math.PI * 2);
+            ctx.fill();
+            this.clearGlow();
+
             // Trail
-            ctx.strokeStyle = c.greenMid;
+            ctx.strokeStyle = `rgba(0, 170, 68, ${Math.max(0.35, missileAlpha * 0.75)})`;
             ctx.lineWidth = 2;
-            const trailProgress = Math.max(0, missile.progress - 0.15);
+            const trailProgress = Math.max(0, missile.progress - 0.2);
             ctx.beginPath();
             ctx.moveTo(currentX, currentY);
             ctx.lineTo(
-                startX + (endPos.x - startX) * trailProgress,
-                startY + (endPos.y - startY) * trailProgress
+                cannonX + (endPos.x - cannonX) * trailProgress,
+                cannonY + (endPos.y - cannonY) * trailProgress
             );
             ctx.stroke();
-            this.clearGlow();
 
             // Target zone
-            const targetScreen = this.worldToScreen(missile.targetX, missile.targetY);
             const radius = this.worldToScreenSize(config.EXPLOSION_RADIUS);
-            ctx.strokeStyle = c.greenDim;
+            ctx.strokeStyle = `rgba(0, 68, 34, ${this.getDepthBrightness(endPos.y) * 0.8})`;
             ctx.lineWidth = 1;
             ctx.setLineDash([3, 6]);
             ctx.beginPath();
-            ctx.arc(targetScreen.x, targetScreen.y, radius, 0, Math.PI * 2);
+            ctx.arc(endPos.x, endPos.y, radius, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
         }
 
-        // Draw explosions
+        // Explosions
         for (const explosion of this.game.explosions) {
             const pos = this.worldToScreen(explosion.x, explosion.y);
             const radius = this.worldToScreenSize(explosion.radius);
             const progress = explosion.age / explosion.maxAge;
             const alpha = 1 - progress;
+            const depth = this.getDepthBrightness(pos.y);
 
-            // Expanding ring
-            ctx.strokeStyle = `rgba(0, 255, 65, ${alpha})`;
-            ctx.lineWidth = 3;
-            this.setGlow(c.greenGlow, 20 * alpha);
+            // Outer ring
+            this.drawBloomCircle(pos.x, pos.y, radius * (0.3 + progress * 0.7), c.primary, c.primaryGlow, 3, alpha * depth * 0.7);
+
+            // Inner ring
+            ctx.strokeStyle = `rgba(0, 255, 102, ${alpha * depth})`;
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(pos.x, pos.y, radius * (0.5 + progress * 0.5), 0, Math.PI * 2);
+            ctx.arc(pos.x, pos.y, radius * 0.5 * (1 - progress), 0, Math.PI * 2);
             ctx.stroke();
 
-            // Inner flash
-            if (progress < 0.3) {
-                ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-                ctx.lineWidth = 2;
+            // Expanding shockwave line
+            ctx.strokeStyle = `rgba(255,255,255, ${alpha * 0.16})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, radius * (0.6 + progress * 1.8), 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Flash
+            if (progress < 0.2) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${(1 - progress * 5) * 0.5 * depth})`;
                 ctx.beginPath();
                 ctx.arc(pos.x, pos.y, radius * 0.3, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.fill();
             }
             this.clearGlow();
         }
 
-        // Draw aliens - UFO shape
+        // Aliens
         for (const alien of this.game.aliens) {
             const pos = this.worldToScreen(alien.x, alien.y);
             const size = this.worldToScreenSize(alien.radius);
-            this.drawUFO(pos.x, pos.y, size);
+            const distanceAlpha = Math.max(0.7, this.getDepthBrightness(pos.y));
+            this.drawUFO(pos.x, pos.y, size, distanceAlpha);
         }
 
-        // Border frame
-        ctx.strokeStyle = c.greenDim;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(1, 1, w - 2, h - 2);
+        ctx.restore();
+
+        if (this.impactFlash > 0.02) {
+            ctx.fillStyle = `rgba(180, 255, 220, ${this.impactFlash * 0.08})`;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        // Corner brackets instead of full border
+        this.drawCornerBrackets();
+    }
+
+    drawAnimatedTrajectory(x1, y1, x2, y2, faded = false) {
+        const ctx = this.ctx;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const dotSpacing = 12;
+        const dotCount = Math.floor(dist / dotSpacing);
+        const animOffset = (this.frameCount * 0.5) % dotSpacing;
+
+        for (let i = 0; i < dotCount; i++) {
+            const t = (i * dotSpacing + animOffset) / dist;
+            if (t > 1) continue;
+
+            const x = x1 + dx * t;
+            const y = y1 + dy * t;
+
+            // Fade toward end
+            const fadeAlpha = faded ? 0.28 : (1 - t * 0.75);
+            const dotRadius = 1 + (1 - t) * 1.2;
+            const alpha = fadeAlpha * this.getDepthBrightness(y) * 0.85;
+            ctx.fillStyle = `rgba(0, 170, 68, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     drawCannon(x, y, angleRad) {
         const ctx = this.ctx;
         const c = this.colors;
+        const recoilOffset = this.cannonRecoil * 4;
 
-        // Cannon base - trapezoid shape
-        ctx.fillStyle = c.greenMid;
-        this.setGlow(c.greenGlow, 10);
+        // Base with layered glow
+        this.setGlow(c.secondaryGlow, 15);
+
+        // Trapezoid base
+        ctx.fillStyle = c.tertiary;
         ctx.beginPath();
-        ctx.moveTo(x - 18, y + 8);
-        ctx.lineTo(x + 18, y + 8);
-        ctx.lineTo(x + 12, y - 2);
-        ctx.lineTo(x - 12, y - 2);
+        ctx.moveTo(x - 20, y + 10);
+        ctx.lineTo(x + 20, y + 10);
+        ctx.lineTo(x + 14, y);
+        ctx.lineTo(x - 14, y);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = c.greenBright;
+
+        ctx.strokeStyle = c.secondary;
         ctx.lineWidth = 1;
         ctx.stroke();
+        this.clearGlow();
 
-        // Cannon turret - rotating part
-        ctx.save();
-        ctx.translate(x, y - 2);
-        ctx.rotate(-angleRad + Math.PI / 2);
-
-        // Turret base circle
-        ctx.fillStyle = c.greenMid;
+        // Ground glow under cannon
+        const groundGlow = ctx.createRadialGradient(x, y + 10, 0, x, y + 10, 28);
+        groundGlow.addColorStop(0, 'rgba(0, 255, 102, 0.08)');
+        groundGlow.addColorStop(1, 'rgba(0, 255, 102, 0)');
+        ctx.fillStyle = groundGlow;
         ctx.beginPath();
-        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.ellipse(x, y + 11, 28, 8, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = c.greenBright;
+
+        // Turret
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(-angleRad + Math.PI / 2);
+        ctx.translate(0, recoilOffset);
+
+        // Turret base
+        this.setGlow(c.primaryGlow, 12);
+        ctx.fillStyle = c.tertiary;
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = c.primary;
+        ctx.lineWidth = 2;
         ctx.stroke();
 
         // Barrel
-        ctx.fillStyle = c.greenMid;
-        ctx.fillRect(-3, -28, 6, 25);
-        ctx.strokeStyle = c.greenBright;
-        ctx.strokeRect(-3, -28, 6, 25);
+        ctx.fillStyle = c.tertiary;
+        ctx.fillRect(-4, -30, 8, 26);
+        ctx.strokeStyle = c.primary;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-4, -30, 8, 26);
+
+        // Barrel segment lines for mechanical feel
+        ctx.strokeStyle = c.secondary;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-4, -22);
+        ctx.lineTo(4, -22);
+        ctx.moveTo(-4, -14);
+        ctx.lineTo(4, -14);
+        ctx.stroke();
 
         // Barrel tip
-        ctx.fillRect(-4, -32, 8, 5);
-        ctx.strokeRect(-4, -32, 8, 5);
+        ctx.fillRect(-5, -35, 10, 6);
+        ctx.strokeRect(-5, -35, 10, 6);
+
+        // Inner detail
+        ctx.strokeStyle = c.secondary;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.stroke();
 
         ctx.restore();
         this.clearGlow();
     }
 
-    drawUFO(x, y, size) {
+    drawUFO(x, y, size, alpha = 1) {
         const ctx = this.ctx;
         const c = this.colors;
+        const time = this.frameCount * 0.03;
+        const bobY = Math.sin(time + x * 0.015) * 4;
+        const drawY = y + bobY;
 
-        const width = size * 3;
-        const height = size * 0.8;
-        const domeHeight = size * 1.2;
+        const width = size * 3.5;
+        const height = size * 0.9;
+        const domeHeight = size * 1.3;
 
-        ctx.strokeStyle = c.red;
+        // Slight rotation drift
+        ctx.save();
+        ctx.translate(x, drawY);
+        ctx.rotate(Math.sin(time + x * 0.01) * 0.05);
+        ctx.translate(-x, -drawY);
+
+        // Outer glow
+        this.setGlow(`rgba(255, 51, 68, ${0.4 * alpha})`, 15);
+
+        // Main body
+        ctx.strokeStyle = `rgba(255, 51, 68, ${alpha})`;
         ctx.lineWidth = 2;
-        this.setGlow(c.redGlow, 12);
-
-        // Main body - flat ellipse
         ctx.beginPath();
-        ctx.ellipse(x, y, width, height, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, drawY, width, height, 0, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Dome on top
+        // Inner body detail
+        ctx.strokeStyle = `rgba(255, 51, 68, ${alpha * 0.5})`;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.ellipse(x, y - height * 0.5, width * 0.4, domeHeight, 0, Math.PI, Math.PI * 2);
+        ctx.ellipse(x, drawY, width * 0.7, height * 0.5, 0, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Bottom detail line
+        // Dome
+        ctx.strokeStyle = `rgba(255, 51, 68, ${alpha})`;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.ellipse(x, y + height * 0.3, width * 0.6, height * 0.3, 0, 0, Math.PI);
+        ctx.ellipse(x, drawY - height * 0.4, width * 0.35, domeHeight, 0, Math.PI, Math.PI * 2);
         ctx.stroke();
 
-        // Lights/windows
-        ctx.fillStyle = c.red;
-        const lightCount = 3;
+        // Bottom ridge
+        ctx.beginPath();
+        ctx.ellipse(x, drawY + height * 0.4, width * 0.5, height * 0.3, 0, 0, Math.PI);
+        ctx.stroke();
+
+        // Animated lights
+        const lightCount = 5;
         for (let i = 0; i < lightCount; i++) {
-            const lx = x + (i - 1) * (width * 0.5);
+            const angle = (i / lightCount) * Math.PI * 2 + time;
+            const lx = x + Math.cos(angle) * width * 0.6;
+            const ly = drawY + Math.sin(angle) * height * 0.3;
+            const pulse = 0.5 + Math.sin(time * 4 + i) * 0.5;
+
+            ctx.fillStyle = `rgba(255, 51, 68, ${alpha * pulse})`;
             ctx.beginPath();
-            ctx.arc(lx, y, 2, 0, Math.PI * 2);
+            ctx.arc(lx, ly, 2, 0, Math.PI * 2);
             ctx.fill();
+        }
+
+        // Scan pulse
+        const pulseRadius = (time % 2) * width;
+        if (pulseRadius < width) {
+            ctx.strokeStyle = `rgba(255, 51, 68, ${(1 - pulseRadius / width) * 0.3 * alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(x, drawY, pulseRadius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+        this.clearGlow();
+    }
+
+    drawCornerBrackets() {
+        const ctx = this.ctx;
+        const c = this.colors;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const size = 25;
+        const offset = 8;
+
+        ctx.strokeStyle = c.secondary;
+        ctx.lineWidth = 2;
+        this.setGlow(c.secondaryGlow, 8);
+
+        // Top-left
+        ctx.beginPath();
+        ctx.moveTo(offset, offset + size);
+        ctx.lineTo(offset, offset);
+        ctx.lineTo(offset + size, offset);
+        ctx.stroke();
+
+        // Top-right
+        ctx.beginPath();
+        ctx.moveTo(w - offset - size, offset);
+        ctx.lineTo(w - offset, offset);
+        ctx.lineTo(w - offset, offset + size);
+        ctx.stroke();
+
+        // Bottom-left
+        ctx.beginPath();
+        ctx.moveTo(offset, h - offset - size);
+        ctx.lineTo(offset, h - offset);
+        ctx.lineTo(offset + size, h - offset);
+        ctx.stroke();
+
+        // Bottom-right
+        ctx.beginPath();
+        ctx.moveTo(w - offset - size, h - offset);
+        ctx.lineTo(w - offset, h - offset);
+        ctx.lineTo(w - offset, h - offset - size);
+        ctx.stroke();
+
+        // Instrument ticks on top and bottom edges
+        ctx.strokeStyle = c.tertiary;
+        ctx.lineWidth = 1;
+        this.setGlow(c.tertiaryGlow, 4);
+        const tickStep = 70;
+        for (let x = 40; x < w - 40; x += tickStep) {
+            ctx.beginPath();
+            ctx.moveTo(x, offset);
+            ctx.lineTo(x, offset + 4);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x, h - offset);
+            ctx.lineTo(x, h - offset - 4);
+            ctx.stroke();
         }
 
         this.clearGlow();

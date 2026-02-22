@@ -305,8 +305,8 @@ class Game {
     }
 
     updateUI() {
-        document.getElementById('level').textContent = `Level ${this.level}`;
-        document.getElementById('hp').textContent = `HP: ${Math.max(0, this.baseHP)}`;
+        document.getElementById('level').innerHTML = `<span class="hud-label">LEVEL</span><span class="hud-value">${this.level}</span>`;
+        document.getElementById('hp').innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, this.baseHP)}</span>`;
         document.getElementById('angle-display').textContent = `${this.launcherAngle}°`;
         document.getElementById('power-bar').style.width = `${this.power}%`;
 
@@ -321,10 +321,12 @@ class Game {
             fireBtn.className = 'charged';
         } else {
             fireBtn.textContent = `FIRE (${missilesLeft} left)`;
-            fireBtn.className = '';
+            fireBtn.className = (!this.isAnimating && missilesLeft > 0) ? 'pulse' : '';
         }
 
-        document.getElementById('advance-btn').disabled = this.isAnimating;
+        const advanceBtn = document.getElementById('advance-btn');
+        advanceBtn.disabled = this.isAnimating;
+        advanceBtn.classList.toggle('is-disabled', this.isAnimating);
     }
 
     // ==================== TEST HELPERS ====================
