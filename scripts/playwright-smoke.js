@@ -57,9 +57,12 @@ async function main() {
         await page.waitForTimeout(500);
     }
 
-    // Upgrade flow: grant a point in test context, click upgrade button, verify UI reacts
+    // Upgrade flow: open menu, grant resources in test context, buy upgrade, verify UI reacts
+    await page.click('#upgrade-menu-btn');
+    await page.waitForTimeout(50);
     await page.evaluate(() => {
-        window.game.upgradePoints = 1;
+        window.game.money = 999;
+        window.game.missileEnergy = Math.max(window.game.missileEnergy, 100);
         window.game.notify();
     });
     await page.waitForTimeout(50);
@@ -71,7 +74,7 @@ async function main() {
         powerBarWidth: document.querySelector('#power-bar')?.style.width,
         fireText: document.querySelector('#fire-btn')?.textContent,
         upgradeText: document.querySelector('#upgrade-target-flag-btn')?.textContent,
-        targetFlagUnlocked: Boolean(window.game?.upgrades?.targetFlags?.level > 0),
+        targetAreaUnlocked: Boolean(window.game?.upgrades?.targetAreas?.level > 0),
         pendingMissiles: window.game?.pendingMissiles?.length ?? null,
         isAnimating: Boolean(window.game?.isAnimating),
         initialAngleText: null

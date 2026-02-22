@@ -15,13 +15,19 @@
             <div id="status">
                 <span id="level">Level 1</span>
                 <span id="hp">HP: 100</span>
-                <span id="energy">EN: 200</span>
-                <span id="upgrade-points">UP: 0</span>
+                <span id="energy">EN: 100</span>
+                <span id="money">$: 0</span>
             </div>
         </div>
         <div id="controls">
             <div id="upgrade-controls">
-                <button id="upgrade-target-flag-btn" data-testid="upgrade-target-flag-btn">UNLOCK TARGET FLAG [1 UP]</button>
+                <button id="upgrade-menu-btn" class="upgrade-btn" data-testid="upgrade-menu-btn">UPGRADES</button>
+            </div>
+            <div id="upgrade-menu" class="upgrade-menu is-hidden">
+                <div class="upgrade-row">
+                    <div id="upgrade-target-area-meta" class="upgrade-meta">TARGET AREA PREVIEW</div>
+                    <button id="upgrade-target-flag-btn" class="upgrade-btn" data-testid="upgrade-target-flag-btn">BUY</button>
+                </div>
             </div>
             <div id="rotation-controls">
                 <div class="rotation-group">

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap');
 
 * {
     margin: 0;
@@ -44,7 +44,7 @@ html, body {
     height: 100%;
     overflow: hidden;
     background: var(--bg-black);
-    font-family: 'Orbitron', 'Courier New', monospace;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
 }
 
 #game-container {
@@ -79,9 +79,9 @@ html, body {
     display: flex;
     justify-content: space-between;
     color: var(--green-ui-cool);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 400;
-    letter-spacing: var(--tracking-label);
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     text-shadow: 0 0 10px var(--green-glow-medium);
 }
@@ -95,17 +95,18 @@ html, body {
 
 .hud-label {
     color: var(--green-secondary);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 400;
-    letter-spacing: var(--tracking-label);
+    letter-spacing: 0.12em;
     opacity: 0.85;
 }
 
 .hud-value {
     color: var(--green-primary);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: var(--tracking-value);
+    letter-spacing: 0.06em;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     text-shadow:
         0 0 2px rgba(0, 255, 102, 0.9),
         0 0 8px var(--green-glow-medium),
@@ -131,6 +132,35 @@ html, body {
     gap: 8px;
 }
 
+.upgrade-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--green-tertiary);
+    background: rgba(0, 10, 4, 0.9);
+    box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.03);
+}
+
+.upgrade-menu.is-hidden {
+    display: none;
+}
+
+.upgrade-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.upgrade-meta {
+    color: var(--green-secondary);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
 .upgrade-btn {
     width: 100%;
     min-height: 30px;
@@ -138,13 +168,18 @@ html, body {
     border: 1px solid var(--green-tertiary);
     color: var(--green-secondary);
     font-family: inherit;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.08em;
     padding: 6px 8px;
     cursor: pointer;
     transition: all 0.1s ease-out;
     box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.02);
+}
+
+#upgrade-target-flag-btn {
+    width: auto;
+    min-width: 150px;
 }
 
 .upgrade-btn:hover:not(:disabled) {
@@ -209,7 +244,7 @@ html, body {
     border: 1px solid var(--green-tertiary);
     border-radius: 2px;
     color: var(--green-secondary);
-    font-family: inherit;
+    font-family: 'Orbitron', 'Share Tech Mono', monospace;
     font-weight: 700;
     cursor: pointer;
     text-shadow: 0 0 5px var(--green-glow-subtle);
@@ -254,8 +289,9 @@ html, body {
     width: 70px;
     text-align: center;
     color: var(--green-primary);
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
+    font-family: 'Orbitron', 'Share Tech Mono', monospace;
     text-shadow: 0 0 15px var(--green-glow-strong);
     letter-spacing: var(--tracking-value);
     position: relative;
@@ -267,10 +303,10 @@ html, body {
     top: -11px;
     left: 0;
     right: 0;
-    font-size: 8px;
+    font-size: 9px;
     font-weight: 400;
     color: var(--green-secondary);
-    letter-spacing: var(--tracking-label);
+    letter-spacing: 0.14em;
     opacity: 0.8;
 }
 
@@ -333,10 +369,10 @@ html, body {
     background: transparent;
     border: 1px solid var(--green-tertiary);
     color: var(--green-secondary);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     font-family: inherit;
-    letter-spacing: 2px;
+    letter-spacing: 0.08em;
     cursor: pointer;
     transition: all 0.1s ease-out;
     position: relative;

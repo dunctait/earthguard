@@ -19,9 +19,10 @@ const GameConfig = {
     MISSILE_TRAVEL_PER_TURN: 0.5,  // 50% of target distance per advance
     EXPLOSION_RADIUS: 6.4,          // 80% of original 8
     MAX_MISSILE_RANGE: 85,          // % of world height
-    MISSILE_ENERGY_MAX: 200,
-    MISSILE_ENERGY_REGEN_PER_TURN: 100,
+    MISSILE_ENERGY_MAX: 100,
+    MISSILE_ENERGY_REGEN_PER_TURN: 10,
     MISSILE_MIN_ENERGY_COST: 10,
+    TRAJECTORY_FADE_STRENGTH: 2.4,
 
     // Power/Charging
     POWER_CHARGE_RATE: 4,           // Per update tick (was 2, now faster)
@@ -32,13 +33,16 @@ const GameConfig = {
     ALIEN_SPEED_PER_LEVEL: 1.0,
     ALIEN_RADIUS: 3,
     ALIEN_DAMAGE: 10,
+    MONEY_PER_KILL: 10,
+    EXACT_HIT_MONEY_MULTIPLIER: 2,
+    EXACT_HIT_RADIUS_FACTOR: 0.35,
 
     // Player
     STARTING_HP: 100,
 
     // Animation
-    ANIMATION_FRAMES: 60,
-    ANIMATION_FRAME_MS: 16
+    ANIMATION_FRAMES: 24,
+    ANIMATION_FRAME_MS: 10
 };
 
 class Game {
@@ -63,14 +67,16 @@ class Game {
         this.level = 1;
         this.baseHP = this.config.STARTING_HP;
         this.isAnimating = false;
-        this.upgradePoints = 0;
+        this.money = 0;
+        this.isUpgradeMenuOpen = false;
         this.upgrades = {
-            targetFlags: {
-                key: 'targetFlags',
-                name: 'Target Flags',
+            targetAreas: {
+                key: 'targetAreas',
+                name: 'Target Area Preview',
                 level: 0,
                 maxLevel: 1,
-                cost: 1
+                moneyCost: 50,
+                energyCost: 20
             }
         };
 
@@ -126,12 +132,12 @@ class Game {
 
     getMissileEnergyCostForPower(power = this.power) {
         if (power <= 0) return 0;
-        return this.utils.clamp(Math.ceil(power), this.config.MISSILE_MIN_ENERGY_COST, this.config.MISSILE_ENERGY_MAX);
+        return this.config.MISSILE_MIN_ENERGY_COST;
     }
 
     getMaxChargePowerForEnergy(energy = this.missileEnergy) {
         if (energy < this.config.MISSILE_MIN_ENERGY_COST) return 0;
-        return this.utils.clamp(Math.floor(energy), this.config.MISSILE_MIN_ENERGY_COST, 100);
+        return 100;
     }
 
     getLauncherOrigin() {
@@ -155,11 +161,12 @@ class Game {
     }
 
     startCharging() {
-        if (!this.canCharge()) return;
+        if (!this.canCharge()) return false;
         this.isCharging = true;
         // Start at minimum lockable charge so energy budget is visible/predictable.
         this.power = Math.min(this.config.MISSILE_MIN_ENERGY_COST, this.getMaxChargePowerForEnergy());
         this.notify();
+        return true;
     }
 
     updateCharge() {
@@ -199,7 +206,7 @@ class Game {
             // Auto-advance when all missiles locked
             if (this.missilesLockedThisTurn >= this.config.MISSILES_PER_TURN) {
                 this.notify();
-                setTimeout(() => this.advance(), 300);
+                setTimeout(() => this.advance(), 100);
                 return;
             }
         }
@@ -230,18 +237,30 @@ class Game {
         return Boolean(this.upgrades[key] && this.upgrades[key].level > 0);
     }
 
+    toggleUpgradeMenu() {
+        this.isUpgradeMenuOpen = !this.isUpgradeMenuOpen;
+        this.notify();
+    }
+
     canPurchaseUpgrade(key) {
         const upgrade = this.upgrades[key];
         if (!upgrade) return false;
         if (upgrade.level >= upgrade.maxLevel) return false;
-        return this.upgradePoints >= upgrade.cost;
+        return this.money >= upgrade.moneyCost &&
+               this.missileEnergy >= upgrade.energyCost;
     }
 
     purchaseUpgrade(key) {
         if (!this.canPurchaseUpgrade(key)) return false;
         const upgrade = this.upgrades[key];
-        this.upgradePoints -= upgrade.cost;
+        this.money -= upgrade.moneyCost;
+        this.missileEnergy = this.utils.clamp(
+            this.missileEnergy - upgrade.energyCost,
+            0,
+            this.config.MISSILE_ENERGY_MAX
+        );
         upgrade.level += 1;
+        this.isUpgradeMenuOpen = false;
         this.notify();
         return true;
     }
@@ -328,7 +347,6 @@ class Game {
 
         // Check wave complete
         if (this.aliens.length === 0) {
-            this.upgradePoints += 1;
             this.level++;
             this.spawnWave();
         }
@@ -356,7 +374,8 @@ class Game {
         this.power = 0;
         this.missilesLockedThisTurn = 0;
         this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
-        this.upgradePoints = 0;
+        this.money = 0;
+        this.isUpgradeMenuOpen = false;
         for (const upgrade of Object.values(this.upgrades)) {
             upgrade.level = 0;
         }
@@ -375,6 +394,13 @@ class Game {
 
             if (dist < explosion.radius + alien.radius) {
                 alien.hp -= 1;
+                if (alien.hp <= 0) {
+                    const exactHit = dist <= (alien.radius * this.config.EXACT_HIT_RADIUS_FACTOR);
+                    const reward = exactHit
+                        ? this.config.MONEY_PER_KILL * this.config.EXACT_HIT_MONEY_MULTIPLIER
+                        : this.config.MONEY_PER_KILL;
+                    this.money += reward;
+                }
             }
         }
         this.aliens = this.aliens.filter(a => a.hp > 0);
@@ -399,6 +425,7 @@ class Game {
             angle: this.launcherAngle,
             power: this.power,
             missileEnergy: this.missileEnergy,
+            money: this.money,
             missilesLocked: this.missilesLockedThisTurn,
             missilesInFlight: this.missiles.length,
             isAnimating: this.isAnimating,

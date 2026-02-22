@@ -9,11 +9,14 @@ class EarthGuardUI {
             'level',
             'hp',
             'energy',
-            'upgrade-points',
+            'money',
             'angle-display',
             'power-bar',
             'fire-btn',
             'advance-btn',
+            'upgrade-menu-btn',
+            'upgrade-menu',
+            'upgrade-target-area-meta',
             'upgrade-target-flag-btn'
         ]) : {};
     }
@@ -32,6 +35,7 @@ class EarthGuardUI {
         this.el.level.innerHTML = `<span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span>`;
         this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
         this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${game.missileEnergy}/${game.config.MISSILE_ENERGY_MAX}</span>`;
+        this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${game.money}</span>`;
     }
 
     renderAngle(game) {
@@ -66,21 +70,28 @@ class EarthGuardUI {
     }
 
     renderUpgrades(game) {
-        const upgradePoints = this.el['upgrade-points'];
+        const money = this.el['money'];
+        const menuBtn = this.el['upgrade-menu-btn'];
+        const menu = this.el['upgrade-menu'];
+        const meta = this.el['upgrade-target-area-meta'];
         const flagBtn = this.el['upgrade-target-flag-btn'];
-        if (!upgradePoints || !flagBtn) return;
+        if (!money || !flagBtn || !menuBtn || !menu || !meta) return;
 
-        upgradePoints.innerHTML = `<span class="hud-label">UP</span><span class="hud-value">${game.upgradePoints}</span>`;
+        menu.classList.toggle('is-hidden', !game.isUpgradeMenuOpen);
+        menuBtn.className = game.isUpgradeMenuOpen ? 'upgrade-btn owned' : 'upgrade-btn';
+        menuBtn.textContent = game.isUpgradeMenuOpen ? 'CLOSE UPGRADES' : 'UPGRADES';
 
-        const targetFlag = game.upgrades.targetFlags;
-        if (targetFlag.level > 0) {
-            flagBtn.textContent = 'TARGET FLAG: ONLINE';
+        const targetAreaUpgrade = game.upgrades.targetAreas;
+        if (targetAreaUpgrade.level > 0) {
+            flagBtn.textContent = 'TARGET AREA: ONLINE';
             flagBtn.className = 'upgrade-btn owned';
             flagBtn.disabled = true;
+            meta.textContent = 'TARGET AREA PREVIEW | ACTIVE';
         } else {
-            flagBtn.textContent = `UNLOCK TARGET FLAG [${targetFlag.cost} UP]`;
+            flagBtn.textContent = `BUY  [$${targetAreaUpgrade.moneyCost} | EN ${targetAreaUpgrade.energyCost}]`;
             flagBtn.className = 'upgrade-btn';
-            flagBtn.disabled = game.upgradePoints < targetFlag.cost;
+            flagBtn.disabled = !game.canPurchaseUpgrade('targetAreas');
+            meta.textContent = 'TARGET AREA PREVIEW | SHOWS IMPACT CIRCLES';
         }
     }
 }

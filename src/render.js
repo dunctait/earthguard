@@ -16,6 +16,7 @@ class Renderer {
         this.dom = this.utils.cacheDom([
             'game-canvas',
             'controls',
+            'upgrade-menu-btn',
             'upgrade-target-flag-btn',
             'rot-left-big',
             'rot-left-small',
@@ -200,8 +201,11 @@ class Renderer {
         this.utils.bindPressHandlers(fireBtn, { onStart: startCharge, onEnd: stopCharge });
 
         this.dom['advance-btn'].addEventListener('click', () => this.game.advance());
+        if (this.dom['upgrade-menu-btn']) {
+            this.dom['upgrade-menu-btn'].addEventListener('click', () => this.game.toggleUpgradeMenu());
+        }
         if (this.dom['upgrade-target-flag-btn']) {
-            this.dom['upgrade-target-flag-btn'].addEventListener('click', () => this.game.purchaseUpgrade('targetFlags'));
+            this.dom['upgrade-target-flag-btn'].addEventListener('click', () => this.game.purchaseUpgrade('targetAreas'));
         }
     }
 
@@ -406,11 +410,10 @@ class Renderer {
             const predScreen = this.worldToScreen(pred.x, pred.y);
             const predRadius = this.worldToScreenSize(pred.radius);
 
-            ctx.setLineDash([4, 4]);
-            this.drawBloomCircle(predScreen.x, predScreen.y, predRadius, c.secondary, c.secondaryGlow, 1, this.getDepthBrightness(predScreen.y));
-            ctx.setLineDash([]);
-            if (this.game.hasUpgrade('targetFlags')) {
-                this.drawTargetFlag(predScreen.x, predScreen.y, this.getDepthBrightness(predScreen.y), false);
+            if (this.game.hasUpgrade('targetAreas')) {
+                ctx.setLineDash([4, 4]);
+                this.drawBloomCircle(predScreen.x, predScreen.y, predRadius, c.secondary, c.secondaryGlow, 1, this.getDepthBrightness(predScreen.y));
+                ctx.setLineDash([]);
             }
         }
 
@@ -420,15 +423,14 @@ class Renderer {
             const predScreen = this.worldToScreen(prediction.x, prediction.y);
             const predRadius = this.worldToScreenSize(prediction.radius);
 
-            ctx.setLineDash([4, 4]);
-            this.drawBloomCircle(predScreen.x, predScreen.y, predRadius, c.amber, c.amberGlow, 1, this.getDepthBrightness(predScreen.y));
-            ctx.setLineDash([]);
+            if (this.game.hasUpgrade('targetAreas')) {
+                ctx.setLineDash([4, 4]);
+                this.drawBloomCircle(predScreen.x, predScreen.y, predRadius, c.amber, c.amberGlow, 1, this.getDepthBrightness(predScreen.y));
+                ctx.setLineDash([]);
+            }
 
             // Animated trajectory dots
             this.drawAnimatedTrajectory(cannonX, cannonY, predScreen.x, predScreen.y);
-            if (this.game.hasUpgrade('targetFlags')) {
-                this.drawTargetFlag(predScreen.x, predScreen.y, this.getDepthBrightness(predScreen.y), true);
-            }
         }
 
         // Aiming guide (animated dots)
@@ -549,6 +551,7 @@ class Renderer {
         const dotSpacing = 12;
         const dotCount = Math.floor(dist / dotSpacing);
         const animOffset = (this.frameCount * 0.5) % dotSpacing;
+        const fadeStrength = this.game.config.TRAJECTORY_FADE_STRENGTH || 1.8;
 
         for (let i = 0; i < dotCount; i++) {
             const t = (i * dotSpacing + animOffset) / dist;
@@ -558,7 +561,8 @@ class Renderer {
             const y = y1 + dy * t;
 
             // Fade toward end
-            const fadeAlpha = faded ? 0.28 : (1 - t * 0.75);
+            const fadeCurve = Math.pow(Math.max(0, 1 - t), fadeStrength);
+            const fadeAlpha = faded ? (0.35 * fadeCurve) : fadeCurve;
             const dotRadius = 1 + (1 - t) * 1.2;
             const alpha = fadeAlpha * this.getDepthBrightness(y) * 0.85;
             ctx.fillStyle = `rgba(0, 170, 68, ${alpha})`;
