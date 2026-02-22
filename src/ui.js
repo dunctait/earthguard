@@ -50,15 +50,17 @@ class EarthGuardUI {
         const fireBtn = this.el['fire-btn'];
         const advanceBtn = this.el['advance-btn'];
         const missilesLeft = game.config.MISSILES_PER_TURN - game.missilesLockedThisTurn;
+        const idleCost = game.getMissileEnergyCostForPower(game.config.MISSILE_MIN_ENERGY_COST);
+        const currentCost = game.getMissileEnergyCostForPower(game.power || game.config.MISSILE_MIN_ENERGY_COST);
 
         if (game.isCharging) {
-            fireBtn.textContent = 'CHARGING...';
+            fireBtn.textContent = `CHARGING | COST ${currentCost}`;
             fireBtn.className = 'charging';
         } else if (missilesLeft === 0) {
             fireBtn.textContent = 'LAUNCHING...';
             fireBtn.className = 'charged';
         } else {
-            fireBtn.textContent = `FIRE (${missilesLeft} | EN ${game.missileEnergy})`;
+            fireBtn.textContent = `FIRE (${missilesLeft} | COST ${idleCost})`;
             fireBtn.className = (!game.isAnimating && missilesLeft > 0) ? 'pulse' : '';
         }
 

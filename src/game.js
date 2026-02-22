@@ -85,6 +85,7 @@ class Game {
         this.missiles = [];      // Active missiles in flight
         this.pendingMissiles = []; // Missiles locked in but not yet launched
         this.explosions = [];
+        this.blastResidue = [];
 
         // Callbacks
         this.onStateChange = null;
@@ -160,6 +161,15 @@ class Game {
         };
     }
 
+    getExplosionRadiusForLevel(level = this.level) {
+        const multiplier = level === 1 ? 2 : 1;
+        return this.config.EXPLOSION_RADIUS * multiplier;
+    }
+
+    getCurrentExplosionRadius() {
+        return this.getExplosionRadiusForLevel(this.level);
+    }
+
     startCharging() {
         if (!this.canCharge()) return false;
         this.isCharging = true;
@@ -195,6 +205,7 @@ class Game {
                 startY: launcher.y,
                 targetX: target.x,
                 targetY: target.y,
+                explosionRadius: this.getCurrentExplosionRadius(),
                 progress: 0,
                 exploded: false
             });
@@ -221,7 +232,7 @@ class Game {
         return {
             x: target.x,
             y: target.y,
-            radius: this.config.EXPLOSION_RADIUS
+            radius: this.getCurrentExplosionRadius()
         };
     }
 
@@ -229,7 +240,7 @@ class Game {
         return this.pendingMissiles.map(m => ({
             x: m.targetX,
             y: m.targetY,
-            radius: this.config.EXPLOSION_RADIUS
+            radius: m.explosionRadius || this.getCurrentExplosionRadius()
         }));
     }
 
@@ -290,7 +301,11 @@ class Game {
                     if (missile.progress >= 0.99) {
                         missile.progress = 1;
                         missile.exploded = true;
-                        this.createExplosion(missile.targetX, missile.targetY);
+                        this.createExplosion(
+                            missile.targetX,
+                            missile.targetY,
+                            missile.explosionRadius || this.getCurrentExplosionRadius()
+                        );
                     }
                 }
             }
@@ -314,32 +329,65 @@ class Game {
         }, this.config.ANIMATION_FRAME_MS);
     }
 
-    createExplosion(x, y) {
+    createExplosion(x, y, radius = this.getCurrentExplosionRadius()) {
         this.explosions.push({
             x: x,
             y: y,
-            radius: this.config.EXPLOSION_RADIUS,
+            radius: radius,
             age: 0,
             maxAge: 30,
             damageApplied: false
         });
     }
 
+    createBlastResidue(explosion) {
+        const particleCount = 10;
+        const particles = [];
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * Math.PI * 2 + (Math.random() * 0.35);
+            const r = explosion.radius * (0.35 + Math.random() * 0.75);
+            particles.push({
+                x: Math.cos(angle) * r,
+                y: Math.sin(angle) * r,
+                size: 0.5 + Math.random() * 1.3,
+                alpha: 0.15 + Math.random() * 0.2
+            });
+        }
+        this.blastResidue.push({
+            x: explosion.x,
+            y: explosion.y,
+            radius: explosion.radius,
+            turnsRemaining: 1,
+            particles
+        });
+    }
+
+    alienTouchesEarthLine(alien) {
+        return (alien.y - alien.radius) <= this.config.LAUNCHER_Y;
+    }
+
     finishTurn() {
+        // Age and remove prior-turn residue markers.
+        for (const residue of this.blastResidue) {
+            residue.turnsRemaining -= 1;
+        }
+        this.blastResidue = this.blastResidue.filter(r => r.turnsRemaining > 0);
+
         // Apply explosion damage
         for (const explosion of this.explosions) {
             if (!explosion.damageApplied) {
                 this.applyExplosionDamage(explosion);
                 explosion.damageApplied = true;
             }
+            this.createBlastResidue(explosion);
         }
 
         // Check aliens reaching Earth
-        const reachedEarth = this.aliens.filter(a => a.y <= this.config.LAUNCHER_Y);
+        const reachedEarth = this.aliens.filter(a => this.alienTouchesEarthLine(a));
         for (const alien of reachedEarth) {
             this.baseHP -= alien.damage;
         }
-        this.aliens = this.aliens.filter(a => a.y > this.config.LAUNCHER_Y);
+        this.aliens = this.aliens.filter(a => !this.alienTouchesEarthLine(a));
 
         // Remove exploded missiles and old explosions
         this.missiles = this.missiles.filter(m => !m.exploded);
@@ -383,6 +431,7 @@ class Game {
         this.missiles = [];
         this.pendingMissiles = [];
         this.explosions = [];
+        this.blastResidue = [];
         this.spawnWave();
     }
 
@@ -428,6 +477,7 @@ class Game {
             money: this.money,
             missilesLocked: this.missilesLockedThisTurn,
             missilesInFlight: this.missiles.length,
+            blastResidue: this.blastResidue.length,
             isAnimating: this.isAnimating,
             aliens: this.aliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),
             config: this.config

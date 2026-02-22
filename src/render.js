@@ -479,7 +479,7 @@ class Renderer {
             ctx.stroke();
 
             // Target zone
-            const radius = this.worldToScreenSize(config.EXPLOSION_RADIUS);
+            const radius = this.worldToScreenSize(missile.explosionRadius || this.game.getCurrentExplosionRadius());
             ctx.strokeStyle = `rgba(0, 68, 34, ${this.getDepthBrightness(endPos.y) * 0.8})`;
             ctx.lineWidth = 1;
             ctx.setLineDash([3, 6]);
@@ -521,7 +521,45 @@ class Renderer {
                 ctx.arc(pos.x, pos.y, radius * 0.3, 0, Math.PI * 2);
                 ctx.fill();
             }
+
+            // Spark particles (renderer-only, derived from explosion progress)
+            const sparkCount = 14;
+            for (let i = 0; i < sparkCount; i++) {
+                const seed = (i / sparkCount) * Math.PI * 2 + (explosion.x * 0.17) + (explosion.y * 0.11);
+                const travel = radius * (0.35 + progress * 1.15);
+                const sx = pos.x + Math.cos(seed + progress * 2.6) * travel;
+                const sy = pos.y + Math.sin(seed + progress * 2.6) * travel;
+                const sparkAlpha = alpha * (0.25 + ((i % 3) * 0.12));
+                ctx.fillStyle = `rgba(180, 255, 210, ${sparkAlpha * 0.6})`;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
             this.clearGlow();
+        }
+
+        // Blast residue markers (persist for one turn to show last impact locations)
+        for (const residue of this.game.blastResidue || []) {
+            const pos = this.worldToScreen(residue.x, residue.y);
+            const radius = this.worldToScreenSize(residue.radius);
+            const depth = this.getDepthBrightness(pos.y);
+
+            ctx.strokeStyle = `rgba(0, 170, 68, ${0.12 * depth})`;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 5]);
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, radius * 0.9, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            for (const p of residue.particles) {
+                const px = pos.x + this.worldToScreenSize(p.x);
+                const py = pos.y - this.worldToScreenSize(p.y);
+                ctx.fillStyle = `rgba(0, 255, 102, ${p.alpha * depth})`;
+                ctx.beginPath();
+                ctx.arc(px, py, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // Aliens
