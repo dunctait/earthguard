@@ -31,11 +31,44 @@ class Renderer {
     }
 
     setupInput() {
-        // Rotation buttons
-        document.getElementById('rot-left-big').addEventListener('click', () => this.game.rotateLeft(10));
-        document.getElementById('rot-left-small').addEventListener('click', () => this.game.rotateLeft(1));
-        document.getElementById('rot-right-small').addEventListener('click', () => this.game.rotateRight(1));
-        document.getElementById('rot-right-big').addEventListener('click', () => this.game.rotateRight(10));
+        // Hold-to-repeat helper
+        const setupHoldButton = (element, action, initialDelay = 300, repeatDelay = 50) => {
+            let timeout, interval;
+            const start = (e) => {
+                e.preventDefault();
+                action();
+                timeout = setTimeout(() => {
+                    interval = setInterval(action, repeatDelay);
+                }, initialDelay);
+            };
+            const stop = () => {
+                clearTimeout(timeout);
+                clearInterval(interval);
+            };
+            element.addEventListener('mousedown', start);
+            element.addEventListener('mouseup', stop);
+            element.addEventListener('mouseleave', stop);
+            element.addEventListener('touchstart', start);
+            element.addEventListener('touchend', stop);
+            element.addEventListener('touchcancel', stop);
+        };
+
+        // Rotation buttons with hold-to-repeat
+        setupHoldButton(document.getElementById('rot-left-big'), () => this.game.rotateLeft(10));
+        setupHoldButton(document.getElementById('rot-left-small'), () => this.game.rotateLeft(1));
+        setupHoldButton(document.getElementById('rot-right-small'), () => this.game.rotateRight(1));
+        setupHoldButton(document.getElementById('rot-right-big'), () => this.game.rotateRight(10));
+
+        // Angle input
+        const angleInput = document.getElementById('angle-input');
+        angleInput.addEventListener('change', () => {
+            const val = parseInt(angleInput.value, 10);
+            if (!isNaN(val)) {
+                this.game.launcherAngle = Math.max(this.game.MIN_ANGLE, Math.min(this.game.MAX_ANGLE, val));
+                this.game.notify();
+                this.game.updateUI();
+            }
+        });
 
         // Fire button - hold to charge
         const fireBtn = document.getElementById('fire-btn');
@@ -142,8 +175,23 @@ class Renderer {
 
         // Draw launcher
         const launcherPos = this.worldToScreen(this.game.WORLD_WIDTH / 2, 5);
-        const launcherLength = 25;
+        const launcherLength = 35;
         const angleRad = this.game.launcherAngle * Math.PI / 180;
+
+        // Aiming guide line (shows direction before charging)
+        if (!this.game.isAnimating && !this.game.hasCharged) {
+            ctx.strokeStyle = '#ffffff22';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 10]);
+            ctx.beginPath();
+            ctx.moveTo(launcherPos.x, launcherPos.y);
+            ctx.lineTo(
+                launcherPos.x + Math.cos(angleRad) * h,
+                launcherPos.y - Math.sin(angleRad) * h
+            );
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
 
         // Launcher base
         ctx.fillStyle = '#555';
@@ -153,13 +201,13 @@ class Renderer {
 
         // Launcher barrel
         ctx.strokeStyle = '#888';
-        ctx.lineWidth = 8;
+        ctx.lineWidth = 10;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(launcherPos.x, launcherPos.y);
         ctx.lineTo(
             launcherPos.x + Math.cos(angleRad) * launcherLength,
-            launcherPos.y - Math.sin(angleRad) * launcherLength // Negative because screen Y is flipped
+            launcherPos.y - Math.sin(angleRad) * launcherLength
         );
         ctx.stroke();
 

@@ -131,11 +131,11 @@ class Game {
         this.isAnimating = true;
         this.notify();
 
-        // Animation runs for ~1 second at 60fps
+        // Animation runs for ~1 second (60 frames at 16ms each)
         const totalFrames = 60;
         let frame = 0;
 
-        const animate = () => {
+        const interval = setInterval(() => {
             frame++;
 
             // Advance missiles
@@ -162,14 +162,11 @@ class Game {
 
             this.notify();
 
-            if (frame < totalFrames) {
-                requestAnimationFrame(animate);
-            } else {
+            if (frame >= totalFrames) {
+                clearInterval(interval);
                 this.finishTurn();
             }
-        };
-
-        requestAnimationFrame(animate);
+        }, 16);
     }
 
     createExplosion(x, y) {
@@ -247,7 +244,10 @@ class Game {
     updateUI() {
         document.getElementById('level').textContent = `Level ${this.level}`;
         document.getElementById('hp').textContent = `HP: ${Math.max(0, this.baseHP)}`;
-        document.getElementById('angle-display').textContent = `${this.launcherAngle}°`;
+        const angleInput = document.getElementById('angle-input');
+        if (document.activeElement !== angleInput) {
+            angleInput.value = this.launcherAngle;
+        }
         document.getElementById('power-bar').style.width = `${this.power}%`;
 
         const fireBtn = document.getElementById('fire-btn');
@@ -256,5 +256,99 @@ class Game {
         fireBtn.textContent = this.hasCharged ? 'LOCKED IN' : (this.isCharging ? 'CHARGING...' : 'HOLD TO CHARGE');
 
         document.getElementById('advance-btn').disabled = this.isAnimating;
+    }
+
+    // ==================== TEST HELPERS ====================
+
+    // Get state summary for testing
+    getState() {
+        return {
+            level: this.level,
+            hp: this.baseHP,
+            angle: this.launcherAngle,
+            power: this.power,
+            hasCharged: this.hasCharged,
+            isAnimating: this.isAnimating,
+            aliens: this.aliens.map(a => ({ x: a.x.toFixed(1), y: a.y.toFixed(1) })),
+            missiles: this.missiles.length
+        };
+    }
+
+    // Aim at first alien (or specific index)
+    aimAtAlien(index = 0) {
+        if (index >= this.aliens.length) return null;
+        const alien = this.aliens[index];
+        const dx = alien.x - this.WORLD_WIDTH / 2;
+        const dy = alien.y - 5;
+        const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI);
+        this.launcherAngle = Math.max(this.MIN_ANGLE, Math.min(this.MAX_ANGLE, angle));
+        this.notify();
+        this.updateUI();
+        return { targetAngle: angle, setAngle: this.launcherAngle, alien: { x: alien.x, y: alien.y } };
+    }
+
+    // Charge to specific power (0-100) and lock in
+    chargeTo(powerPercent) {
+        if (this.hasCharged || this.isAnimating) return false;
+        this.power = Math.max(0, Math.min(100, powerPercent));
+        this.hasCharged = true;
+
+        // Create missile
+        const angleRad = this.launcherAngle * Math.PI / 180;
+        const distance = (this.power / 100) * (this.WORLD_HEIGHT * 0.85);
+        this.missiles.push({
+            x: this.WORLD_WIDTH / 2,
+            y: 5,
+            targetX: this.WORLD_WIDTH / 2 + Math.cos(angleRad) * distance,
+            targetY: 5 + Math.sin(angleRad) * distance,
+            progress: 0,
+            exploded: false
+        });
+
+        this.notify();
+        this.updateUI();
+        return true;
+    }
+
+    // Full auto-turn: aim at alien, charge full, advance, return promise
+    autoTurn(alienIndex = 0) {
+        return new Promise((resolve) => {
+            const aimResult = this.aimAtAlien(alienIndex);
+            if (!aimResult) {
+                resolve({ success: false, reason: 'No alien at index' });
+                return;
+            }
+
+            this.chargeTo(100);
+
+            const originalFinish = this.finishTurn.bind(this);
+            this.finishTurn = () => {
+                originalFinish();
+                this.finishTurn = originalFinish;
+                resolve({
+                    success: true,
+                    aliensRemaining: this.aliens.length,
+                    level: this.level,
+                    hp: this.baseHP
+                });
+            };
+
+            this.advance();
+        });
+    }
+
+    // Play multiple auto-turns
+    async autoPlay(turns = 5) {
+        const results = [];
+        for (let i = 0; i < turns; i++) {
+            if (this.aliens.length === 0) {
+                results.push({ turn: i, skipped: true, reason: 'No aliens' });
+                continue;
+            }
+            const result = await this.autoTurn(0);
+            results.push({ turn: i, ...result });
+            if (this.baseHP <= 0) break;
+        }
+        return results;
     }
 }
