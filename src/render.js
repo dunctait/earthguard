@@ -17,7 +17,9 @@ class Renderer {
             'game-canvas',
             'controls',
             'upgrade-menu-btn',
-            'upgrade-target-flag-btn',
+            'upgrade-modal-overlay',
+            'upgrade-menu',
+            'upgrade-menu-close-btn',
             'rot-left-big',
             'rot-left-small',
             'rot-right-small',
@@ -80,8 +82,10 @@ class Renderer {
         this.impactFlash = 0;
         this.seenGameExplosionIds = new Set();
         this.seenEnemyDeathFxIds = new Set();
+        this.seenWaveClearFxIds = new Set();
         this.playerExplosionFx = [];
         this.enemyExplosionFx = [];
+        this.waveClearBanners = [];
 
         this.generateStars();
         this.resize();
@@ -212,8 +216,22 @@ class Renderer {
         if (this.dom['upgrade-menu-btn']) {
             this.dom['upgrade-menu-btn'].addEventListener('click', () => this.game.toggleUpgradeMenu());
         }
-        if (this.dom['upgrade-target-flag-btn']) {
-            this.dom['upgrade-target-flag-btn'].addEventListener('click', () => this.game.purchaseUpgrade('targetAreas'));
+        if (this.dom['upgrade-menu-close-btn']) {
+            this.dom['upgrade-menu-close-btn'].addEventListener('click', () => this.game.closeUpgradeMenu());
+        }
+        if (this.dom['upgrade-menu']) {
+            this.dom['upgrade-menu'].addEventListener('click', (event) => {
+                const button = event.target.closest('[data-upgrade-key]');
+                if (!button) return;
+                this.game.purchaseUpgrade(button.dataset.upgradeKey);
+            });
+        }
+        if (this.dom['upgrade-modal-overlay']) {
+            this.dom['upgrade-modal-overlay'].addEventListener('click', (event) => {
+                if (event.target === this.dom['upgrade-modal-overlay']) {
+                    this.game.closeUpgradeMenu();
+                }
+            });
         }
     }
 
@@ -319,8 +337,10 @@ class Renderer {
 
         for (const fx of this.playerExplosionFx) fx.age++;
         for (const fx of this.enemyExplosionFx) fx.age++;
+        for (const banner of this.waveClearBanners) banner.age++;
         this.playerExplosionFx = this.playerExplosionFx.filter((fx) => fx.age <= fx.maxAge);
         this.enemyExplosionFx = this.enemyExplosionFx.filter((fx) => fx.age <= fx.maxAge);
+        this.waveClearBanners = this.waveClearBanners.filter((fx) => fx.age <= fx.maxAge);
     }
 
     syncFxFromGameState() {
@@ -346,6 +366,17 @@ class Renderer {
                 age: 0,
                 maxAge: 14,
                 exactHit: Boolean(event.exactHit)
+            });
+        }
+
+        for (const event of this.game.waveClearFxEvents || []) {
+            if (this.seenWaveClearFxIds.has(event.id)) continue;
+            this.seenWaveClearFxIds.add(event.id);
+            this.waveClearBanners.push({
+                title: event.title,
+                subtitle: event.subtitle || '',
+                age: 0,
+                maxAge: 85
             });
         }
     }
@@ -682,7 +713,19 @@ class Renderer {
             }
         }
 
-        // Aliens
+        // Incoming next-wave previews (dimmed, non-interactive), revealed after a few cycles.
+        if ((this.game.levelCycles || 0) >= (this.game.config.INCOMING_PREVIEW_REVEAL_CYCLE || 2)) {
+            for (const alien of (this.game.incomingAliens || [])) {
+                const pos = this.worldToScreen(alien.x, alien.y);
+                // Keep previews in upper staging area to avoid overlap clutter.
+                if (pos.y > h * 0.38 || pos.y < -40) continue;
+                const size = this.worldToScreenSize(alien.radius);
+                const distanceAlpha = Math.max(0.3, this.getDepthBrightness(pos.y) * 0.45);
+                this.drawUFO(pos.x, pos.y, size, distanceAlpha);
+            }
+        }
+
+        // Active aliens
         for (const alien of this.game.aliens) {
             const pos = this.worldToScreen(alien.x, alien.y);
             const size = this.worldToScreenSize(alien.radius);
@@ -699,6 +742,7 @@ class Renderer {
 
         // Corner brackets instead of full border
         this.drawCornerBrackets();
+        this.drawWaveClearBanners();
     }
 
     drawAnimatedTrajectory(x1, y1, x2, y2, faded = false) {
@@ -908,6 +952,45 @@ class Renderer {
 
         ctx.restore();
         this.clearGlow();
+    }
+
+    drawWaveClearBanners() {
+        if (!this.waveClearBanners.length) return;
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const banner = this.waveClearBanners[this.waveClearBanners.length - 1];
+        const t = banner.age / Math.max(1, banner.maxAge);
+        const fadeIn = Math.min(1, t / 0.12);
+        const fadeOut = Math.min(1, (1 - t) / 0.28);
+        const alpha = Math.max(0, Math.min(fadeIn, fadeOut)) * 0.95;
+        if (alpha <= 0) return;
+
+        const pulse = 1 + Math.sin(this.frameCount * 0.12) * 0.01;
+        const centerX = w / 2;
+        const centerY = h * 0.46;
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.scale(pulse, pulse);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        ctx.font = "700 18px Orbitron, 'Share Tech Mono', monospace";
+        ctx.fillStyle = `rgba(0, 255, 102, ${alpha * 0.9})`;
+        ctx.shadowColor = 'rgba(0, 255, 102, 0.35)';
+        ctx.shadowBlur = 12;
+        ctx.fillText(banner.title, 0, 0);
+
+        if (banner.subtitle) {
+            ctx.font = "700 12px 'Share Tech Mono', monospace";
+            ctx.fillStyle = `rgba(255, 170, 0, ${alpha * 0.85})`;
+            ctx.shadowColor = 'rgba(255, 170, 0, 0.22)';
+            ctx.shadowBlur = 8;
+            ctx.fillText(banner.subtitle, 0, 18);
+        }
+
+        ctx.restore();
     }
 
     drawCornerBrackets() {

@@ -66,14 +66,14 @@ async function main() {
         window.game.notify();
     });
     await page.waitForTimeout(50);
-    await page.click('#upgrade-target-flag-btn');
+    await page.click('[data-upgrade-key=\"targetAreas\"]');
     await page.waitForTimeout(100);
 
     const results = await page.evaluate(() => ({
         angleText: document.querySelector('#angle-display')?.textContent,
         powerBarWidth: document.querySelector('#power-bar')?.style.width,
         fireText: document.querySelector('#fire-btn')?.textContent,
-        upgradeText: document.querySelector('#upgrade-target-flag-btn')?.textContent,
+        upgradeText: document.querySelector('[data-upgrade-key="targetAreas"]')?.textContent,
         targetAreaUnlocked: Boolean(window.game?.upgrades?.targetAreas?.level > 0),
         pendingMissiles: window.game?.pendingMissiles?.length ?? null,
         isAnimating: Boolean(window.game?.isAnimating),

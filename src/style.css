@@ -86,11 +86,30 @@ html, body {
     text-shadow: 0 0 10px var(--green-glow-medium);
 }
 
-#status span {
+#status > span {
     display: flex;
     gap: 5px;
     align-items: baseline;
     animation: hudBreath 4s ease-in-out infinite;
+}
+
+#level {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+}
+
+.hud-line {
+    display: flex;
+    gap: 5px;
+    align-items: baseline;
+}
+
+.hud-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
 }
 
 .hud-label {
@@ -115,13 +134,26 @@ html, body {
 
 #controls {
     flex: 0 0 auto;
-    background: var(--bg-black);
     padding: 10px 12px 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    border-top: 1px solid var(--green-tertiary);
     position: relative;
+}
+
+.terminal-panel {
+    background: rgba(0, 8, 2, 0.96);
+    border: 1px solid var(--green-tertiary);
+    box-shadow:
+        inset 0 1px 0 rgba(0, 255, 102, 0.04),
+        inset 0 0 12px rgba(0, 255, 102, 0.02);
+}
+
+#controls.terminal-panel {
+    border-top-color: var(--green-tertiary);
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
     box-shadow:
         inset 0 1px 0 rgba(0, 255, 102, 0.06),
         0 -8px 24px rgba(0, 255, 102, 0.04);
@@ -133,26 +165,125 @@ html, body {
     margin-bottom: 6px;
 }
 
-.upgrade-menu {
+.modal-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 6px;
-    border: 1px solid var(--green-tertiary);
-    background: rgba(0, 10, 4, 0.9);
-    box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.03);
-    margin-bottom: 6px;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.42);
 }
 
-.upgrade-menu.is-hidden {
+.modal-overlay.is-hidden {
     display: none;
+}
+
+.ui-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    border-color: var(--green-secondary);
+    background: rgba(0, 10, 4, 0.96);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.55),
+        0 0 18px rgba(0, 255, 102, 0.08),
+        inset 0 0 12px rgba(0, 255, 102, 0.04);
+    margin-bottom: 8px;
+    border-radius: 3px;
+}
+
+.ui-modal.is-hidden {
+    display: none;
+}
+
+.ui-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid rgba(0, 255, 102, 0.14);
+    padding-bottom: 6px;
+}
+
+.ui-modal-title {
+    color: var(--green-primary);
+    font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+}
+
+.ui-modal-close {
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid var(--green-tertiary);
+    color: var(--green-secondary);
+    cursor: pointer;
+    font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.ui-modal-close:hover {
+    border-color: var(--cyan-friendly);
+    color: var(--cyan-friendly);
+}
+
+.ui-modal-body {
+    min-width: 0;
+}
+
+.upgrade-menu {
+    width: min(420px, calc(100% - 8px));
+    max-height: min(70vh, 460px);
+    margin: 0;
+}
+
+.upgrade-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-height: min(55vh, 360px);
+    overflow-y: auto;
+    padding-right: 2px;
 }
 
 .upgrade-row {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
-    align-items: center;
+    align-items: start;
+    background: rgba(0, 24, 10, 0.25);
+    padding: 6px;
+    border-color: rgba(0, 255, 102, 0.08);
+}
+
+.upgrade-copy {
+    min-width: 0;
+}
+
+.upgrade-name {
+    color: var(--green-primary);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.15;
+}
+
+.upgrade-level {
+    color: var(--cyan-friendly);
+    opacity: 0.85;
+}
+
+.upgrade-effect {
+    color: var(--amber-warning);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    margin-top: 3px;
+    text-transform: uppercase;
 }
 
 .upgrade-meta {
@@ -161,27 +292,38 @@ html, body {
     letter-spacing: 0.06em;
     line-height: 1.2;
     text-transform: uppercase;
+    margin-top: 2px;
+}
+
+.terminal-btn {
+    background: transparent;
+    border: 1px solid var(--green-tertiary);
+    border-radius: 2px;
+    color: var(--green-secondary);
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.1s ease-out;
+    position: relative;
+    overflow: hidden;
+    text-shadow: 0 0 5px var(--green-glow-subtle);
+    box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.02);
+}
+
+.terminal-btn::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: linear-gradient(180deg, rgba(0, 255, 102, 0.04), transparent 55%);
+    pointer-events: none;
 }
 
 .upgrade-btn {
     width: 100%;
     min-height: 30px;
-    background: transparent;
-    border: 1px solid var(--green-tertiary);
-    color: var(--green-secondary);
-    font-family: inherit;
     font-size: 11px;
-    font-weight: 700;
     letter-spacing: 0.08em;
     padding: 6px 8px;
-    cursor: pointer;
-    transition: all 0.1s ease-out;
-    box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.02);
-}
-
-#upgrade-target-flag-btn {
-    width: auto;
-    min-width: 150px;
 }
 
 .upgrade-btn:hover:not(:disabled) {
@@ -203,6 +345,12 @@ html, body {
     border-color: var(--cyan-friendly);
     color: var(--cyan-friendly);
     box-shadow: inset 0 0 10px rgba(51, 230, 255, 0.06);
+}
+
+.upgrade-row .upgrade-btn {
+    width: auto;
+    min-width: 150px;
+    align-self: center;
 }
 
 /* Corner brackets for controls */
@@ -242,17 +390,7 @@ html, body {
 }
 
 .rot-btn {
-    background: transparent;
-    border: 1px solid var(--green-tertiary);
-    border-radius: 2px;
-    color: var(--green-secondary);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
-    font-weight: 700;
-    cursor: pointer;
-    text-shadow: 0 0 5px var(--green-glow-subtle);
-    transition: all 0.1s ease-out;
-    position: relative;
-    overflow: hidden;
     box-shadow: inset 0 0 0 1px rgba(0, 255, 102, 0.02);
 }
 
@@ -368,17 +506,9 @@ html, body {
 #fire-btn,
 #advance-btn {
     height: 52px;
-    background: transparent;
-    border: 1px solid var(--green-tertiary);
-    color: var(--green-secondary);
     font-size: 12px;
-    font-weight: 700;
     font-family: inherit;
     letter-spacing: 0.08em;
-    cursor: pointer;
-    transition: all 0.1s ease-out;
-    position: relative;
-    overflow: hidden;
     box-shadow: inset 0 0 12px rgba(0, 255, 102, 0.03);
 }
 
@@ -467,16 +597,6 @@ html, body {
     opacity: 0.4;
     box-shadow: none;
     cursor: default;
-}
-
-#fire-btn::before,
-#advance-btn::before,
-.rot-btn::before {
-    content: '';
-    position: absolute;
-    inset: 1px;
-    background: linear-gradient(180deg, rgba(0, 255, 102, 0.04), transparent 55%);
-    pointer-events: none;
 }
 
 @keyframes hudBreath {

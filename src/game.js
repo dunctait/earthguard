@@ -36,9 +36,12 @@ const GameConfig = {
     MONEY_PER_KILL: 10,
     EXACT_HIT_MONEY_MULTIPLIER: 2,
     EXACT_HIT_RADIUS_FACTOR: 0.35,
-    WAVE_CLEAR_BONUS_BASE: 40,
-    WAVE_CLEAR_BONUS_DECAY_PER_CYCLE: 8,
-    WAVE_CLEAR_BONUS_MIN: 5,
+    WAVE_CLEAR_BONUS_BASE: 12,
+    WAVE_CLEAR_BONUS_DECAY_PER_CYCLE: 2,
+    WAVE_CLEAR_BONUS_MIN: 0,
+    WAVE_CLEAR_BONUS_LEVEL_SCALE: 0.04,
+    INCOMING_PREVIEW_REVEAL_CYCLE: 2,
+    UPGRADE_EFFICIENCY_STEP: 0.10,
 
     // Player
     STARTING_HP: 100,
@@ -80,18 +83,82 @@ class Game {
                 name: 'Target Area Preview',
                 level: 0,
                 maxLevel: 1,
-                moneyCost: 50,
-                energyCost: 20
+                description: 'Shows predicted impact circles for locked missiles.',
+                tiers: [
+                    { moneyCost: 50, energyCost: 20, label: 'Unlock preview' }
+                ]
+            },
+            blastRadius: {
+                key: 'blastRadius',
+                name: 'Blast Radius',
+                level: 0,
+                maxLevel: 3,
+                description: 'Increase explosion radius for all missiles.',
+                tiers: [
+                    { moneyCost: 30, energyCost: 10, radiusMultiplier: 1.15, label: '+15%' },
+                    { moneyCost: 60, energyCost: 14, radiusMultiplier: 1.30, label: '+30%' },
+                    { moneyCost: 110, energyCost: 18, radiusMultiplier: 1.50, label: '+50%' }
+                ]
+            },
+            missileRacks: {
+                key: 'missileRacks',
+                name: 'Missile Racks',
+                level: 0,
+                maxLevel: 3,
+                description: 'Adds one missile slot per cycle per level.',
+                tiers: [
+                    { moneyCost: 40, energyCost: 14, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
+                    { moneyCost: 85, energyCost: 18, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
+                    { moneyCost: 150, energyCost: 24, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
+                ]
+            },
+            bountyLink: {
+                key: 'bountyLink',
+                name: 'Bounty Link',
+                level: 0,
+                maxLevel: 3,
+                description: 'Increase cash paid per enemy kill.',
+                tiers: [
+                    { moneyCost: 25, energyCost: 8, moneyPerKillBonus: 5, label: '+$5 / kill' },
+                    { moneyCost: 55, energyCost: 12, moneyPerKillBonus: 10, label: '+$10 / kill' },
+                    { moneyCost: 95, energyCost: 16, moneyPerKillBonus: 15, label: '+$15 / kill' }
+                ]
+            },
+            energyEfficiency: {
+                key: 'energyEfficiency',
+                name: 'Energy Efficiency',
+                level: 0,
+                maxLevel: 3,
+                description: 'Reduce missile energy cost by 10% per level.',
+                tiers: [
+                    { moneyCost: 35, energyCost: 10, costReductionPct: 10, label: '-10% cost' },
+                    { moneyCost: 70, energyCost: 14, costReductionPct: 20, label: '-20% cost' },
+                    { moneyCost: 120, energyCost: 18, costReductionPct: 30, label: '-30% cost' }
+                ]
+            },
+            reactorRegen: {
+                key: 'reactorRegen',
+                name: 'Reactor Regen',
+                level: 0,
+                maxLevel: 3,
+                description: 'Restore more energy after each cycle.',
+                tiers: [
+                    { moneyCost: 30, energyCost: 10, regenBonus: 1, label: '+1 EN / cycle' },
+                    { moneyCost: 70, energyCost: 14, regenBonus: 2, label: '+2 EN / cycle' },
+                    { moneyCost: 120, energyCost: 18, regenBonus: 4, label: '+4 EN / cycle' }
+                ]
             }
         };
 
         // Entities
         this.aliens = [];
+        this.incomingAliens = [];
         this.missiles = [];      // Active missiles in flight
         this.pendingMissiles = []; // Missiles locked in but not yet launched
         this.explosions = [];
         this.blastResidue = [];
         this.enemyDeathFxEvents = [];
+        this.waveClearFxEvents = [];
         this.nextFxEventId = 1;
 
         // Callbacks
@@ -99,6 +166,7 @@ class Game {
 
         // Initialize
         this.spawnWave();
+        this.queueIncomingWavePreview(this.level + 1);
     }
 
     get WORLD_HEIGHT() { return this.config.WORLD_HEIGHT; }
@@ -106,18 +174,42 @@ class Game {
 
     spawnWave() {
         this.levelCycles = 0;
-        const alienCount = Math.min(2 + Math.floor((this.level - 1) / 2), 8);
-        const speed = this.config.BASE_ALIEN_SPEED + (this.level * this.config.ALIEN_SPEED_PER_LEVEL);
+        this.aliens = this.generateWaveAliens(this.level, false);
+    }
 
+    generateWaveAliens(level, incoming = false) {
+        const aliens = [];
+        const alienCount = Math.min(2 + Math.floor((level - 1) / 2), 8);
+        const speed = this.config.BASE_ALIEN_SPEED + (level * this.config.ALIEN_SPEED_PER_LEVEL);
+        const startY = incoming ? (this.config.WORLD_HEIGHT + 10) : (this.config.WORLD_HEIGHT - 5);
         for (let i = 0; i < alienCount; i++) {
-            this.aliens.push({
+            aliens.push({
                 x: 10 + Math.random() * (this.config.WORLD_WIDTH - 20),
-                y: this.config.WORLD_HEIGHT - 5 - (i * 8),
+                y: startY - (i * 8),
                 speed: speed,
                 hp: 1,
                 damage: this.config.ALIEN_DAMAGE,
-                radius: this.config.ALIEN_RADIUS
+                radius: this.config.ALIEN_RADIUS,
+                waveLevel: level,
+                incoming
             });
+        }
+        return aliens;
+    }
+
+    queueIncomingWavePreview(level) {
+        this.incomingAliens = this.generateWaveAliens(level, true);
+    }
+
+    emitWaveClearFx(waveLevel, bonus) {
+        const subtitle = bonus > 0 ? `CYCLES BONUS +$${bonus}` : '';
+        this.waveClearFxEvents.push({
+            id: this.nextFxEventId++,
+            title: `WAVE ${waveLevel} CLEARED!`,
+            subtitle
+        });
+        if (this.waveClearFxEvents.length > 20) {
+            this.waveClearFxEvents.shift();
         }
     }
 
@@ -135,13 +227,15 @@ class Game {
     canCharge() {
         return !this.isAnimating &&
                !this.isCharging &&
-               this.missilesLockedThisTurn < this.config.MISSILES_PER_TURN &&
+               this.missilesLockedThisTurn < this.getMissilesPerTurn() &&
                this.missileEnergy >= this.config.MISSILE_MIN_ENERGY_COST;
     }
 
     getMissileEnergyCostForPower(power = this.power) {
         if (power <= 0) return 0;
-        return this.config.MISSILE_MIN_ENERGY_COST;
+        const efficiencyLevel = this.upgrades.energyEfficiency?.level || 0;
+        const reduction = efficiencyLevel * this.config.UPGRADE_EFFICIENCY_STEP;
+        return Math.max(1, Math.ceil(this.config.MISSILE_MIN_ENERGY_COST * (1 - reduction)));
     }
 
     getMaxChargePowerForEnergy(energy = this.missileEnergy) {
@@ -171,7 +265,9 @@ class Game {
 
     getExplosionRadiusForLevel(level = this.level) {
         const multiplier = level === 1 ? 2 : 1;
-        return this.config.EXPLOSION_RADIUS * multiplier;
+        const radiusTier = this.getCurrentUpgradeTier('blastRadius');
+        const upgradeMultiplier = radiusTier?.radiusMultiplier || 1;
+        return this.config.EXPLOSION_RADIUS * multiplier * upgradeMultiplier;
     }
 
     getCurrentExplosionRadius() {
@@ -182,7 +278,7 @@ class Game {
         const raw = this.config.WAVE_CLEAR_BONUS_BASE - ((Math.max(1, cycles) - 1) * this.config.WAVE_CLEAR_BONUS_DECAY_PER_CYCLE);
         const clamped = Math.max(this.config.WAVE_CLEAR_BONUS_MIN, raw);
         // Mild level scaling to keep bonuses meaningful without exploding economy.
-        return Math.round(clamped * (1 + ((Math.max(1, level) - 1) * 0.1)));
+        return Math.round(clamped * (1 + ((Math.max(1, level) - 1) * (this.config.WAVE_CLEAR_BONUS_LEVEL_SCALE || 0))));
     }
 
     startCharging() {
@@ -230,7 +326,7 @@ class Game {
             this.power = 0;
 
             // Auto-advance when all missiles locked
-            if (this.missilesLockedThisTurn >= this.config.MISSILES_PER_TURN) {
+            if (this.missilesLockedThisTurn >= this.getMissilesPerTurn()) {
                 this.notify();
                 setTimeout(() => this.advance(), 100);
                 return;
@@ -263,8 +359,50 @@ class Game {
         return Boolean(this.upgrades[key] && this.upgrades[key].level > 0);
     }
 
+    getCurrentUpgradeTier(key) {
+        const upgrade = this.upgrades[key];
+        if (!upgrade || upgrade.level <= 0) return null;
+        return upgrade.tiers[upgrade.level - 1] || null;
+    }
+
+    getNextUpgradeTier(key) {
+        const upgrade = this.upgrades[key];
+        if (!upgrade) return null;
+        return upgrade.tiers[upgrade.level] || null;
+    }
+
+    getAvailableUpgradeCount() {
+        let count = 0;
+        for (const key of Object.keys(this.upgrades)) {
+            if (this.canPurchaseUpgrade(key)) count++;
+        }
+        return count;
+    }
+
+    getMissilesPerTurn() {
+        const tier = this.getCurrentUpgradeTier('missileRacks');
+        return this.config.MISSILES_PER_TURN + (tier?.missilesPerTurnBonus || 0);
+    }
+
+    getEnergyRegenPerTurn() {
+        const tier = this.getCurrentUpgradeTier('reactorRegen');
+        return this.config.MISSILE_ENERGY_REGEN_PER_TURN + (tier?.regenBonus || 0);
+    }
+
+    getMoneyPerKillReward(exactHit = false) {
+        const tier = this.getCurrentUpgradeTier('bountyLink');
+        const baseReward = this.config.MONEY_PER_KILL + (tier?.moneyPerKillBonus || 0);
+        return exactHit ? baseReward * this.config.EXACT_HIT_MONEY_MULTIPLIER : baseReward;
+    }
+
     toggleUpgradeMenu() {
         this.isUpgradeMenuOpen = !this.isUpgradeMenuOpen;
+        this.notify();
+    }
+
+    closeUpgradeMenu() {
+        if (!this.isUpgradeMenuOpen) return;
+        this.isUpgradeMenuOpen = false;
         this.notify();
     }
 
@@ -272,16 +410,19 @@ class Game {
         const upgrade = this.upgrades[key];
         if (!upgrade) return false;
         if (upgrade.level >= upgrade.maxLevel) return false;
-        return this.money >= upgrade.moneyCost &&
-               this.missileEnergy >= upgrade.energyCost;
+        const nextTier = this.getNextUpgradeTier(key);
+        if (!nextTier) return false;
+        return this.money >= nextTier.moneyCost &&
+               this.missileEnergy >= nextTier.energyCost;
     }
 
     purchaseUpgrade(key) {
         if (!this.canPurchaseUpgrade(key)) return false;
         const upgrade = this.upgrades[key];
-        this.money -= upgrade.moneyCost;
+        const nextTier = this.getNextUpgradeTier(key);
+        this.money -= nextTier.moneyCost;
         this.missileEnergy = this.utils.clamp(
-            this.missileEnergy - upgrade.energyCost,
+            this.missileEnergy - nextTier.energyCost,
             0,
             this.config.MISSILE_ENERGY_MAX
         );
@@ -328,6 +469,10 @@ class Game {
             // Advance aliens
             for (const alien of this.aliens) {
                 alien.y -= alien.speed / totalFrames;
+            }
+            for (const alien of this.incomingAliens) {
+                // Preview wave drifts in more slowly and never affects gameplay until promoted.
+                alien.y -= (alien.speed * 0.55) / totalFrames;
             }
 
             // Age explosions
@@ -443,10 +588,24 @@ class Game {
         if (this.aliens.length === 0) {
             this.lastWaveClearBonus = this.getWaveClearSpeedBonus(this.levelCycles, this.level);
             this.money += this.lastWaveClearBonus;
+            this.emitWaveClearFx(this.level, this.lastWaveClearBonus);
             this.level++;
-            this.spawnWave();
+            if (this.incomingAliens.length > 0) {
+                this.aliens = this.incomingAliens.map((alien) => ({
+                    ...alien,
+                    incoming: false
+                }));
+                this.incomingAliens = [];
+                this.levelCycles = 0;
+            } else {
+                this.spawnWave();
+            }
+            this.queueIncomingWavePreview(this.level + 1);
         } else {
             this.lastWaveClearBonus = 0;
+            if (this.incomingAliens.length === 0) {
+                this.queueIncomingWavePreview(this.level + 1);
+            }
         }
 
         // Check game over
@@ -458,7 +617,7 @@ class Game {
 
         this.isAnimating = false;
         this.missileEnergy = this.utils.clamp(
-            this.missileEnergy + this.config.MISSILE_ENERGY_REGEN_PER_TURN,
+            this.missileEnergy + this.getEnergyRegenPerTurn(),
             0,
             this.config.MISSILE_ENERGY_MAX
         );
@@ -485,7 +644,10 @@ class Game {
         this.explosions = [];
         this.blastResidue = [];
         this.enemyDeathFxEvents = [];
+        this.waveClearFxEvents = [];
+        this.incomingAliens = [];
         this.spawnWave();
+        this.queueIncomingWavePreview(this.level + 1);
     }
 
     applyExplosionDamage(explosion) {
@@ -498,9 +660,7 @@ class Game {
                 alien.hp -= 1;
                 if (alien.hp <= 0) {
                     const exactHit = dist <= (alien.radius * this.config.EXACT_HIT_RADIUS_FACTOR);
-                    const reward = exactHit
-                        ? this.config.MONEY_PER_KILL * this.config.EXACT_HIT_MONEY_MULTIPLIER
-                        : this.config.MONEY_PER_KILL;
+                    const reward = this.getMoneyPerKillReward(exactHit);
                     this.money += reward;
                     this.queueEnemyDeathFx(alien, exactHit);
                 }
@@ -532,10 +692,12 @@ class Game {
             levelCycles: this.levelCycles,
             lastWaveClearBonus: this.lastWaveClearBonus,
             missilesLocked: this.missilesLockedThisTurn,
+            missilesPerTurn: this.getMissilesPerTurn(),
             missilesInFlight: this.missiles.length,
             blastResidue: this.blastResidue.length,
             isAnimating: this.isAnimating,
             aliens: this.aliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),
+            incomingAliens: this.incomingAliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),
             config: this.config
         };
     }
@@ -569,13 +731,13 @@ class Game {
     async autoTurn() {
         return new Promise((resolve) => {
             // Fire all missiles at different aliens
-            for (let i = 0; i < this.config.MISSILES_PER_TURN && i < this.aliens.length; i++) {
+            for (let i = 0; i < this.getMissilesPerTurn() && i < this.aliens.length; i++) {
                 this.aimAtAlien(i);
                 this.chargeTo(100);
             }
 
             // If we still have missiles to fire, fire at first alien
-            while (this.canCharge() && this.missilesLockedThisTurn < this.config.MISSILES_PER_TURN && this.aliens.length > 0) {
+            while (this.canCharge() && this.missilesLockedThisTurn < this.getMissilesPerTurn() && this.aliens.length > 0) {
                 this.aimAtAlien(0);
                 if (!this.chargeTo(100)) break;
             }
@@ -594,7 +756,7 @@ class Game {
             }, 100);
 
             // Manual advance if not auto-triggered
-            if (this.missilesLockedThisTurn > 0 && this.missilesLockedThisTurn < this.config.MISSILES_PER_TURN) {
+            if (this.missilesLockedThisTurn > 0 && this.missilesLockedThisTurn < this.getMissilesPerTurn()) {
                 this.advance();
             }
         });

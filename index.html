@@ -19,25 +19,19 @@
                 <span id="money">$: 0</span>
             </div>
         </div>
-        <div id="controls">
+        <div id="controls" class="terminal-panel">
             <div id="upgrade-controls">
-                <button id="upgrade-menu-btn" class="upgrade-btn" data-testid="upgrade-menu-btn">UPGRADES</button>
-            </div>
-            <div id="upgrade-menu" class="upgrade-menu is-hidden">
-                <div class="upgrade-row">
-                    <div id="upgrade-target-area-meta" class="upgrade-meta">TARGET AREA PREVIEW</div>
-                    <button id="upgrade-target-flag-btn" class="upgrade-btn" data-testid="upgrade-target-flag-btn">BUY</button>
-                </div>
+                <button id="upgrade-menu-btn" class="terminal-btn upgrade-btn" data-testid="upgrade-menu-btn">UPGRADES</button>
             </div>
             <div id="rotation-controls">
                 <div class="rotation-group">
-                    <button class="rot-btn big" id="rot-left-big" data-testid="rot-left-10">&lt;&lt;</button>
-                    <button class="rot-btn small" id="rot-left-small" data-testid="rot-left-1">&lt;</button>
+                    <button class="terminal-btn rot-btn big" id="rot-left-big" data-testid="rot-left-10">&lt;&lt;</button>
+                    <button class="terminal-btn rot-btn small" id="rot-left-small" data-testid="rot-left-1">&lt;</button>
                 </div>
                 <div id="angle-display" data-testid="angle-display">0°</div>
                 <div class="rotation-group">
-                    <button class="rot-btn small" id="rot-right-small" data-testid="rot-right-1">&gt;</button>
-                    <button class="rot-btn big" id="rot-right-big" data-testid="rot-right-10">&gt;&gt;</button>
+                    <button class="terminal-btn rot-btn small" id="rot-right-small" data-testid="rot-right-1">&gt;</button>
+                    <button class="terminal-btn rot-btn big" id="rot-right-big" data-testid="rot-right-10">&gt;&gt;</button>
                 </div>
             </div>
             <div id="action-controls">
@@ -45,9 +39,18 @@
                     <div id="power-bar-container">
                         <div id="power-bar" data-testid="power-bar"></div>
                     </div>
-                    <button id="fire-btn" data-testid="fire-btn">HOLD TO CHARGE</button>
+                    <button id="fire-btn" class="terminal-btn" data-testid="fire-btn">HOLD TO CHARGE</button>
                 </div>
-                <button id="advance-btn" data-testid="advance-btn">ADVANCE</button>
+                <button id="advance-btn" class="terminal-btn" data-testid="advance-btn">ADVANCE</button>
+            </div>
+        </div>
+        <div id="upgrade-modal-overlay" class="modal-overlay is-hidden" aria-hidden="true">
+            <div id="upgrade-menu" class="terminal-panel ui-modal upgrade-menu">
+                <div class="ui-modal-header">
+                    <div id="upgrade-menu-title" class="ui-modal-title">UPGRADES</div>
+                    <button id="upgrade-menu-close-btn" class="terminal-btn ui-modal-close" type="button" aria-label="Close upgrades" data-testid="upgrade-menu-close-btn">X</button>
+                </div>
+                <div id="upgrade-list" class="ui-modal-body upgrade-list"></div>
             </div>
         </div>
     </div>
