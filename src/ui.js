@@ -102,9 +102,7 @@ class EarthGuardUI {
             const isOwnedOut = upgrade.level >= upgrade.maxLevel;
             const canBuy = game.canPurchaseUpgrade(upgrade.key);
             const levelText = `L${upgrade.level}/${upgrade.maxLevel}`;
-            const effectText = isOwnedOut
-                ? 'MAXED'
-                : (nextTier?.label || 'NEXT');
+            const effectText = game.getUpgradeNextTierText(upgrade.key);
             const costText = isOwnedOut
                 ? 'OWNED'
                 : `BUY [$${nextTier.moneyCost} | EN ${nextTier.energyCost}]`;

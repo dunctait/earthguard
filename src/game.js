@@ -17,6 +17,7 @@ const GameConfig = {
     // Missiles
     MISSILES_PER_TURN: 2,
     MISSILE_TRAVEL_PER_TURN: 0.5,  // 50% of target distance per advance
+    MISSILE_LAUNCH_START_PROGRESS: 0.05,
     EXPLOSION_RADIUS: 6.4,          // 80% of original 8
     MAX_MISSILE_RANGE: 85,          // % of world height
     MISSILE_ENERGY_MAX: 100,
@@ -41,7 +42,6 @@ const GameConfig = {
     WAVE_CLEAR_BONUS_MIN: 0,
     WAVE_CLEAR_BONUS_LEVEL_SCALE: 0.04,
     INCOMING_PREVIEW_REVEAL_CYCLE: 2,
-    UPGRADE_EFFICIENCY_STEP: 0.10,
 
     // Player
     STARTING_HP: 100,
@@ -49,6 +49,112 @@ const GameConfig = {
     // Animation
     ANIMATION_FRAMES: 24,
     ANIMATION_FRAME_MS: 10
+};
+
+const UpgradeDefinitions = {
+    targetAreas: {
+        key: 'targetAreas',
+        name: 'Target Area Preview',
+        description: 'Shows predicted impact circles for locked missiles.',
+        stackingMode: 'unlock',
+        tiers: [
+            { moneyCost: 50, energyCost: 20, label: 'Unlock preview' }
+        ],
+        uiLabelForTier: (tier) => tier.label || 'UNLOCK',
+        apply: ({ effects }) => {
+            effects.targetAreasEnabled = true;
+        }
+    },
+    blastRadius: {
+        key: 'blastRadius',
+        name: 'Blast Radius',
+        description: 'Increase explosion radius for all missiles.',
+        stackingMode: 'replace',
+        tiers: [
+            { moneyCost: 30, energyCost: 10, radiusMultiplier: 1.15, label: '+15%' },
+            { moneyCost: 60, energyCost: 14, radiusMultiplier: 1.30, label: '+30%' },
+            { moneyCost: 110, energyCost: 18, radiusMultiplier: 1.50, label: '+50%' }
+        ],
+        uiLabelForTier: (tier) => tier.label || `x${tier.radiusMultiplier ?? 1}`,
+        apply: ({ effects, tier }) => {
+            effects.blastRadiusMultiplier = tier.radiusMultiplier || 1;
+        }
+    },
+    missileRacks: {
+        key: 'missileRacks',
+        name: 'Missile Racks',
+        description: 'Adds one missile slot per cycle per level.',
+        stackingMode: 'replace',
+        tiers: [
+            { moneyCost: 40, energyCost: 14, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
+            { moneyCost: 85, energyCost: 18, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
+            { moneyCost: 150, energyCost: 24, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
+        ],
+        uiLabelForTier: (tier) => tier.label || `+${tier.missilesPerTurnBonus || 0} missile/cycle`,
+        apply: ({ effects, tier }) => {
+            effects.missilesPerTurnBonus = tier.missilesPerTurnBonus || 0;
+        }
+    },
+    bountyLink: {
+        key: 'bountyLink',
+        name: 'Bounty Link',
+        description: 'Increase cash paid per enemy kill.',
+        stackingMode: 'replace',
+        tiers: [
+            { moneyCost: 25, energyCost: 8, moneyPerKillBonus: 5, label: '+$5 / kill' },
+            { moneyCost: 55, energyCost: 12, moneyPerKillBonus: 10, label: '+$10 / kill' },
+            { moneyCost: 95, energyCost: 16, moneyPerKillBonus: 15, label: '+$15 / kill' }
+        ],
+        uiLabelForTier: (tier) => tier.label || `+$${tier.moneyPerKillBonus || 0} / kill`,
+        apply: ({ effects, tier }) => {
+            effects.moneyPerKillBonus = tier.moneyPerKillBonus || 0;
+        }
+    },
+    energyEfficiency: {
+        key: 'energyEfficiency',
+        name: 'Energy Efficiency',
+        description: 'Reduce missile energy cost by 10% per level.',
+        stackingMode: 'replace',
+        tiers: [
+            { moneyCost: 35, energyCost: 10, costReductionPct: 10, label: '-10% cost' },
+            { moneyCost: 70, energyCost: 14, costReductionPct: 20, label: '-20% cost' },
+            { moneyCost: 120, energyCost: 18, costReductionPct: 30, label: '-30% cost' }
+        ],
+        uiLabelForTier: (tier) => tier.label || `-${tier.costReductionPct || 0}% cost`,
+        apply: ({ effects, tier }) => {
+            effects.energyCostReductionPct = (tier.costReductionPct || 0) / 100;
+        }
+    },
+    reactorRegen: {
+        key: 'reactorRegen',
+        name: 'Reactor Regen',
+        description: 'Restore more energy after each cycle.',
+        stackingMode: 'replace',
+        tiers: [
+            { moneyCost: 30, energyCost: 10, regenBonus: 1, label: '+1 EN / cycle' },
+            { moneyCost: 70, energyCost: 14, regenBonus: 2, label: '+2 EN / cycle' },
+            { moneyCost: 120, energyCost: 18, regenBonus: 4, label: '+4 EN / cycle' }
+        ],
+        uiLabelForTier: (tier) => tier.label || `+${tier.regenBonus || 0} EN / cycle`,
+        apply: ({ effects, tier }) => {
+            effects.energyRegenBonus = tier.regenBonus || 0;
+        }
+    },
+    trajectoryProcessor: {
+        key: 'trajectoryProcessor',
+        name: 'Trajectory Processor',
+        description: 'Extends aiming guide visibility by reducing fade falloff.',
+        stackingMode: 'replace',
+        tiers: [
+            { moneyCost: 25, energyCost: 8, fadeStrengthMultiplier: 0.85, label: 'Longer guide I' },
+            { moneyCost: 55, energyCost: 12, fadeStrengthMultiplier: 0.70, label: 'Longer guide II' },
+            { moneyCost: 95, energyCost: 16, fadeStrengthMultiplier: 0.55, label: 'Longer guide III' }
+        ],
+        uiLabelForTier: (tier) => tier.label || 'Longer guide',
+        apply: ({ effects, tier }) => {
+            effects.trajectoryFadeStrengthMultiplier = tier.fadeStrengthMultiplier || 1;
+        }
+    }
 };
 
 class Game {
@@ -77,78 +183,9 @@ class Game {
         this.levelCycles = 0;
         this.lastWaveClearBonus = 0;
         this.isUpgradeMenuOpen = false;
-        this.upgrades = {
-            targetAreas: {
-                key: 'targetAreas',
-                name: 'Target Area Preview',
-                level: 0,
-                maxLevel: 1,
-                description: 'Shows predicted impact circles for locked missiles.',
-                tiers: [
-                    { moneyCost: 50, energyCost: 20, label: 'Unlock preview' }
-                ]
-            },
-            blastRadius: {
-                key: 'blastRadius',
-                name: 'Blast Radius',
-                level: 0,
-                maxLevel: 3,
-                description: 'Increase explosion radius for all missiles.',
-                tiers: [
-                    { moneyCost: 30, energyCost: 10, radiusMultiplier: 1.15, label: '+15%' },
-                    { moneyCost: 60, energyCost: 14, radiusMultiplier: 1.30, label: '+30%' },
-                    { moneyCost: 110, energyCost: 18, radiusMultiplier: 1.50, label: '+50%' }
-                ]
-            },
-            missileRacks: {
-                key: 'missileRacks',
-                name: 'Missile Racks',
-                level: 0,
-                maxLevel: 3,
-                description: 'Adds one missile slot per cycle per level.',
-                tiers: [
-                    { moneyCost: 40, energyCost: 14, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
-                    { moneyCost: 85, energyCost: 18, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
-                    { moneyCost: 150, energyCost: 24, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
-                ]
-            },
-            bountyLink: {
-                key: 'bountyLink',
-                name: 'Bounty Link',
-                level: 0,
-                maxLevel: 3,
-                description: 'Increase cash paid per enemy kill.',
-                tiers: [
-                    { moneyCost: 25, energyCost: 8, moneyPerKillBonus: 5, label: '+$5 / kill' },
-                    { moneyCost: 55, energyCost: 12, moneyPerKillBonus: 10, label: '+$10 / kill' },
-                    { moneyCost: 95, energyCost: 16, moneyPerKillBonus: 15, label: '+$15 / kill' }
-                ]
-            },
-            energyEfficiency: {
-                key: 'energyEfficiency',
-                name: 'Energy Efficiency',
-                level: 0,
-                maxLevel: 3,
-                description: 'Reduce missile energy cost by 10% per level.',
-                tiers: [
-                    { moneyCost: 35, energyCost: 10, costReductionPct: 10, label: '-10% cost' },
-                    { moneyCost: 70, energyCost: 14, costReductionPct: 20, label: '-20% cost' },
-                    { moneyCost: 120, energyCost: 18, costReductionPct: 30, label: '-30% cost' }
-                ]
-            },
-            reactorRegen: {
-                key: 'reactorRegen',
-                name: 'Reactor Regen',
-                level: 0,
-                maxLevel: 3,
-                description: 'Restore more energy after each cycle.',
-                tiers: [
-                    { moneyCost: 30, energyCost: 10, regenBonus: 1, label: '+1 EN / cycle' },
-                    { moneyCost: 70, energyCost: 14, regenBonus: 2, label: '+2 EN / cycle' },
-                    { moneyCost: 120, energyCost: 18, regenBonus: 4, label: '+4 EN / cycle' }
-                ]
-            }
-        };
+        this.upgrades = this.createUpgradeState();
+        this.upgradeEffects = this.getDefaultUpgradeEffects();
+        this.rebuildUpgradeEffects();
 
         // Entities
         this.aliens = [];
@@ -172,33 +209,103 @@ class Game {
     get WORLD_HEIGHT() { return this.config.WORLD_HEIGHT; }
     get WORLD_WIDTH() { return this.config.WORLD_WIDTH; }
 
-    spawnWave() {
-        this.levelCycles = 0;
-        this.aliens = this.generateWaveAliens(this.level, false);
+    createUpgradeState() {
+        const state = {};
+        for (const [key, definition] of Object.entries(UpgradeDefinitions)) {
+            state[key] = {
+                ...definition,
+                maxLevel: definition.tiers.length,
+                level: 0
+            };
+        }
+        return state;
     }
 
-    generateWaveAliens(level, incoming = false) {
+    getDefaultUpgradeEffects() {
+        return {
+            targetAreasEnabled: false,
+            blastRadiusMultiplier: 1,
+            missilesPerTurnBonus: 0,
+            moneyPerKillBonus: 0,
+            energyCostReductionPct: 0,
+            energyRegenBonus: 0,
+            trajectoryFadeStrengthMultiplier: 1
+        };
+    }
+
+    rebuildUpgradeEffects() {
+        const effects = this.getDefaultUpgradeEffects();
+        for (const upgrade of Object.values(this.upgrades)) {
+            if (upgrade.level <= 0) continue;
+            const tier = upgrade.tiers[upgrade.level - 1];
+            if (!tier || typeof upgrade.apply !== 'function') continue;
+            upgrade.apply({
+                game: this,
+                config: this.config,
+                effects,
+                upgrade,
+                tier,
+                level: upgrade.level
+            });
+        }
+        this.upgradeEffects = effects;
+        return effects;
+    }
+
+    getWaveSpec(level) {
+        return {
+            level,
+            alienCount: Math.min(2 + Math.floor((level - 1) / 2), 8),
+            speed: this.config.BASE_ALIEN_SPEED + (level * this.config.ALIEN_SPEED_PER_LEVEL)
+        };
+    }
+
+    createAliensFromWaveSpec(spec, incoming = false) {
         const aliens = [];
-        const alienCount = Math.min(2 + Math.floor((level - 1) / 2), 8);
-        const speed = this.config.BASE_ALIEN_SPEED + (level * this.config.ALIEN_SPEED_PER_LEVEL);
         const startY = incoming ? (this.config.WORLD_HEIGHT + 10) : (this.config.WORLD_HEIGHT - 5);
-        for (let i = 0; i < alienCount; i++) {
+        for (let i = 0; i < spec.alienCount; i++) {
             aliens.push({
                 x: 10 + Math.random() * (this.config.WORLD_WIDTH - 20),
                 y: startY - (i * 8),
-                speed: speed,
+                speed: spec.speed,
                 hp: 1,
                 damage: this.config.ALIEN_DAMAGE,
                 radius: this.config.ALIEN_RADIUS,
-                waveLevel: level,
+                waveLevel: spec.level,
                 incoming
             });
         }
         return aliens;
     }
 
+    startWave(level = this.level) {
+        this.levelCycles = 0;
+        const waveSpec = this.getWaveSpec(level);
+        this.aliens = this.createAliensFromWaveSpec(waveSpec, false);
+    }
+
+    primeIncomingWave(level) {
+        const waveSpec = this.getWaveSpec(level);
+        this.incomingAliens = this.createAliensFromWaveSpec(waveSpec, true);
+    }
+
+    promoteIncomingWaveToActive() {
+        if (!this.incomingAliens.length) return false;
+        this.aliens = this.incomingAliens.map((alien) => ({
+            ...alien,
+            incoming: false
+        }));
+        this.incomingAliens = [];
+        this.levelCycles = 0;
+        return true;
+    }
+
+    spawnWave() {
+        this.startWave(this.level);
+    }
+
     queueIncomingWavePreview(level) {
-        this.incomingAliens = this.generateWaveAliens(level, true);
+        this.primeIncomingWave(level);
     }
 
     emitWaveClearFx(waveLevel, bonus) {
@@ -233,8 +340,7 @@ class Game {
 
     getMissileEnergyCostForPower(power = this.power) {
         if (power <= 0) return 0;
-        const efficiencyLevel = this.upgrades.energyEfficiency?.level || 0;
-        const reduction = efficiencyLevel * this.config.UPGRADE_EFFICIENCY_STEP;
+        const reduction = this.upgradeEffects.energyCostReductionPct || 0;
         return Math.max(1, Math.ceil(this.config.MISSILE_MIN_ENERGY_COST * (1 - reduction)));
     }
 
@@ -265,8 +371,7 @@ class Game {
 
     getExplosionRadiusForLevel(level = this.level) {
         const multiplier = level === 1 ? 2 : 1;
-        const radiusTier = this.getCurrentUpgradeTier('blastRadius');
-        const upgradeMultiplier = radiusTier?.radiusMultiplier || 1;
+        const upgradeMultiplier = this.upgradeEffects.blastRadiusMultiplier || 1;
         return this.config.EXPLOSION_RADIUS * multiplier * upgradeMultiplier;
     }
 
@@ -365,6 +470,10 @@ class Game {
         return upgrade.tiers[upgrade.level - 1] || null;
     }
 
+    getUpgradeDefinition(key) {
+        return this.upgrades[key] || null;
+    }
+
     getNextUpgradeTier(key) {
         const upgrade = this.upgrades[key];
         if (!upgrade) return null;
@@ -379,19 +488,42 @@ class Game {
         return count;
     }
 
+    getUpgradeTierLabel(key, tier, fallback = 'NEXT') {
+        const upgrade = this.getUpgradeDefinition(key);
+        if (!upgrade || !tier) return fallback;
+        if (typeof upgrade.uiLabelForTier === 'function') {
+            return upgrade.uiLabelForTier(tier, { game: this, upgrade });
+        }
+        return tier.label || fallback;
+    }
+
+    getUpgradeNextTierText(key) {
+        const upgrade = this.getUpgradeDefinition(key);
+        if (!upgrade) return 'NEXT';
+        if (upgrade.level >= upgrade.maxLevel) return 'MAXED';
+        const tier = this.getNextUpgradeTier(key);
+        return this.getUpgradeTierLabel(key, tier, 'NEXT');
+    }
+
+    getUpgradeStackingMode(key) {
+        return this.getUpgradeDefinition(key)?.stackingMode || 'replace';
+    }
+
     getMissilesPerTurn() {
-        const tier = this.getCurrentUpgradeTier('missileRacks');
-        return this.config.MISSILES_PER_TURN + (tier?.missilesPerTurnBonus || 0);
+        return this.config.MISSILES_PER_TURN + (this.upgradeEffects.missilesPerTurnBonus || 0);
     }
 
     getEnergyRegenPerTurn() {
-        const tier = this.getCurrentUpgradeTier('reactorRegen');
-        return this.config.MISSILE_ENERGY_REGEN_PER_TURN + (tier?.regenBonus || 0);
+        return this.config.MISSILE_ENERGY_REGEN_PER_TURN + (this.upgradeEffects.energyRegenBonus || 0);
+    }
+
+    getTrajectoryFadeStrength() {
+        const multiplier = this.upgradeEffects.trajectoryFadeStrengthMultiplier || 1;
+        return Math.max(0.3, this.config.TRAJECTORY_FADE_STRENGTH * multiplier);
     }
 
     getMoneyPerKillReward(exactHit = false) {
-        const tier = this.getCurrentUpgradeTier('bountyLink');
-        const baseReward = this.config.MONEY_PER_KILL + (tier?.moneyPerKillBonus || 0);
+        const baseReward = this.config.MONEY_PER_KILL + (this.upgradeEffects.moneyPerKillBonus || 0);
         return exactHit ? baseReward * this.config.EXACT_HIT_MONEY_MULTIPLIER : baseReward;
     }
 
@@ -427,6 +559,7 @@ class Game {
             this.config.MISSILE_ENERGY_MAX
         );
         upgrade.level += 1;
+        this.rebuildUpgradeEffects();
         this.isUpgradeMenuOpen = false;
         this.notify();
         return true;
@@ -436,7 +569,11 @@ class Game {
         if (this.isAnimating) return;
 
         // Move pending missiles to active
-        this.missiles.push(...this.pendingMissiles);
+        const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
+        this.missiles.push(...this.pendingMissiles.map((missile) => ({
+            ...missile,
+            progress: Math.max(missile.progress || 0, launchStartProgress)
+        })));
         this.pendingMissiles = [];
         this.missilesLockedThisTurn = 0;
 
@@ -638,6 +775,7 @@ class Game {
         for (const upgrade of Object.values(this.upgrades)) {
             upgrade.level = 0;
         }
+        this.rebuildUpgradeEffects();
         this.aliens = [];
         this.missiles = [];
         this.pendingMissiles = [];

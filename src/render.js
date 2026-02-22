@@ -706,9 +706,9 @@ class Renderer {
                 const py = pos.y - this.worldToScreenSize(p.y);
                 ctx.fillStyle = isRedResidue
                     ? `rgba(255, 80, 90, ${Math.min(0.5, p.alpha * 1.7) * depth})`
-                    : `rgba(0, 255, 102, ${Math.min(0.55, p.alpha * 1.8) * depth})`;
+                    : `rgba(120, 255, 170, ${Math.min(0.72, p.alpha * 2.2) * depth})`;
                 ctx.beginPath();
-                ctx.arc(px, py, p.size + (isRedResidue ? 0.2 : 0.4), 0, Math.PI * 2);
+                ctx.arc(px, py, p.size + (isRedResidue ? 0.2 : 0.5), 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -753,7 +753,9 @@ class Renderer {
         const dotSpacing = 12;
         const dotCount = Math.floor(dist / dotSpacing);
         const animOffset = (this.frameCount * 0.5) % dotSpacing;
-        const fadeStrength = this.game.config.TRAJECTORY_FADE_STRENGTH || 1.8;
+        const fadeStrength = (typeof this.game.getTrajectoryFadeStrength === 'function')
+            ? this.game.getTrajectoryFadeStrength()
+            : (this.game.config.TRAJECTORY_FADE_STRENGTH || 1.8);
 
         for (let i = 0; i < dotCount; i++) {
             const t = (i * dotSpacing + animOffset) / dist;
