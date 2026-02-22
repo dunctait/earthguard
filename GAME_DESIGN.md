@@ -6,81 +6,113 @@ A five minute, portrait mode, continuous space, turn-based missile defence game 
 
 ## Core Loop
 
-1. **Aim** - Rotate launcher left/right using buttons (1° fine, 10° coarse)
-2. **Charge** - Hold fire button to charge power (determines missile travel distance)
-3. **Preview** - See predicted explosion area as dashed circle
-4. **Advance** - Press advance to execute the turn (~1 second animation)
-5. **Repeat** - Aliens descend, explosions resolve, next turn begins
+1. **Aim** - Rotate launcher left/right (0° = up, negative = left, positive = right)
+2. **Charge** - Hold fire button to charge power (determines missile range)
+3. **Lock** - Release to lock in missile (2 missiles per turn)
+4. **Auto-Advance** - After locking all missiles, turn auto-advances
+5. **Travel** - Missiles travel 50% of their distance per turn
+6. **Explode** - Missiles detonate on their 2nd turn (when reaching target)
+7. **Repeat** - Aliens descend, damage applied, next turn begins
 
 ## Turn Resolution (on Advance)
 
-All of the following animate over ~1 second:
-
-1. Missile travels toward target position
-2. Aliens descend toward Earth
-3. Missile explodes when it reaches target
-4. Explosion damage applied to aliens in radius
-5. Aliens reaching Earth deal damage to base HP
-6. Dead aliens removed
-7. If wave cleared, next wave spawns
-8. If HP <= 0, game over
+1. Pending missiles become active (in-flight)
+2. All missiles travel 50% toward their targets
+3. Missiles reaching 100% explode
+4. Aliens descend
+5. Explosion damage applied to aliens in radius
+6. Aliens reaching Earth deal damage to base HP
+7. Dead aliens removed
+8. If wave cleared, next wave spawns
 
 ## Controls
 
 | Control | Action |
 |---------|--------|
-| `<<` | Rotate left 10° |
-| `<` | Rotate left 1° |
-| `>` | Rotate right 1° |
-| `>>` | Rotate right 10° |
-| **HOLD FIRE** | Charge power (longer = farther shot) |
-| **ADVANCE** | Execute the turn |
+| `<<` | Rotate left 10° (hold to repeat) |
+| `<` | Rotate left 1° (hold to repeat) |
+| `>` | Rotate right 1° (hold to repeat) |
+| `>>` | Rotate right 10° (hold to repeat) |
+| **HOLD FIRE** | Charge power (faster fill = harder control) |
+| **ADVANCE** | Manual advance (or auto after 2 missiles locked) |
 
-## Launcher
+## GameConfig (Central Configuration)
 
-- Fixed position at bottom center
-- Rotates between 30° and 150° (where 90° is straight up)
-- Fires one missile per turn
-- Power determines how far missile travels before exploding
+All tunable values in one place:
 
-## Missiles
+```javascript
+GameConfig = {
+    // World
+    WORLD_HEIGHT: 100,
+    WORLD_WIDTH: 60,
 
-- Travel in straight line from launcher
-- Explode at distance determined by charge power
-- Explosion has fixed radius
-- Full damage at center, could add falloff later
+    // Launcher
+    LAUNCHER_Y: 5,
+    MIN_ANGLE: -60,
+    MAX_ANGLE: 60,
+    START_ANGLE: 0,
 
-## Aliens
+    // Missiles
+    MISSILES_PER_TURN: 2,
+    MISSILE_TRAVEL_PER_TURN: 0.5,  // 50% per advance
+    EXPLOSION_RADIUS: 6.4,          // 80% of original
+    MAX_MISSILE_RANGE: 85,          // % of world height
 
-- Spawn at top of screen
-- Move downward each turn
-- Single hit point (one explosion kills)
-- Deal damage to base HP if they reach bottom
-- Wave count increases with level
+    // Power/Charging
+    POWER_CHARGE_RATE: 4,           // Fast = harder
+    POWER_UPDATE_INTERVAL: 30,
 
-## Difficulty Scaling
+    // Aliens
+    BASE_ALIEN_SPEED: 3,
+    ALIEN_SPEED_PER_LEVEL: 0.5,
+    ALIEN_RADIUS: 3,
+    ALIEN_DAMAGE: 10,
 
-- Level 1: 1 alien
-- Each 2 levels: +1 alien (capped at 8)
-- Alien speed increases with level
-- Future: HP scaling, behavior modifiers
+    // Player
+    STARTING_HP: 100,
 
-## World Space
+    // Animation
+    ANIMATION_FRAMES: 60,
+    ANIMATION_FRAME_MS: 16
+}
+```
 
-- Continuous 2D space (not grid-based)
-- World units: 60 wide × 100 tall
-- Earth/launcher at y=5
-- Aliens spawn near y=95
+## Missile Mechanics
+
+- Player locks in 2 missiles per turn
+- Each missile travels 50% of total distance per advance
+- Missiles explode when reaching target (2nd advance after firing)
+- Prediction circles: orange while charging, green when locked
+- In-flight missiles show faint target zone
+
+## Angle Convention
+
+- 0° = straight up
+- Negative = left (e.g., -30° aims left)
+- Positive = right (e.g., +30° aims right)
+- Range: -60° to +60°
 
 ## Visual Feedback
 
-- Launcher barrel shows current angle
-- Power bar fills while charging
-- Dashed circle shows predicted explosion area
-- Trajectory line shows missile path
-- Explosion animates with radial gradient
+- Launcher barrel rotates with angle
+- Dashed aiming guide when not charging
+- Orange prediction circle while charging
+- Green circles for locked missiles
+- Missiles show trail while flying
+- Target zones shown for in-flight missiles
+- Explosion gradient effect
 
-## Future Considerations (Not Yet Implemented)
+## Test Helpers
+
+```javascript
+game.getState()           // Current state summary
+game.aimAtAlien(0)        // Aim at first alien
+game.chargeTo(100)        // Lock missile at power level
+game.autoTurn()           // Full automated turn
+game.autoPlay(10)         // Play N turns automatically
+```
+
+## Future Considerations
 
 From original design doc (`docs/DESIGN.md`):
 
@@ -90,4 +122,3 @@ From original design doc (`docs/DESIGN.md`):
 - Prestige/meta-progression
 - Aim deviation (bounded uncertainty)
 - Multiple alien types
-- Fuse timing vs current distance-based system
