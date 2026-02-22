@@ -737,6 +737,12 @@ class Game {
         return (alien.y - alien.radius) <= this.config.LAUNCHER_Y;
     }
 
+    isAlienDamageable(alien) {
+        if (!alien) return false;
+        if (alien.incoming) return false;
+        return alien.waveLevel === this.level;
+    }
+
     finishTurn() {
         this.levelCycles += 1;
 
@@ -838,6 +844,7 @@ class Game {
 
     applyExplosionDamage(explosion) {
         for (const alien of this.aliens) {
+            if (!this.isAlienDamageable(alien)) continue;
             const dx = alien.x - explosion.x;
             const dy = alien.y - explosion.y;
             const dist = this.utils.distance(dx, dy);

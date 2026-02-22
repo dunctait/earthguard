@@ -136,8 +136,8 @@ html, body {
 .hud-delta {
     position: absolute;
     left: 0;
-    top: 100%;
-    margin-top: 2px;
+    top: calc(100% - 6px);
+    margin-top: 0;
     color: var(--amber-warning);
     font-size: 10px;
     font-weight: 700;
