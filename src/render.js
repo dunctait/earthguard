@@ -186,7 +186,10 @@ class Renderer {
         let chargeInterval = null;
 
         const startCharge = () => {
-            this.game.startCharging();
+            // Guard against duplicate mouse+touch event sequences creating stacked timers.
+            if (chargeInterval || this.game.isCharging) return;
+            const started = this.game.startCharging();
+            if (!started) return;
             chargeInterval = setInterval(() => this.game.updateCharge(), this.game.config.POWER_UPDATE_INTERVAL);
         };
 
@@ -195,6 +198,7 @@ class Renderer {
                 clearInterval(chargeInterval);
                 chargeInterval = null;
             }
+            if (!this.game.isCharging) return;
             this.game.stopCharging();
         };
 

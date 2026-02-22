@@ -1,6 +1,7 @@
 {
   "scripts": {
     "smoke": "node scripts/playwright-smoke.js",
+    "smoke:charge": "node scripts/playwright-charge-regression.js",
     "smoke:layout": "node scripts/playwright-layout-check.js",
     "smoke:headed": "node scripts/playwright-smoke.js --headed --slowmo=120"
   },
