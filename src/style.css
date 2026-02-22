@@ -130,6 +130,7 @@ html, body {
 #upgrade-controls {
     display: flex;
     gap: 8px;
+    margin-bottom: 6px;
 }
 
 .upgrade-menu {
@@ -140,6 +141,7 @@ html, body {
     border: 1px solid var(--green-tertiary);
     background: rgba(0, 10, 4, 0.9);
     box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.03);
+    margin-bottom: 6px;
 }
 
 .upgrade-menu.is-hidden {
@@ -231,12 +233,12 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .rotation-group {
     display: flex;
-    gap: 4px;
+    gap: 10px;
 }
 
 .rot-btn {
@@ -261,7 +263,7 @@ html, body {
 }
 
 .rot-btn.small {
-    width: 32px;
+    width: 42px;
     height: 48px;
     font-size: 12px;
 }

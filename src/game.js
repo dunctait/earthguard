@@ -86,6 +86,8 @@ class Game {
         this.pendingMissiles = []; // Missiles locked in but not yet launched
         this.explosions = [];
         this.blastResidue = [];
+        this.enemyDeathFxEvents = [];
+        this.nextFxEventId = 1;
 
         // Callbacks
         this.onStateChange = null;
@@ -331,6 +333,7 @@ class Game {
 
     createExplosion(x, y, radius = this.getCurrentExplosionRadius()) {
         this.explosions.push({
+            id: this.nextFxEventId++,
             x: x,
             y: y,
             radius: radius,
@@ -338,6 +341,19 @@ class Game {
             maxAge: 30,
             damageApplied: false
         });
+    }
+
+    queueEnemyDeathFx(alien, exactHit = false) {
+        this.enemyDeathFxEvents.push({
+            id: this.nextFxEventId++,
+            x: alien.x,
+            y: alien.y,
+            radius: alien.radius * (exactHit ? 1.6 : 1.2),
+            exactHit
+        });
+        if (this.enemyDeathFxEvents.length > 100) {
+            this.enemyDeathFxEvents.shift();
+        }
     }
 
     createBlastResidue(explosion) {
@@ -432,6 +448,7 @@ class Game {
         this.pendingMissiles = [];
         this.explosions = [];
         this.blastResidue = [];
+        this.enemyDeathFxEvents = [];
         this.spawnWave();
     }
 
@@ -449,6 +466,7 @@ class Game {
                         ? this.config.MONEY_PER_KILL * this.config.EXACT_HIT_MONEY_MULTIPLIER
                         : this.config.MONEY_PER_KILL;
                     this.money += reward;
+                    this.queueEnemyDeathFx(alien, exactHit);
                 }
             }
         }

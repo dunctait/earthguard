@@ -78,6 +78,10 @@ class Renderer {
         this.lastExplosionCount = 0;
         this.cannonRecoil = 0;
         this.impactFlash = 0;
+        this.seenGameExplosionIds = new Set();
+        this.seenEnemyDeathFxIds = new Set();
+        this.playerExplosionFx = [];
+        this.enemyExplosionFx = [];
 
         this.generateStars();
         this.resize();
@@ -312,6 +316,87 @@ class Renderer {
 
         this.cannonRecoil *= 0.82;
         this.impactFlash *= 0.88;
+
+        for (const fx of this.playerExplosionFx) fx.age++;
+        for (const fx of this.enemyExplosionFx) fx.age++;
+        this.playerExplosionFx = this.playerExplosionFx.filter((fx) => fx.age <= fx.maxAge);
+        this.enemyExplosionFx = this.enemyExplosionFx.filter((fx) => fx.age <= fx.maxAge);
+    }
+
+    syncFxFromGameState() {
+        for (const explosion of this.game.explosions || []) {
+            if (this.seenGameExplosionIds.has(explosion.id)) continue;
+            this.seenGameExplosionIds.add(explosion.id);
+            this.playerExplosionFx.push({
+                x: explosion.x,
+                y: explosion.y,
+                radius: explosion.radius,
+                age: 0,
+                maxAge: 18
+            });
+        }
+
+        for (const event of this.game.enemyDeathFxEvents || []) {
+            if (this.seenEnemyDeathFxIds.has(event.id)) continue;
+            this.seenEnemyDeathFxIds.add(event.id);
+            this.enemyExplosionFx.push({
+                x: event.x,
+                y: event.y,
+                radius: event.radius,
+                age: 0,
+                maxAge: 14,
+                exactHit: Boolean(event.exactHit)
+            });
+        }
+    }
+
+    drawTransientExplosionFxList(list, mode = 'player') {
+        const ctx = this.ctx;
+        const c = this.colors;
+        const isEnemy = mode === 'enemy';
+
+        for (const fx of list) {
+            const pos = this.worldToScreen(fx.x, fx.y);
+            const radius = this.worldToScreenSize(fx.radius);
+            const progress = fx.age / Math.max(1, fx.maxAge);
+            const alpha = Math.max(0, 1 - progress);
+            const depth = this.getDepthBrightness(pos.y);
+            const coreColor = isEnemy ? c.enemy : c.primary;
+            const glowColor = isEnemy ? c.enemyGlow : c.primaryGlow;
+
+            this.drawBloomCircle(
+                pos.x,
+                pos.y,
+                radius * (0.35 + progress * 0.9),
+                coreColor,
+                glowColor,
+                isEnemy ? 2 : 3,
+                alpha * depth * (isEnemy ? 0.8 : 0.9)
+            );
+
+            ctx.strokeStyle = isEnemy
+                ? `rgba(255, 80, 90, ${alpha * 0.55 * depth})`
+                : `rgba(0, 255, 102, ${alpha * 0.45 * depth})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, radius * (0.6 + progress * 1.4), 0, Math.PI * 2);
+            ctx.stroke();
+
+            const sparkCount = isEnemy ? 10 : 14;
+            for (let i = 0; i < sparkCount; i++) {
+                const seed = (i / sparkCount) * Math.PI * 2 + (fx.x * 0.13) + (fx.y * 0.19);
+                const travel = radius * (0.25 + progress * (isEnemy ? 0.9 : 1.2));
+                const sx = pos.x + Math.cos(seed + progress * 2.2) * travel;
+                const sy = pos.y + Math.sin(seed + progress * 2.2) * travel;
+                const sparkAlpha = alpha * (isEnemy ? 0.5 : 0.35);
+                ctx.fillStyle = isEnemy
+                    ? `rgba(255, 70, 70, ${sparkAlpha * depth})`
+                    : `rgba(180, 255, 210, ${sparkAlpha * depth})`;
+                ctx.beginPath();
+                ctx.arc(sx, sy, isEnemy ? 1.4 : 1.1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
     }
 
     render() {
@@ -322,6 +407,7 @@ class Renderer {
         const c = this.colors;
         const time = this.frameCount * 0.02;
         this.updateVisualEffects();
+        this.syncFxFromGameState();
 
         // Gradient background
         const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
@@ -542,15 +628,19 @@ class Renderer {
             this.clearGlow();
         }
 
+        // Persistent renderer-driven explosion FX, so impacts remain visible after turn cleanup.
+        this.drawTransientExplosionFxList(this.playerExplosionFx, 'player');
+        this.drawTransientExplosionFxList(this.enemyExplosionFx, 'enemy');
+
         // Blast residue markers (persist for one turn to show last impact locations)
         for (const residue of this.game.blastResidue || []) {
             const pos = this.worldToScreen(residue.x, residue.y);
             const radius = this.worldToScreenSize(residue.radius);
             const depth = this.getDepthBrightness(pos.y);
 
-            ctx.strokeStyle = `rgba(0, 170, 68, ${0.12 * depth})`;
+            ctx.strokeStyle = `rgba(0, 170, 68, ${0.28 * depth})`;
             ctx.lineWidth = 1;
-            ctx.setLineDash([2, 5]);
+            ctx.setLineDash([2, 4]);
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, radius * 0.9, 0, Math.PI * 2);
             ctx.stroke();
@@ -559,9 +649,9 @@ class Renderer {
             for (const p of residue.particles) {
                 const px = pos.x + this.worldToScreenSize(p.x);
                 const py = pos.y - this.worldToScreenSize(p.y);
-                ctx.fillStyle = `rgba(0, 255, 102, ${p.alpha * depth})`;
+                ctx.fillStyle = `rgba(0, 255, 102, ${Math.min(0.55, p.alpha * 1.8) * depth})`;
                 ctx.beginPath();
-                ctx.arc(px, py, p.size, 0, Math.PI * 2);
+                ctx.arc(px, py, p.size + 0.4, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
