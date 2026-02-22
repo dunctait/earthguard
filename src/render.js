@@ -22,6 +22,9 @@ class Renderer {
             orangeGlow: 'rgba(255, 136, 0, 0.4)'
         };
 
+        // Generate terrain once
+        this.terrainPoints = null;
+
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
@@ -41,7 +44,33 @@ class Renderer {
         const controlsHeight = document.getElementById('controls').offsetHeight || 150;
         this.canvas.width = container.clientWidth;
         this.canvas.height = container.clientHeight - controlsHeight;
+        this.generateTerrain();
         this.render();
+    }
+
+    generateTerrain() {
+        // Generate noisy terrain with a hill in the center
+        const w = this.canvas.width;
+        const baseY = this.canvas.height - 30;
+        const points = [];
+        const segments = 40;
+
+        for (let i = 0; i <= segments; i++) {
+            const x = (i / segments) * w;
+            const normalizedX = i / segments;
+
+            // Central hill (gaussian-ish bump)
+            const distFromCenter = Math.abs(normalizedX - 0.5);
+            const hillHeight = Math.exp(-distFromCenter * distFromCenter * 20) * 25;
+
+            // Small noise
+            const noise = Math.sin(i * 1.5) * 3 + Math.sin(i * 3.7) * 2;
+
+            points.push({ x, y: baseY - hillHeight - noise });
+        }
+
+        this.terrainPoints = points;
+        this.hillTopY = baseY - 25; // Top of the central hill
     }
 
     setupInput() {
@@ -116,7 +145,6 @@ class Renderer {
         return (90 - angle) * Math.PI / 180;
     }
 
-    // Set glow effect
     setGlow(color, blur = 10) {
         this.ctx.shadowColor = color;
         this.ctx.shadowBlur = blur;
@@ -138,26 +166,31 @@ class Renderer {
         ctx.fillRect(0, 0, w, h);
 
         // Scanline effect (subtle)
-        ctx.fillStyle = 'rgba(0, 20, 0, 0.1)';
+        ctx.fillStyle = 'rgba(0, 20, 0, 0.08)';
         for (let y = 0; y < h; y += 3) {
             ctx.fillRect(0, y, w, 1);
         }
 
-        const launcherPos = this.worldToScreen(config.WORLD_WIDTH / 2, config.LAUNCHER_Y);
+        // Cannon position - on top of the hill
+        const cannonX = w / 2;
+        const cannonY = this.hillTopY - 5;
         const angleRad = this.gameAngleToRad(this.game.launcherAngle);
 
-        // Ground line
-        const groundY = this.worldToScreen(0, config.LAUNCHER_Y).y;
-        ctx.strokeStyle = c.greenMid;
-        ctx.lineWidth = 2;
-        this.setGlow(c.greenGlow, 8);
-        ctx.beginPath();
-        ctx.moveTo(0, groundY);
-        ctx.lineTo(w, groundY);
-        ctx.stroke();
-        this.clearGlow();
+        // Draw terrain
+        if (this.terrainPoints && this.terrainPoints.length > 0) {
+            ctx.strokeStyle = c.greenMid;
+            ctx.lineWidth = 2;
+            this.setGlow(c.greenGlow, 8);
+            ctx.beginPath();
+            ctx.moveTo(this.terrainPoints[0].x, this.terrainPoints[0].y);
+            for (let i = 1; i < this.terrainPoints.length; i++) {
+                ctx.lineTo(this.terrainPoints[i].x, this.terrainPoints[i].y);
+            }
+            ctx.stroke();
+            this.clearGlow();
+        }
 
-        // Draw locked missiles predictions (green circles)
+        // Draw locked missiles predictions
         const lockedPredictions = this.game.getLockedMissilesPredictions();
         for (const pred of lockedPredictions) {
             const predScreen = this.worldToScreen(pred.x, pred.y);
@@ -194,7 +227,7 @@ class Renderer {
             ctx.lineWidth = 1;
             ctx.setLineDash([3, 6]);
             ctx.beginPath();
-            ctx.moveTo(launcherPos.x, launcherPos.y);
+            ctx.moveTo(cannonX, cannonY);
             ctx.lineTo(predScreen.x, predScreen.y);
             ctx.stroke();
             ctx.setLineDash([]);
@@ -208,47 +241,29 @@ class Renderer {
             this.setGlow(c.greenGlow, 5);
             ctx.setLineDash([5, 10]);
             ctx.beginPath();
-            ctx.moveTo(launcherPos.x, launcherPos.y);
+            ctx.moveTo(cannonX, cannonY);
             ctx.lineTo(
-                launcherPos.x + Math.cos(angleRad) * h,
-                launcherPos.y - Math.sin(angleRad) * h
+                cannonX + Math.cos(angleRad) * h,
+                cannonY - Math.sin(angleRad) * h
             );
             ctx.stroke();
             ctx.setLineDash([]);
             this.clearGlow();
         }
 
-        // Launcher base - simple circle
-        ctx.strokeStyle = c.greenBright;
-        ctx.lineWidth = 2;
-        this.setGlow(c.greenGlow, 10);
-        ctx.beginPath();
-        ctx.arc(launcherPos.x, launcherPos.y, 12, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Launcher barrel - line
-        const launcherLength = 30;
-        ctx.strokeStyle = c.greenBright;
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(launcherPos.x, launcherPos.y);
-        ctx.lineTo(
-            launcherPos.x + Math.cos(angleRad) * launcherLength,
-            launcherPos.y - Math.sin(angleRad) * launcherLength
-        );
-        ctx.stroke();
-        this.clearGlow();
+        // Draw cannon - solid shape
+        this.drawCannon(cannonX, cannonY, angleRad);
 
         // Draw missiles in flight
         for (const missile of this.game.missiles) {
             if (missile.exploded) continue;
 
-            const startPos = this.worldToScreen(missile.startX, missile.startY);
+            const startX = cannonX;
+            const startY = cannonY;
             const endPos = this.worldToScreen(missile.targetX, missile.targetY);
 
-            const currentX = startPos.x + (endPos.x - startPos.x) * missile.progress;
-            const currentY = startPos.y + (endPos.y - startPos.y) * missile.progress;
+            const currentX = startX + (endPos.x - startX) * missile.progress;
+            const currentY = startY + (endPos.y - startY) * missile.progress;
 
             // Missile - bright dot
             ctx.fillStyle = c.greenBright;
@@ -264,8 +279,8 @@ class Renderer {
             ctx.beginPath();
             ctx.moveTo(currentX, currentY);
             ctx.lineTo(
-                startPos.x + (endPos.x - startPos.x) * trailProgress,
-                startPos.y + (endPos.y - startPos.y) * trailProgress
+                startX + (endPos.x - startX) * trailProgress,
+                startY + (endPos.y - startY) * trailProgress
             );
             ctx.stroke();
             this.clearGlow();
@@ -308,26 +323,101 @@ class Renderer {
             this.clearGlow();
         }
 
-        // Draw aliens - triangle wireframes
+        // Draw aliens - UFO shape
         for (const alien of this.game.aliens) {
             const pos = this.worldToScreen(alien.x, alien.y);
             const size = this.worldToScreenSize(alien.radius);
-
-            ctx.strokeStyle = c.red;
-            ctx.lineWidth = 2;
-            this.setGlow(c.redGlow, 12);
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y - size * 1.5);
-            ctx.lineTo(pos.x - size, pos.y + size);
-            ctx.lineTo(pos.x + size, pos.y + size);
-            ctx.closePath();
-            ctx.stroke();
-            this.clearGlow();
+            this.drawUFO(pos.x, pos.y, size);
         }
 
         // Border frame
         ctx.strokeStyle = c.greenDim;
         ctx.lineWidth = 1;
         ctx.strokeRect(1, 1, w - 2, h - 2);
+    }
+
+    drawCannon(x, y, angleRad) {
+        const ctx = this.ctx;
+        const c = this.colors;
+
+        // Cannon base - trapezoid shape
+        ctx.fillStyle = c.greenMid;
+        this.setGlow(c.greenGlow, 10);
+        ctx.beginPath();
+        ctx.moveTo(x - 18, y + 8);
+        ctx.lineTo(x + 18, y + 8);
+        ctx.lineTo(x + 12, y - 2);
+        ctx.lineTo(x - 12, y - 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = c.greenBright;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Cannon turret - rotating part
+        ctx.save();
+        ctx.translate(x, y - 2);
+        ctx.rotate(-angleRad + Math.PI / 2);
+
+        // Turret base circle
+        ctx.fillStyle = c.greenMid;
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = c.greenBright;
+        ctx.stroke();
+
+        // Barrel
+        ctx.fillStyle = c.greenMid;
+        ctx.fillRect(-3, -28, 6, 25);
+        ctx.strokeStyle = c.greenBright;
+        ctx.strokeRect(-3, -28, 6, 25);
+
+        // Barrel tip
+        ctx.fillRect(-4, -32, 8, 5);
+        ctx.strokeRect(-4, -32, 8, 5);
+
+        ctx.restore();
+        this.clearGlow();
+    }
+
+    drawUFO(x, y, size) {
+        const ctx = this.ctx;
+        const c = this.colors;
+
+        const width = size * 3;
+        const height = size * 0.8;
+        const domeHeight = size * 1.2;
+
+        ctx.strokeStyle = c.red;
+        ctx.lineWidth = 2;
+        this.setGlow(c.redGlow, 12);
+
+        // Main body - flat ellipse
+        ctx.beginPath();
+        ctx.ellipse(x, y, width, height, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Dome on top
+        ctx.beginPath();
+        ctx.ellipse(x, y - height * 0.5, width * 0.4, domeHeight, 0, Math.PI, Math.PI * 2);
+        ctx.stroke();
+
+        // Bottom detail line
+        ctx.beginPath();
+        ctx.ellipse(x, y + height * 0.3, width * 0.6, height * 0.3, 0, 0, Math.PI);
+        ctx.stroke();
+
+        // Lights/windows
+        ctx.fillStyle = c.red;
+        const lightCount = 3;
+        for (let i = 0; i < lightCount; i++) {
+            const lx = x + (i - 1) * (width * 0.5);
+            ctx.beginPath();
+            ctx.arc(lx, y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        this.clearGlow();
     }
 }

@@ -72,5 +72,6 @@
 
 ## Completed
 
+- [x] **T45** - Improve visuals: solid cannon shape on hill, flat UFO enemies, noisy terrain line
 - [x] **T6** - Retro visual overhaul: black background, green LCD/vector style (Missile Command/Star Wars aesthetic)
 
