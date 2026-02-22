@@ -5,6 +5,14 @@
 class EarthGuardUI {
     constructor() {
         const utils = window.EarthGuardUtils;
+        this.prevHudValues = {
+            energy: null,
+            money: null
+        };
+        this.hudDeltaFx = {
+            energy: null,
+            money: null
+        };
         this.el = utils ? utils.cacheDom([
             'level',
             'hp',
@@ -26,6 +34,7 @@ class EarthGuardUI {
     update(game) {
         if (!game || !this.el['fire-btn']) return;
 
+        this.trackHudDeltas(game);
         this.renderHud(game);
         this.renderAngle(game);
         this.renderPower(game);
@@ -33,13 +42,49 @@ class EarthGuardUI {
         this.renderUpgrades(game);
     }
 
+    trackHudDeltas(game) {
+        this.trackHudDelta('energy', game.missileEnergy, 'EN');
+        this.trackHudDelta('money', game.money, '$');
+    }
+
+    trackHudDelta(key, nextValue, prefix) {
+        const prevValue = this.prevHudValues[key];
+        if (typeof prevValue === 'number' && nextValue > prevValue) {
+            this.hudDeltaFx[key] = {
+                text: `+${prefix === '$' ? '$' : ''}${nextValue - prevValue}`,
+                until: Date.now() + 850
+            };
+        }
+        this.prevHudValues[key] = nextValue;
+    }
+
+    getHudDeltaMarkup(key) {
+        const fx = this.hudDeltaFx[key];
+        if (!fx || Date.now() > fx.until) return '';
+        return `<span class="hud-delta">${fx.text}</span>`;
+    }
+
+    formatUpgradeLevelText(upgrade) {
+        const maxText = (upgrade.maxLevel === null || upgrade.maxLevel === undefined) ? '∞' : upgrade.maxLevel;
+        return `L${upgrade.level}/${maxText}`;
+    }
+
+    formatUpgradeCostText(tier) {
+        if (!tier) return 'BUY';
+        const parts = [];
+        if ((tier.moneyCost ?? 0) > 0) parts.push(`$${tier.moneyCost}`);
+        if ((tier.energyCost ?? 0) > 0) parts.push(`EN ${tier.energyCost}`);
+        if (parts.length === 0) return 'BUY [FREE]';
+        return `BUY [${parts.join(' | ')}]`;
+    }
+
     renderHud(game) {
         const displayedCycle = Math.max(1, game.levelCycles || 0);
         const liveBonus = game.getWaveClearSpeedBonus(displayedCycle, game.level);
         this.el.level.innerHTML = `<span class="hud-line"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-line"><span class="hud-label">CYCLE</span><span class="hud-value">${displayedCycle}</span></span><span class="hud-line"><span class="hud-label">BONUS</span><span class="hud-value">+$${liveBonus}</span></span>`;
         this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
-        this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${game.missileEnergy}/${game.config.MISSILE_ENERGY_MAX}</span>`;
-        this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${game.money}</span>`;
+        this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${game.missileEnergy}/${game.config.MISSILE_ENERGY_MAX}</span>${this.getHudDeltaMarkup('energy')}`;
+        this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${game.money}</span>${this.getHudDeltaMarkup('money')}`;
     }
 
     renderAngle(game) {
@@ -99,13 +144,13 @@ class EarthGuardUI {
 
         list.innerHTML = Object.values(game.upgrades).map((upgrade) => {
             const nextTier = game.getNextUpgradeTier(upgrade.key);
-            const isOwnedOut = upgrade.level >= upgrade.maxLevel;
+            const isOwnedOut = (upgrade.maxLevel !== null) && (upgrade.level >= upgrade.maxLevel);
             const canBuy = game.canPurchaseUpgrade(upgrade.key);
-            const levelText = `L${upgrade.level}/${upgrade.maxLevel}`;
+            const levelText = this.formatUpgradeLevelText(upgrade);
             const effectText = game.getUpgradeNextTierText(upgrade.key);
             const costText = isOwnedOut
                 ? 'OWNED'
-                : `BUY [$${nextTier.moneyCost} | EN ${nextTier.energyCost}]`;
+                : this.formatUpgradeCostText(nextTier);
             const btnClass = isOwnedOut ? 'terminal-btn upgrade-btn owned' : 'terminal-btn upgrade-btn';
             const disabledAttr = (isOwnedOut || !canBuy) ? 'disabled' : '';
 

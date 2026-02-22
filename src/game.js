@@ -16,8 +16,8 @@ const GameConfig = {
 
     // Missiles
     MISSILES_PER_TURN: 2,
-    MISSILE_TRAVEL_PER_TURN: 0.5,  // 50% of target distance per advance
-    MISSILE_LAUNCH_START_PROGRESS: 0.05,
+    MISSILE_TRAVEL_PER_TURN: 0.4,  // 40% of target distance per advance (after visible launch offset)
+    MISSILE_LAUNCH_START_PROGRESS: 0.20,
     EXPLOSION_RADIUS: 6.4,          // 80% of original 8
     MAX_MISSILE_RANGE: 85,          // % of world height
     MISSILE_ENERGY_MAX: 100,
@@ -154,6 +154,32 @@ const UpgradeDefinitions = {
         apply: ({ effects, tier }) => {
             effects.trajectoryFadeStrengthMultiplier = tier.fadeStrengthMultiplier || 1;
         }
+    },
+    energyResupply: {
+        key: 'energyResupply',
+        name: 'Energy Resupply',
+        description: 'Buy an emergency reactor charge. Price spikes each purchase.',
+        stackingMode: 'repeat',
+        repeatable: true,
+        maxLevel: null,
+        getTierForLevel: (level) => {
+            const purchaseCount = Math.max(0, level);
+            return {
+                moneyCost: 8 * Math.pow(3, purchaseCount),
+                energyCost: 0,
+                energyGain: 30,
+                label: '+30 EN'
+            };
+        },
+        uiLabelForTier: (tier) => tier.label || `+${tier.energyGain || 0} EN`,
+        canPurchase: ({ game }) => game.missileEnergy < game.config.MISSILE_ENERGY_MAX,
+        onPurchase: ({ game, tier }) => {
+            game.missileEnergy = game.utils.clamp(
+                game.missileEnergy + (tier.energyGain || 0),
+                0,
+                game.config.MISSILE_ENERGY_MAX
+            );
+        }
     }
 };
 
@@ -174,6 +200,7 @@ class Game {
         this.isCharging = false;
         this.missilesLockedThisTurn = 0;
         this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
+        this.missilesLaunchedThisCycle = 0;
 
         // Game state
         this.level = 1;
@@ -212,9 +239,12 @@ class Game {
     createUpgradeState() {
         const state = {};
         for (const [key, definition] of Object.entries(UpgradeDefinitions)) {
+            const derivedMaxLevel = definition.repeatable
+                ? (definition.maxLevel ?? null)
+                : (definition.maxLevel ?? definition.tiers.length);
             state[key] = {
                 ...definition,
-                maxLevel: definition.tiers.length,
+                maxLevel: derivedMaxLevel,
                 level: 0
             };
         }
@@ -262,7 +292,7 @@ class Game {
 
     createAliensFromWaveSpec(spec, incoming = false) {
         const aliens = [];
-        const startY = incoming ? (this.config.WORLD_HEIGHT + 10) : (this.config.WORLD_HEIGHT - 5);
+        const startY = incoming ? (this.config.WORLD_HEIGHT + 3) : (this.config.WORLD_HEIGHT - 5);
         for (let i = 0; i < spec.alienCount; i++) {
             aliens.push({
                 x: 10 + Math.random() * (this.config.WORLD_WIDTH - 20),
@@ -467,6 +497,9 @@ class Game {
     getCurrentUpgradeTier(key) {
         const upgrade = this.upgrades[key];
         if (!upgrade || upgrade.level <= 0) return null;
+        if (typeof upgrade.getTierForLevel === 'function') {
+            return upgrade.getTierForLevel(upgrade.level - 1, { game: this, upgrade }) || null;
+        }
         return upgrade.tiers[upgrade.level - 1] || null;
     }
 
@@ -477,6 +510,9 @@ class Game {
     getNextUpgradeTier(key) {
         const upgrade = this.upgrades[key];
         if (!upgrade) return null;
+        if (typeof upgrade.getTierForLevel === 'function') {
+            return upgrade.getTierForLevel(upgrade.level, { game: this, upgrade }) || null;
+        }
         return upgrade.tiers[upgrade.level] || null;
     }
 
@@ -500,7 +536,7 @@ class Game {
     getUpgradeNextTierText(key) {
         const upgrade = this.getUpgradeDefinition(key);
         if (!upgrade) return 'NEXT';
-        if (upgrade.level >= upgrade.maxLevel) return 'MAXED';
+        if (upgrade.maxLevel !== null && upgrade.level >= upgrade.maxLevel) return 'MAXED';
         const tier = this.getNextUpgradeTier(key);
         return this.getUpgradeTierLabel(key, tier, 'NEXT');
     }
@@ -541,11 +577,16 @@ class Game {
     canPurchaseUpgrade(key) {
         const upgrade = this.upgrades[key];
         if (!upgrade) return false;
-        if (upgrade.level >= upgrade.maxLevel) return false;
+        if (upgrade.maxLevel !== null && upgrade.level >= upgrade.maxLevel) return false;
         const nextTier = this.getNextUpgradeTier(key);
         if (!nextTier) return false;
-        return this.money >= nextTier.moneyCost &&
+        const baseCanBuy = this.money >= nextTier.moneyCost &&
                this.missileEnergy >= nextTier.energyCost;
+        if (!baseCanBuy) return false;
+        if (typeof upgrade.canPurchase === 'function') {
+            return Boolean(upgrade.canPurchase({ game: this, upgrade, tier: nextTier }));
+        }
+        return true;
     }
 
     purchaseUpgrade(key) {
@@ -559,6 +600,9 @@ class Game {
             this.config.MISSILE_ENERGY_MAX
         );
         upgrade.level += 1;
+        if (typeof upgrade.onPurchase === 'function') {
+            upgrade.onPurchase({ game: this, upgrade, tier: nextTier, level: upgrade.level });
+        }
         this.rebuildUpgradeEffects();
         this.isUpgradeMenuOpen = false;
         this.notify();
@@ -569,6 +613,7 @@ class Game {
         if (this.isAnimating) return;
 
         // Move pending missiles to active
+        this.missilesLaunchedThisCycle = this.pendingMissiles.length;
         const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
         this.missiles.push(...this.pendingMissiles.map((missile) => ({
             ...missile,
@@ -753,11 +798,13 @@ class Game {
         }
 
         this.isAnimating = false;
+        const regenMultiplier = this.missilesLaunchedThisCycle === 0 ? 2 : 1;
         this.missileEnergy = this.utils.clamp(
-            this.missileEnergy + this.getEnergyRegenPerTurn(),
+            this.missileEnergy + (this.getEnergyRegenPerTurn() * regenMultiplier),
             0,
             this.config.MISSILE_ENERGY_MAX
         );
+        this.missilesLaunchedThisCycle = 0;
         this.notify();
     }
 
@@ -768,6 +815,7 @@ class Game {
         this.power = 0;
         this.missilesLockedThisTurn = 0;
         this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
+        this.missilesLaunchedThisCycle = 0;
         this.money = 0;
         this.levelCycles = 0;
         this.lastWaveClearBonus = 0;

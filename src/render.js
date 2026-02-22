@@ -585,6 +585,35 @@ class Renderer {
         // Cannon
         this.drawCannon(cannonX, cannonY, angleRad);
 
+        // Pending (locked) missiles: show a short launched segment immediately after firing,
+        // before ADVANCE resolves the cycle, so the player gets instant visual confirmation.
+        for (const missile of (this.game.pendingMissiles || [])) {
+            const endPos = this.worldToScreen(missile.targetX, missile.targetY);
+            const launchProgress = this.game.config.MISSILE_LAUNCH_START_PROGRESS || 0.10;
+            const currentX = cannonX + (endPos.x - cannonX) * launchProgress;
+            const currentY = cannonY + (endPos.y - cannonY) * launchProgress;
+            const missileAlpha = this.getDepthBrightness(currentY) * 0.9;
+
+            this.setGlow(c.primaryGlow, 16);
+            ctx.fillStyle = `rgba(0, 255, 102, ${missileAlpha})`;
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 3.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = c.white;
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 1.6, 0, Math.PI * 2);
+            ctx.fill();
+            this.clearGlow();
+
+            ctx.strokeStyle = `rgba(0, 170, 68, ${Math.max(0.25, missileAlpha * 0.45)})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(cannonX, cannonY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+        }
+
         // Missiles in flight
         for (const missile of this.game.missiles) {
             if (missile.exploded) continue;
@@ -719,7 +748,7 @@ class Renderer {
                 const pos = this.worldToScreen(alien.x, alien.y);
                 // Keep previews in upper staging area to avoid overlap clutter.
                 if (pos.y > h * 0.38 || pos.y < -40) continue;
-                const size = this.worldToScreenSize(alien.radius);
+                const size = this.worldToScreenSize(alien.radius) * 0.75;
                 const distanceAlpha = Math.max(0.3, this.getDepthBrightness(pos.y) * 0.45);
                 this.drawUFO(pos.x, pos.y, size, distanceAlpha);
             }
@@ -728,12 +757,21 @@ class Renderer {
         // Active aliens
         for (const alien of this.game.aliens) {
             const pos = this.worldToScreen(alien.x, alien.y);
-            const size = this.worldToScreenSize(alien.radius);
+            const size = this.worldToScreenSize(alien.radius) * 0.75;
             const distanceAlpha = Math.max(0.7, this.getDepthBrightness(pos.y));
             this.drawUFO(pos.x, pos.y, size, distanceAlpha);
         }
 
         ctx.restore();
+
+        // Top vignette to improve HUD readability and de-emphasize high-altitude clutter.
+        const topFadeHeight = h * 0.20;
+        const topFade = ctx.createLinearGradient(0, 0, 0, topFadeHeight);
+        topFade.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
+        topFade.addColorStop(0.45, 'rgba(0, 0, 0, 0.45)');
+        topFade.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = topFade;
+        ctx.fillRect(0, 0, w, topFadeHeight);
 
         if (this.impactFlash > 0.02) {
             ctx.fillStyle = `rgba(180, 255, 220, ${this.impactFlash * 0.08})`;
@@ -1000,39 +1038,40 @@ class Renderer {
         const c = this.colors;
         const w = this.canvas.width;
         const h = this.canvas.height;
-        const size = 25;
+        const size = 18;
         const offset = 8;
 
-        ctx.strokeStyle = c.secondary;
         ctx.lineWidth = 2;
         this.setGlow(c.secondaryGlow, 8);
 
-        // Top-left
+        // Subtle side rails to delimit the playfield without crowding the HUD.
+        const sideInset = 1;
+        const railTop = offset + 8;
+        const railBottom = h - offset - 8;
+        const railGradientLeft = ctx.createLinearGradient(0, railTop, 0, railBottom);
+        const railGradientRight = ctx.createLinearGradient(0, railTop, 0, railBottom);
+        const midAlpha = 0.6;
+        railGradientLeft.addColorStop(0, 'rgba(0, 255, 102, 0)');
+        railGradientLeft.addColorStop(0.10, 'rgba(0, 255, 102, 0)');
+        railGradientLeft.addColorStop(0.5, `rgba(0, 255, 102, ${midAlpha})`);
+        railGradientLeft.addColorStop(0.90, 'rgba(0, 255, 102, 0)');
+        railGradientLeft.addColorStop(1, 'rgba(0, 255, 102, 0)');
+        railGradientRight.addColorStop(0, 'rgba(0, 255, 102, 0)');
+        railGradientRight.addColorStop(0.10, 'rgba(0, 255, 102, 0)');
+        railGradientRight.addColorStop(0.5, `rgba(0, 255, 102, ${midAlpha})`);
+        railGradientRight.addColorStop(0.90, 'rgba(0, 255, 102, 0)');
+        railGradientRight.addColorStop(1, 'rgba(0, 255, 102, 0)');
+
+        ctx.strokeStyle = railGradientLeft;
         ctx.beginPath();
-        ctx.moveTo(offset, offset + size);
-        ctx.lineTo(offset, offset);
-        ctx.lineTo(offset + size, offset);
+        ctx.moveTo(sideInset, railTop);
+        ctx.lineTo(sideInset, railBottom);
         ctx.stroke();
 
-        // Top-right
+        ctx.strokeStyle = railGradientRight;
         ctx.beginPath();
-        ctx.moveTo(w - offset - size, offset);
-        ctx.lineTo(w - offset, offset);
-        ctx.lineTo(w - offset, offset + size);
-        ctx.stroke();
-
-        // Bottom-left
-        ctx.beginPath();
-        ctx.moveTo(offset, h - offset - size);
-        ctx.lineTo(offset, h - offset);
-        ctx.lineTo(offset + size, h - offset);
-        ctx.stroke();
-
-        // Bottom-right
-        ctx.beginPath();
-        ctx.moveTo(w - offset - size, h - offset);
-        ctx.lineTo(w - offset, h - offset);
-        ctx.lineTo(w - offset, h - offset - size);
+        ctx.moveTo(w - sideInset, railTop);
+        ctx.lineTo(w - sideInset, railBottom);
         ctx.stroke();
 
         // Instrument ticks on top and bottom edges
