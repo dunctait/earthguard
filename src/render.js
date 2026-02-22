@@ -357,6 +357,20 @@ class Renderer {
         this.playerExplosionFx = this.playerExplosionFx.filter((fx) => fx.age <= fx.maxAge);
         this.enemyExplosionFx = this.enemyExplosionFx.filter((fx) => fx.age <= fx.maxAge);
         this.waveClearBanners = this.waveClearBanners.filter((fx) => fx.age <= fx.maxAge);
+
+        this.updateAlienEntryFastForwardFx(this.game.aliens);
+        this.updateAlienEntryFastForwardFx(this.game.incomingAliens);
+    }
+
+    updateAlienEntryFastForwardFx(aliens) {
+        if (!Array.isArray(aliens)) return;
+        for (const alien of aliens) {
+            if (!alien || !alien.entryVisualOffsetY) continue;
+            alien.entryVisualOffsetY *= 0.72;
+            if (Math.abs(alien.entryVisualOffsetY) < 0.08) {
+                alien.entryVisualOffsetY = 0;
+            }
+        }
     }
 
     syncFxFromGameState() {
@@ -758,7 +772,8 @@ class Renderer {
         // Incoming next-wave previews (dimmed, non-interactive), revealed after a few cycles.
         if ((this.game.levelCycles || 0) >= (this.game.config.INCOMING_PREVIEW_REVEAL_CYCLE || 2)) {
             for (const alien of (this.game.incomingAliens || [])) {
-                const pos = this.worldToScreen(alien.x, alien.y);
+                const displayY = alien.y + (alien.entryVisualOffsetY || 0);
+                const pos = this.worldToScreen(alien.x, displayY);
                 // Keep previews in upper staging area to avoid overlap clutter.
                 if (pos.y > h * 0.38 || pos.y < -40) continue;
                 const size = this.worldToScreenSize(alien.radius) * 0.75;
@@ -769,7 +784,8 @@ class Renderer {
 
         // Active aliens
         for (const alien of this.game.aliens) {
-            const pos = this.worldToScreen(alien.x, alien.y);
+            const displayY = alien.y + (alien.entryVisualOffsetY || 0);
+            const pos = this.worldToScreen(alien.x, displayY);
             const size = this.worldToScreenSize(alien.radius) * 0.75;
             const distanceAlpha = Math.max(0.7, this.getDepthBrightness(pos.y));
             this.drawUFO(pos.x, pos.y, size, distanceAlpha);

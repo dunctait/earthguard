@@ -78,6 +78,7 @@ html, body {
 #status {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     color: var(--green-ui-cool);
     font-size: 13px;
     font-weight: 400;

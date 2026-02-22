@@ -38,6 +38,8 @@ const GameConfig = {
     ALIEN_WAVE_VERTICAL_SPACING: 8,
     ALIEN_ACTIVE_SPAWN_TOP_Y: 95,
     ALIEN_INCOMING_WAVE_GAP: 4,
+    WAVE_ENTRY_FAST_FORWARD_CYCLES: 2,
+    WAVE_ENTRY_MIN_ACTIVE_Y: 88,
     MONEY_PER_KILL: 10,
     EXACT_HIT_MONEY_MULTIPLIER: 2,
     EXACT_HIT_RADIUS_FACTOR: 0.35,
@@ -326,6 +328,7 @@ class Game {
         this.levelCycles = 0;
         const waveSpec = this.getWaveSpec(level);
         this.aliens = this.createAliensFromWaveSpec(waveSpec, false);
+        this.fastForwardWaveEntry(this.aliens, waveSpec);
     }
 
     primeIncomingWave(level) {
@@ -341,7 +344,29 @@ class Game {
         }));
         this.incomingAliens = [];
         this.levelCycles = 0;
+        this.fastForwardWaveEntry(this.aliens);
         return true;
+    }
+
+    fastForwardWaveEntry(aliens, waveSpec = null) {
+        if (!Array.isArray(aliens) || aliens.length === 0) return;
+        const cycles = this.config.WAVE_ENTRY_FAST_FORWARD_CYCLES || 0;
+        if (cycles <= 0) return;
+        const minActiveY = this.config.WAVE_ENTRY_MIN_ACTIVE_Y || 0;
+        const highestAlienY = Math.max(...aliens.map((alien) => alien.y));
+        if (highestAlienY <= minActiveY) return;
+
+        // Pull the formation down just enough to bring its highest alien into the
+        // visible battlefield band.
+        const neededShift = Math.max(0, highestAlienY - minActiveY);
+        const appliedShift = neededShift;
+        if (appliedShift <= 0) return;
+
+        for (const alien of aliens) {
+            alien.y -= appliedShift;
+            // Renderer animates this back to zero for a brief "fast-forward" slide-in.
+            alien.entryVisualOffsetY = appliedShift;
+        }
     }
 
     spawnWave() {
@@ -860,12 +885,7 @@ class Game {
             this.emitWaveClearFx(this.level, this.lastWaveClearBonus);
             this.level++;
             if (this.incomingAliens.length > 0) {
-                this.aliens = this.incomingAliens.map((alien) => ({
-                    ...alien,
-                    incoming: false
-                }));
-                this.incomingAliens = [];
-                this.levelCycles = 0;
+                this.promoteIncomingWaveToActive();
             } else {
                 this.spawnWave();
             }
