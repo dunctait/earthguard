@@ -29,6 +29,7 @@ const GameConfig = {
     // Power/Charging
     POWER_CHARGE_RATE: 4,           // Per update tick (was 2, now faster)
     POWER_UPDATE_INTERVAL: 30,      // ms between charge updates
+    POWER_TO_DISTANCE_EXPONENT: 1.5,
 
     // Aliens
     BASE_ALIEN_SPEED: 6,
@@ -65,7 +66,7 @@ const UpgradeDefinitions = {
         description: 'Shows predicted impact circles for locked missiles.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 140, energyCost: 35, label: 'Unlock preview' }
+            { moneyCost: 140, energyCost: 20, label: 'Unlock preview' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -78,7 +79,7 @@ const UpgradeDefinitions = {
         description: 'Automatically cycles when all targets are locked.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 10, energyCost: 2, label: 'Unlock auto-cycle' }
+            { moneyCost: 10, energyCost: 1, label: 'Unlock auto-cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -91,9 +92,9 @@ const UpgradeDefinitions = {
         description: 'Increase explosion radius for all missiles.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 30, energyCost: 10, radiusMultiplier: 1.15, label: '+15%' },
-            { moneyCost: 60, energyCost: 14, radiusMultiplier: 1.30, label: '+30%' },
-            { moneyCost: 110, energyCost: 18, radiusMultiplier: 1.50, label: '+50%' }
+            { moneyCost: 30, energyCost: 6, radiusMultiplier: 1.15, label: '+15%' },
+            { moneyCost: 60, energyCost: 8, radiusMultiplier: 1.30, label: '+30%' },
+            { moneyCost: 110, energyCost: 10, radiusMultiplier: 1.50, label: '+50%' }
         ],
         uiLabelForTier: (tier) => tier.label || `x${tier.radiusMultiplier ?? 1}`,
         apply: ({ effects, tier }) => {
@@ -106,9 +107,9 @@ const UpgradeDefinitions = {
         description: 'Adds one missile slot per cycle per level.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 40, energyCost: 14, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
-            { moneyCost: 85, energyCost: 18, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
-            { moneyCost: 150, energyCost: 24, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
+            { moneyCost: 40, energyCost: 8, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
+            { moneyCost: 85, energyCost: 10, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
+            { moneyCost: 150, energyCost: 12, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || `+${tier.missilesPerTurnBonus || 0} missile/cycle`,
         apply: ({ effects, tier }) => {
@@ -121,9 +122,9 @@ const UpgradeDefinitions = {
         description: 'Multiply cash paid per enemy kill.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 25, energyCost: 8, moneyPerKillMultiplier: 1.10, label: '1.10x $ / kill' },
-            { moneyCost: 55, energyCost: 12, moneyPerKillMultiplier: 1.25, label: '1.25x $ / kill' },
-            { moneyCost: 95, energyCost: 16, moneyPerKillMultiplier: 1.50, label: '1.50x $ / kill' }
+            { moneyCost: 25, energyCost: 4, moneyPerKillMultiplier: 1.20, label: '1.20x $ / kill' },
+            { moneyCost: 55, energyCost: 6, moneyPerKillMultiplier: 1.40, label: '1.40x $ / kill' },
+            { moneyCost: 95, energyCost: 8, moneyPerKillMultiplier: 1.60, label: '1.60x $ / kill' }
         ],
         uiLabelForTier: (tier) => tier.label || `${tier.moneyPerKillMultiplier || 1}x $ / kill`,
         apply: ({ effects, tier }) => {
@@ -136,9 +137,9 @@ const UpgradeDefinitions = {
         description: 'Multiply energy restored per enemy kill.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 28, energyCost: 8, energyPerKillMultiplier: 1.10, label: '1.10x EN / kill' },
-            { moneyCost: 62, energyCost: 12, energyPerKillMultiplier: 1.25, label: '1.25x EN / kill' },
-            { moneyCost: 110, energyCost: 16, energyPerKillMultiplier: 1.50, label: '1.50x EN / kill' }
+            { moneyCost: 28, energyCost: 4, energyPerKillMultiplier: 1.20, label: '1.20x EN / kill' },
+            { moneyCost: 62, energyCost: 6, energyPerKillMultiplier: 1.40, label: '1.40x EN / kill' },
+            { moneyCost: 110, energyCost: 8, energyPerKillMultiplier: 1.60, label: '1.60x EN / kill' }
         ],
         uiLabelForTier: (tier) => tier.label || `${tier.energyPerKillMultiplier || 1}x EN / kill`,
         apply: ({ effects, tier }) => {
@@ -151,9 +152,9 @@ const UpgradeDefinitions = {
         description: 'Reduce missile energy cost by 10% per level.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 35, energyCost: 10, costReductionPct: 10, label: '-10% cost' },
-            { moneyCost: 70, energyCost: 14, costReductionPct: 20, label: '-20% cost' },
-            { moneyCost: 120, energyCost: 18, costReductionPct: 30, label: '-30% cost' }
+            { moneyCost: 35, energyCost: 6, costReductionPct: 10, label: '-10% cost' },
+            { moneyCost: 70, energyCost: 8, costReductionPct: 20, label: '-20% cost' },
+            { moneyCost: 120, energyCost: 10, costReductionPct: 30, label: '-30% cost' }
         ],
         uiLabelForTier: (tier) => tier.label || `-${tier.costReductionPct || 0}% cost`,
         apply: ({ effects, tier }) => {
@@ -166,9 +167,9 @@ const UpgradeDefinitions = {
         description: 'Restore more energy after each cycle.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 30, energyCost: 10, regenBonus: 1, label: '+1 EN / cycle' },
-            { moneyCost: 70, energyCost: 14, regenBonus: 2, label: '+2 EN / cycle' },
-            { moneyCost: 120, energyCost: 18, regenBonus: 4, label: '+4 EN / cycle' }
+            { moneyCost: 30, energyCost: 6, regenBonus: 1, label: '+1 EN / cycle' },
+            { moneyCost: 70, energyCost: 8, regenBonus: 2, label: '+2 EN / cycle' },
+            { moneyCost: 120, energyCost: 10, regenBonus: 4, label: '+4 EN / cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || `+${tier.regenBonus || 0} EN / cycle`,
         apply: ({ effects, tier }) => {
@@ -181,9 +182,9 @@ const UpgradeDefinitions = {
         description: 'Extends aiming guide visibility by reducing fade falloff.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 25, energyCost: 8, fadeStrengthMultiplier: 0.85, label: 'Longer guide I' },
-            { moneyCost: 55, energyCost: 12, fadeStrengthMultiplier: 0.70, label: 'Longer guide II' },
-            { moneyCost: 95, energyCost: 16, fadeStrengthMultiplier: 0.55, label: 'Longer guide III' }
+            { moneyCost: 25, energyCost: 4, fadeStrengthMultiplier: 0.85, label: 'Longer guide I' },
+            { moneyCost: 55, energyCost: 6, fadeStrengthMultiplier: 0.70, label: 'Longer guide II' },
+            { moneyCost: 95, energyCost: 8, fadeStrengthMultiplier: 0.55, label: 'Longer guide III' }
         ],
         uiLabelForTier: (tier) => tier.label || 'Longer guide',
         apply: ({ effects, tier }) => {
@@ -241,13 +242,15 @@ const LevelDefinitions = {
 };
 
 class Game {
-    constructor() {
+    constructor(options = {}) {
         this.config = GameConfig;
-        this.utils = window.EarthGuardUtils || {
+        const root = options.root || (typeof window !== 'undefined' ? window : globalThis);
+        this.instantAutoCycle = !!options.instantAutoCycle;
+        this.utils = options.utils || root.EarthGuardUtils || {
             clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
             distance: (dx, dy) => Math.sqrt((dx * dx) + (dy * dy))
         };
-        this.ui = window.EarthGuardUI ? new window.EarthGuardUI() : null;
+        this.ui = options.ui ?? (root.EarthGuardUI ? new root.EarthGuardUI() : null);
 
         // Launcher state
         this.launcherAngle = this.config.START_ANGLE;
@@ -258,6 +261,7 @@ class Game {
         this.missilesLockedThisTurn = 0;
         this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
         this.missilesLaunchedThisCycle = 0;
+        this.lastLockedPower = 0;
 
         // Game state
         this.level = 1;
@@ -329,7 +333,9 @@ class Game {
         const effects = this.getDefaultUpgradeEffects();
         for (const upgrade of Object.values(this.upgrades)) {
             if (upgrade.level <= 0) continue;
-            const tier = upgrade.tiers[upgrade.level - 1];
+            const tier = (typeof upgrade.getTierForLevel === 'function')
+                ? (upgrade.getTierForLevel(upgrade.level - 1, { game: this, upgrade }) || null)
+                : (upgrade.tiers?.[upgrade.level - 1] || null);
             if (!tier || typeof upgrade.apply !== 'function') continue;
             upgrade.apply({
                 game: this,
@@ -532,7 +538,9 @@ class Game {
         if (power <= 0) return null;
 
         const mathAngle = (90 - this.launcherAngle) * Math.PI / 180;
-        const distance = (power / 100) * (this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100);
+        const normalizedPower = this.utils.clamp(power / 100, 0, 1);
+        const curvedPower = Math.pow(normalizedPower, this.config.POWER_TO_DISTANCE_EXPONENT || 1);
+        const distance = curvedPower * (this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100);
         const launcher = this.getLauncherOrigin();
 
         return {
@@ -600,12 +608,17 @@ class Game {
             });
 
             this.missilesLockedThisTurn++;
+            this.lastLockedPower = this.power;
             this.missileEnergy = this.utils.clamp(this.missileEnergy - energyCost, 0, this.config.MISSILE_ENERGY_MAX);
             this.power = 0;
             // Auto-cycle when all missiles are locked (upgrade-gated).
             if (this.hasAutoCycle() && this.missilesLockedThisTurn >= this.getMissilesPerTurn()) {
                 this.emitStatusFx('MISSILE TARGETED', 'AUTO-CYCLED', 70);
                 this.notify();
+                if (this.instantAutoCycle) {
+                    this.advanceImmediate();
+                    return;
+                }
                 setTimeout(() => this.advance(), 100);
                 return;
             }
@@ -799,37 +812,7 @@ class Game {
 
         const interval = setInterval(() => {
             frame++;
-
-            // Advance missiles by MISSILE_TRAVEL_PER_TURN of remaining distance
-            for (const missile of this.missiles) {
-                if (!missile.exploded) {
-                    missile.progress += this.config.MISSILE_TRAVEL_PER_TURN / totalFrames;
-
-                    if (missile.progress >= 0.99) {
-                        missile.progress = 1;
-                        missile.exploded = true;
-                        this.createExplosion(
-                            missile.targetX,
-                            missile.targetY,
-                            missile.explosionRadius || this.getCurrentExplosionRadius()
-                        );
-                    }
-                }
-            }
-
-            // Advance aliens
-            for (const alien of this.aliens) {
-                alien.y -= alien.speed / totalFrames;
-            }
-            for (const alien of this.incomingAliens) {
-                // Preview wave drifts in more slowly and never affects gameplay until promoted.
-                alien.y -= (alien.speed * 0.55) / totalFrames;
-            }
-
-            // Age explosions
-            for (const explosion of this.explosions) {
-                explosion.age++;
-            }
+            this.runAdvanceAnimationFrame(totalFrames);
 
             this.notify();
 
@@ -838,6 +821,57 @@ class Game {
                 this.finishTurn();
             }
         }, this.config.ANIMATION_FRAME_MS);
+    }
+
+    runAdvanceAnimationFrame(totalFrames) {
+        // Advance missiles by MISSILE_TRAVEL_PER_TURN of remaining distance
+        for (const missile of this.missiles) {
+            if (!missile.exploded) {
+                missile.progress += this.config.MISSILE_TRAVEL_PER_TURN / totalFrames;
+
+                if (missile.progress >= 0.99) {
+                    missile.progress = 1;
+                    missile.exploded = true;
+                    this.createExplosion(
+                        missile.targetX,
+                        missile.targetY,
+                        missile.explosionRadius || this.getCurrentExplosionRadius()
+                    );
+                }
+            }
+        }
+
+        for (const alien of this.aliens) {
+            alien.y -= alien.speed / totalFrames;
+        }
+        for (const alien of this.incomingAliens) {
+            alien.y -= (alien.speed * 0.55) / totalFrames;
+        }
+
+        for (const explosion of this.explosions) {
+            explosion.age++;
+        }
+    }
+
+    advanceImmediate() {
+        if (this.isAnimating || this.isGameOver) return false;
+
+        this.missilesLaunchedThisCycle = this.pendingMissiles.length;
+        const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
+        this.missiles.push(...this.pendingMissiles.map((missile) => ({
+            ...missile,
+            progress: Math.max(missile.progress || 0, launchStartProgress)
+        })));
+        this.pendingMissiles = [];
+        this.missilesLockedThisTurn = 0;
+
+        this.isAnimating = true;
+        const totalFrames = Math.max(1, this.config.ANIMATION_FRAMES || 1);
+        for (let frame = 0; frame < totalFrames; frame++) {
+            this.runAdvanceAnimationFrame(totalFrames);
+        }
+        this.finishTurn();
+        return true;
     }
 
     createExplosion(x, y, radius = this.getCurrentExplosionRadius()) {
@@ -1024,6 +1058,7 @@ class Game {
         this.missilesLockedThisTurn = 0;
         this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
         this.missilesLaunchedThisCycle = 0;
+        this.lastLockedPower = 0;
         this.money = 0;
         this.levelCycles = 0;
         this.lastWaveClearBonus = 0;
@@ -1180,4 +1215,8 @@ class Game {
         }
         return results;
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Game, GameConfig, UpgradeDefinitions, LevelDefinitions };
 }

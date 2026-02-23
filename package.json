@@ -1,5 +1,17 @@
 {
   "scripts": {
+    "sim:core": "node scripts/simulate-game-core.js",
+    "sim:core:good": "node scripts/simulate-game-core.js --persona=good",
+    "sim:core:good:10": "node scripts/simulate-game-core.js --persona=good --runs=10 --quiet",
+    "sim:core:perfect": "node scripts/simulate-game-core.js --persona=perfect",
+    "sim:core:perfect:10": "node scripts/simulate-game-core.js --persona=perfect --runs=10 --quiet",
+    "sim:batch": "node scripts/sim-batch.js",
+    "sim:batch:default": "node scripts/sim-batch.js --personas=good,perfect,noUpgrades,missesTwoThirds --runs=10",
+    "sim": "node scripts/playwright-simulate-game.js",
+    "sim:good": "node scripts/playwright-simulate-game.js --persona=good",
+    "sim:good:10": "node scripts/playwright-simulate-game.js --persona=good --runs=10 --quiet",
+    "sim:perfect": "node scripts/playwright-simulate-game.js --persona=perfect",
+    "sim:perfect:10": "node scripts/playwright-simulate-game.js --persona=perfect --runs=10 --quiet",
     "smoke": "node scripts/playwright-smoke.js",
     "smoke:charge": "node scripts/playwright-charge-regression.js",
     "smoke:gameover": "node scripts/playwright-gameover-smoke.js",

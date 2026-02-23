@@ -259,6 +259,10 @@ class Renderer {
 
     animate() {
         this.frameCount++;
+        // Keep charge/power feedback responsive even if a state-change notification is dropped.
+        if (this.game?.ui && typeof this.game.ui.renderPower === 'function') {
+            this.game.ui.renderPower(this.game);
+        }
         this.render();
         requestAnimationFrame(() => this.animate());
     }

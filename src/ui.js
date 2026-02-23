@@ -20,7 +20,9 @@ class EarthGuardUI {
             'money',
             'missiles-status',
             'angle-display',
+            'power-bar-container',
             'power-bar',
+            'power-lock-marker',
             'fire-btn',
             'advance-btn',
             'upgrade-menu-btn',
@@ -108,7 +110,20 @@ class EarthGuardUI {
     }
 
     renderPower(game) {
-        this.el['power-bar'].style.width = `${game.power}%`;
+        const power = Math.max(0, Math.min(100, game.power || 0));
+        const powerScale = power / 100;
+        const bar = this.el['power-bar'];
+        if (bar) {
+            bar.style.setProperty('--power-scale', String(powerScale));
+            // Fallback for browsers/styles that ignore transform-based fill.
+            bar.style.width = `${power}%`;
+        }
+        const marker = this.el['power-lock-marker'];
+        if (marker) {
+            const lastLockedPower = Math.max(0, Math.min(100, game.lastLockedPower || 0));
+            marker.style.left = `${lastLockedPower}%`;
+            marker.classList.toggle('is-visible', lastLockedPower > 0);
+        }
     }
 
     renderButtons(game) {

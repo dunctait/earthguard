@@ -1,0 +1,133 @@
+const fs = require('fs');
+const path = require('path');
+const { runSingleSimulation, getPersona, PERSONA_NAMES } = require('./simulate-game-core.js');
+
+function parseArgs(argv) {
+    const args = {
+        personas: ['good', 'perfect'],
+        runs: 10,
+        seed: 1337,
+        maxTurns: 500,
+        verbose: false,
+        outDir: path.resolve(__dirname, '..', 'artifacts', 'sim')
+    };
+    for (const arg of argv) {
+        if (arg.startsWith('--personas=')) args.personas = arg.split('=')[1].split(',').map((s) => s.trim()).filter(Boolean);
+        else if (arg.startsWith('--runs=')) args.runs = Number(arg.split('=')[1]);
+        else if (arg.startsWith('--seed=')) args.seed = Number(arg.split('=')[1]);
+        else if (arg.startsWith('--max-turns=')) args.maxTurns = Number(arg.split('=')[1]);
+        else if (arg.startsWith('--out-dir=')) args.outDir = path.resolve(arg.split('=')[1]);
+        else if (arg === '--verbose') args.verbose = true;
+    }
+    return args;
+}
+
+function avg(values) {
+    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+}
+
+function summarizeRuns(personaName, runs) {
+    return {
+        persona: personaName,
+        runs: runs.length,
+        avgTurns: +avg(runs.map((r) => r.turnsPlayed)).toFixed(2),
+        avgFinalLevel: +avg(runs.map((r) => r.finalState.level)).toFixed(2),
+        avgFinalMoney: +avg(runs.map((r) => Number(r.finalState.money) || 0)).toFixed(2),
+        avgFinalEnergy: +avg(runs.map((r) => Number(r.finalState.missileEnergy) || 0)).toFixed(2),
+        avgHp: +avg(runs.map((r) => Number(r.finalState.hp) || 0)).toFixed(2),
+        gameOverRate: +avg(runs.map((r) => r.finalState.isGameOver ? 1 : 0)).toFixed(2),
+        maxLevel: Math.max(...runs.map((r) => r.finalState.level)),
+        minLevel: Math.min(...runs.map((r) => r.finalState.level))
+    };
+}
+
+function toCsv(rows) {
+    if (!rows.length) return '';
+    const headers = Object.keys(rows[0]);
+    const esc = (v) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    return [headers.join(','), ...rows.map((row) => headers.map((h) => esc(row[h])).join(','))].join('\n');
+}
+
+function ensureDir(dir) {
+    fs.mkdirSync(dir, { recursive: true });
+}
+
+function main() {
+    const args = parseArgs(process.argv.slice(2));
+    const invalid = args.personas.filter((name) => !getPersona(name));
+    if (invalid.length) {
+        console.error(`Unknown persona(s): ${invalid.join(', ')}`);
+        console.error(`Available: ${PERSONA_NAMES().join(', ')}`);
+        process.exit(1);
+    }
+
+    ensureDir(args.outDir);
+
+    const startedAt = new Date();
+    const allResults = [];
+    const aggregateRows = [];
+
+    for (const personaName of args.personas) {
+        const persona = getPersona(personaName);
+        const runs = [];
+        console.log(`\n[batch] persona=${personaName} runs=${args.runs} seed=${args.seed}`);
+
+        for (let i = 0; i < args.runs; i++) {
+            const seed = args.seed + i;
+            const run = runSingleSimulation(persona, {
+                persona: personaName,
+                seed,
+                maxTurns: args.maxTurns,
+                verbose: args.verbose
+            });
+            runs.push(run);
+            allResults.push({
+                persona: personaName,
+                seed,
+                turnsPlayed: run.turnsPlayed,
+                finalLevel: run.finalState.level,
+                finalHp: run.finalState.hp,
+                finalMoney: +Number(run.finalState.money).toFixed(2),
+                finalEnergy: +Number(run.finalState.missileEnergy).toFixed(2),
+                gameOver: !!run.finalState.isGameOver,
+                gameOverReason: run.finalState.gameOverReason || '',
+                upgrades: Object.entries(run.upgrades).filter(([, lvl]) => lvl > 0).map(([k, lvl]) => `${k}:L${lvl}`).join('|')
+            });
+        }
+
+        const summary = summarizeRuns(personaName, runs);
+        aggregateRows.push(summary);
+        console.log(`[batch summary] ${JSON.stringify(summary)}`);
+    }
+
+    const manifest = {
+        generatedAt: startedAt.toISOString(),
+        mode: 'core-batch',
+        config: {
+            personas: args.personas,
+            runs: args.runs,
+            seed: args.seed,
+            maxTurns: args.maxTurns
+        },
+        aggregate: aggregateRows,
+        runs: allResults
+    };
+
+    const jsonPath = path.join(args.outDir, 'sim-batch-results.json');
+    const csvPath = path.join(args.outDir, 'sim-batch-results.csv');
+    const aggregateCsvPath = path.join(args.outDir, 'sim-batch-aggregate.csv');
+    fs.writeFileSync(jsonPath, JSON.stringify(manifest, null, 2));
+    fs.writeFileSync(csvPath, toCsv(allResults));
+    fs.writeFileSync(aggregateCsvPath, toCsv(aggregateRows));
+
+    console.log('\n[batch output]');
+    console.log(`json: ${jsonPath}`);
+    console.log(`csv:  ${csvPath}`);
+    console.log(`agg:  ${aggregateCsvPath}`);
+}
+
+main();

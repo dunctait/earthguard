@@ -546,12 +546,41 @@ html, body {
 
 #power-bar {
     height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, var(--green-secondary), var(--cyan-friendly), var(--green-primary));
+    width: 100%;
+    transform-origin: left center;
+    transform: scaleX(var(--power-scale, 0));
+    background: linear-gradient(
+        90deg,
+        rgba(0, 255, 255, 0.9) 0%,
+        rgba(0, 255, 170, 0.95) 30%,
+        rgba(255, 210, 80, 0.92) 62%,
+        rgba(255, 120, 40, 0.9) 82%,
+        rgba(255, 70, 70, 0.95) 100%
+    );
     box-shadow:
         0 0 4px var(--green-glow-medium),
         0 0 14px rgba(0, 255, 102, 0.15);
-    transition: width 0.05s linear;
+    transition: transform 0.05s linear, width 0.05s linear;
+}
+
+#power-lock-marker {
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    width: 2px;
+    margin-left: -1px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow:
+        0 0 10px rgba(255, 255, 255, 0.25),
+        0 0 3px rgba(255, 210, 80, 0.45);
+    opacity: 0;
+    transform: scaleY(0.75);
+    transition: opacity 0.15s ease-out;
+    pointer-events: none;
+}
+
+#power-lock-marker.is-visible {
+    opacity: 0.8;
 }
 
 #fire-btn,
