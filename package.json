@@ -7,6 +7,7 @@
     "sim:core:perfect:10": "node scripts/simulate-game-core.js --persona=perfect --runs=10 --quiet",
     "sim:batch": "node scripts/sim-batch.js",
     "sim:batch:default": "node scripts/sim-batch.js --personas=good,perfect,noUpgrades,missesTwoThirds --runs=10",
+    "sim:batch:ci": "node scripts/sim-batch.js --personas=good,perfect,noUpgrades,perfectNoUpgrades,missesTwoThirds --runs=50 --max-turns=120 --strict",
     "sim": "node scripts/playwright-simulate-game.js",
     "sim:good": "node scripts/playwright-simulate-game.js --persona=good",
     "sim:good:10": "node scripts/playwright-simulate-game.js --persona=good --runs=10 --quiet",

@@ -111,17 +111,22 @@ class EarthGuardUI {
 
     renderPower(game) {
         const power = Math.max(0, Math.min(100, game.power || 0));
-        const powerScale = power / 100;
+        const powerScale = typeof game.getTargetRangeProgressForPower === 'function'
+            ? game.getTargetRangeProgressForPower(power)
+            : (power / 100);
         const bar = this.el['power-bar'];
         if (bar) {
             bar.style.setProperty('--power-scale', String(powerScale));
-            // Fallback for browsers/styles that ignore transform-based fill.
-            bar.style.width = `${power}%`;
+            // Keep width fixed so the transform scale is the single source of truth.
+            bar.style.width = '100%';
         }
         const marker = this.el['power-lock-marker'];
         if (marker) {
             const lastLockedPower = Math.max(0, Math.min(100, game.lastLockedPower || 0));
-            marker.style.left = `${lastLockedPower}%`;
+            const markerScale = typeof game.getTargetRangeProgressForPower === 'function'
+                ? game.getTargetRangeProgressForPower(lastLockedPower)
+                : (lastLockedPower / 100);
+            marker.style.left = `${Math.max(0, Math.min(100, markerScale * 100))}%`;
             marker.classList.toggle('is-visible', lastLockedPower > 0);
         }
     }

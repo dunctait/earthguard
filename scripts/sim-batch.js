@@ -9,6 +9,7 @@ function parseArgs(argv) {
         seed: 1337,
         maxTurns: 500,
         verbose: false,
+        strict: false,
         outDir: path.resolve(__dirname, '..', 'artifacts', 'sim')
     };
     for (const arg of argv) {
@@ -18,6 +19,7 @@ function parseArgs(argv) {
         else if (arg.startsWith('--max-turns=')) args.maxTurns = Number(arg.split('=')[1]);
         else if (arg.startsWith('--out-dir=')) args.outDir = path.resolve(arg.split('=')[1]);
         else if (arg === '--verbose') args.verbose = true;
+        else if (arg === '--strict') args.strict = true;
     }
     return args;
 }
@@ -208,6 +210,9 @@ function main() {
     const failing = criteriaRows.filter((r) => !r.pass);
     if (failing.length) {
         console.log(`\n[criteria summary] FAIL (${failing.length}/${criteriaRows.length} personas)`);
+        if (args.strict) {
+            process.exit(2);
+        }
     } else {
         console.log('\n[criteria summary] PASS');
     }

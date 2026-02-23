@@ -560,7 +560,7 @@ html, body {
     box-shadow:
         0 0 4px var(--green-glow-medium),
         0 0 14px rgba(0, 255, 102, 0.15);
-    transition: transform 0.05s linear, width 0.05s linear;
+    transition: transform 0.02s linear;
 }
 
 #power-lock-marker {

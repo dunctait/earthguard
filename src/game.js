@@ -560,6 +560,11 @@ class Game {
         return this.getExplosionRadiusForLevel(this.level);
     }
 
+    getTargetRangeProgressForPower(power = this.power) {
+        const normalizedPower = this.utils.clamp((power || 0) / 100, 0, 1);
+        return Math.pow(normalizedPower, this.config.POWER_TO_DISTANCE_EXPONENT || 1);
+    }
+
     getWaveClearSpeedBonus(cycles = this.levelCycles, level = this.level) {
         const raw = this.config.WAVE_CLEAR_BONUS_BASE - ((Math.max(1, cycles) - 1) * this.config.WAVE_CLEAR_BONUS_DECAY_PER_CYCLE);
         const clamped = Math.max(this.config.WAVE_CLEAR_BONUS_MIN, raw);
