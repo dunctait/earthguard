@@ -178,8 +178,8 @@ function runSingleSimulation(persona, options) {
 
             const logRow = {
                 turn: turnCount,
-                before: { level: pre.level, cycle: pre.levelCycles + 1, hp: pre.hp, energy: +Number(pre.missileEnergy).toFixed(1), money: +Number(pre.money).toFixed(1), aliens: pre.aliens.length },
-                after: { level: post.level, cycle: post.levelCycles + 1, hp: post.hp, energy: +Number(post.missileEnergy).toFixed(1), money: +Number(post.money).toFixed(1), aliens: post.aliens.length, gameOver: !!post.isGameOver, reason: post.gameOverReason || '' },
+                before: { level: pre.level, cycle: pre.levelCycles + 1, totalCycles: pre.totalCycles, hp: pre.hp, energy: +Number(pre.missileEnergy).toFixed(1), money: +Number(pre.money).toFixed(1), aliens: pre.aliens.length },
+                after: { level: post.level, cycle: post.levelCycles + 1, totalCycles: post.totalCycles, hp: post.hp, energy: +Number(post.missileEnergy).toFixed(1), money: +Number(post.money).toFixed(1), aliens: post.aliens.length, gameOver: !!post.isGameOver, reason: post.gameOverReason || '' },
                 actions,
                 purchases: purchasedThisTurn
             };
@@ -188,7 +188,7 @@ function runSingleSimulation(persona, options) {
             if (options.verbose) {
                 const a = actions.actionMeta;
                 console.log(
-                    `[turn ${turnCount}] L${logRow.before.level}C${logRow.before.cycle} HP ${logRow.before.hp} EN ${logRow.before.energy} $${logRow.before.money} ` +
+                    `[turn ${turnCount}] L${logRow.before.level}C${logRow.before.cycle} (T${logRow.before.totalCycles}) HP ${logRow.before.hp} EN ${logRow.before.energy} $${logRow.before.money} ` +
                     `aliens=${logRow.before.aliens} | shots ${a.shotsLocked}/${a.shotsAttempted}${a.autoCycleTriggered ? ' [AUTO-CYCLE]' : ''}`
                 );
                 for (const s of actions.logs) {
@@ -197,7 +197,7 @@ function runSingleSimulation(persona, options) {
                 if (purchasedThisTurn.length) {
                     console.log(`  - purchases: ${purchasedThisTurn.map((p) => `${p.key}@L${p.level}`).join(', ')}`);
                 }
-                console.log(`  -> after: L${logRow.after.level}C${logRow.after.cycle} HP ${logRow.after.hp} EN ${logRow.after.energy} $${logRow.after.money} aliens=${logRow.after.aliens}${logRow.after.gameOver ? ` [GAME OVER: ${logRow.after.reason}]` : ''}`);
+                console.log(`  -> after: L${logRow.after.level}C${logRow.after.cycle} (T${logRow.after.totalCycles}) HP ${logRow.after.hp} EN ${logRow.after.energy} $${logRow.after.money} aliens=${logRow.after.aliens}${logRow.after.gameOver ? ` [GAME OVER: ${logRow.after.reason}]` : ''}`);
             }
         }
 
@@ -214,7 +214,7 @@ function runSingleSimulation(persona, options) {
 }
 
 function printRunSummary(run, i, total) {
-    console.log(`\n[summary run ${i + 1}/${total}] turns=${run.turnsPlayed} level=${run.finalState.level} hp=${run.finalState.hp} EN=${run.finalState.missileEnergy} $=${run.finalState.money} gameOver=${run.finalState.isGameOver} reason="${run.finalState.gameOverReason || ''}"`);
+    console.log(`\n[summary run ${i + 1}/${total}] decisions=${run.turnsPlayed} cycles=${run.finalState.totalCycles} level=${run.finalState.level} hp=${run.finalState.hp} EN=${run.finalState.missileEnergy} $=${run.finalState.money} gameOver=${run.finalState.isGameOver} reason="${run.finalState.gameOverReason || ''}"`);
     console.log(`[summary upgrades] ${Object.entries(run.upgrades).filter(([, lvl]) => lvl > 0).map(([k, lvl]) => `${k}:L${lvl}`).join(', ') || '(none)'}`);
 }
 
@@ -240,6 +240,7 @@ function main() {
             runs: runs.length,
             persona: persona.name,
             avgTurns: +avg(runs.map((r) => r.turnsPlayed)).toFixed(2),
+            avgFinalCycles: +avg(runs.map((r) => r.finalState.totalCycles || 0)).toFixed(2),
             avgFinalLevel: +avg(runs.map((r) => r.finalState.level)).toFixed(2),
             avgFinalMoney: +avg(runs.map((r) => Number(r.finalState.money) || 0)).toFixed(2),
             avgFinalEnergy: +avg(runs.map((r) => Number(r.finalState.missileEnergy) || 0)).toFixed(2),
@@ -257,6 +258,7 @@ function main() {
             turnsPlayed: r.turnsPlayed,
             finalState: {
                 level: r.finalState.level,
+                totalCycles: r.finalState.totalCycles,
                 hp: r.finalState.hp,
                 missileEnergy: r.finalState.missileEnergy,
                 money: r.finalState.money,
