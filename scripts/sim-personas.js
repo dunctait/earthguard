@@ -247,6 +247,10 @@ const MATRIX_STRATEGIES = {
         upgradeStrategy: 'cheapest',
         upgradePriority: []
     },
+    cheapestCombatUpgrade: {
+        upgradeStrategy: 'cheapestCombat',
+        upgradePriority: []
+    },
     prioritiseMoney: {
         upgradeStrategy: 'priorityThenCheapest',
         upgradePriority: ['autoCycle', 'powerMemory', 'bountyLink', 'targetAreas', 'trajectoryProcessor', 'blastRadius', 'missileRacks', 'energyResupply']

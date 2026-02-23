@@ -33,7 +33,7 @@ const GameConfig = {
 
     // Aliens
     BASE_ALIEN_SPEED: 6,
-    ALIEN_SPEED_PER_LEVEL: 1.0,
+    ALIEN_SPEED_PER_LEVEL: 0.85,
     ALIEN_RADIUS: 3,
     ALIEN_DAMAGE: 10,
     ALIEN_WAVE_VERTICAL_SPACING: 8,
@@ -66,7 +66,7 @@ const UpgradeDefinitions = {
         description: 'Shows predicted impact circles for locked missiles.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 140, energyCost: 8, label: 'Unlock preview' }
+            { moneyCost: 110, energyCost: 4, label: 'Unlock preview' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -79,7 +79,7 @@ const UpgradeDefinitions = {
         description: 'Automatically cycles when all targets are locked.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 10, energyCost: 1, label: 'Unlock auto-cycle' }
+            { moneyCost: 10, energyCost: 0, label: 'Unlock auto-cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -92,9 +92,9 @@ const UpgradeDefinitions = {
         description: 'Increase explosion radius for all missiles.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 20, energyCost: 2, radiusMultiplier: 1.25, label: '+25%' },
-            { moneyCost: 45, energyCost: 4, radiusMultiplier: 1.50, label: '+50%' },
-            { moneyCost: 80, energyCost: 8, radiusMultiplier: 1.80, label: '+80%' }
+            { moneyCost: 18, energyCost: 1, radiusMultiplier: 1.35, label: '+35%' },
+            { moneyCost: 40, energyCost: 3, radiusMultiplier: 1.70, label: '+70%' },
+            { moneyCost: 75, energyCost: 6, radiusMultiplier: 2.10, label: '+110%' }
         ],
         uiLabelForTier: (tier) => tier.label || `x${tier.radiusMultiplier ?? 1}`,
         apply: ({ effects, tier }) => {
@@ -107,9 +107,9 @@ const UpgradeDefinitions = {
         description: 'Adds one missile slot per cycle per level.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 32, energyCost: 3, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
-            { moneyCost: 70, energyCost: 5, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
-            { moneyCost: 120, energyCost: 10, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
+            { moneyCost: 26, energyCost: 2, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
+            { moneyCost: 55, energyCost: 3, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
+            { moneyCost: 95, energyCost: 6, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || `+${tier.missilesPerTurnBonus || 0} missile/cycle`,
         apply: ({ effects, tier }) => {
@@ -152,9 +152,9 @@ const UpgradeDefinitions = {
         description: 'Reduce missile energy cost by 10% per level.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 28, energyCost: 2, costReductionPct: 15, label: '-15% cost' },
-            { moneyCost: 55, energyCost: 4, costReductionPct: 30, label: '-30% cost' },
-            { moneyCost: 95, energyCost: 8, costReductionPct: 45, label: '-45% cost' }
+            { moneyCost: 24, energyCost: 1, costReductionPct: 20, label: '-20% cost' },
+            { moneyCost: 48, energyCost: 3, costReductionPct: 40, label: '-40% cost' },
+            { moneyCost: 85, energyCost: 6, costReductionPct: 60, label: '-60% cost' }
         ],
         uiLabelForTier: (tier) => tier.label || `-${tier.costReductionPct || 0}% cost`,
         apply: ({ effects, tier }) => {
@@ -167,9 +167,9 @@ const UpgradeDefinitions = {
         description: 'Restore more energy after each cycle.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 24, energyCost: 2, regenBonus: 2, label: '+2 EN / cycle' },
-            { moneyCost: 50, energyCost: 4, regenBonus: 4, label: '+4 EN / cycle' },
-            { moneyCost: 90, energyCost: 8, regenBonus: 6, label: '+6 EN / cycle' }
+            { moneyCost: 22, energyCost: 1, regenBonus: 3, label: '+3 EN / cycle' },
+            { moneyCost: 45, energyCost: 3, regenBonus: 6, label: '+6 EN / cycle' },
+            { moneyCost: 80, energyCost: 6, regenBonus: 9, label: '+9 EN / cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || `+${tier.regenBonus || 0} EN / cycle`,
         apply: ({ effects, tier }) => {
@@ -284,6 +284,12 @@ class Game {
         this.levelCycles = 0;
         this.totalCycles = 0;
         this.lastWaveClearBonus = 0;
+        this.stats = {
+            missilesTargeted: 0,
+            missilesLaunched: 0,
+            kills: 0,
+            exactHitKills: 0
+        };
         this.isUpgradeMenuOpen = false;
         this.isGameOver = false;
         this.gameOverReason = '';
@@ -628,6 +634,7 @@ class Game {
             });
 
             this.missilesLockedThisTurn++;
+            this.stats.missilesTargeted += 1;
             this.lastLockedPower = this.power;
             this.missileEnergy = this.utils.clamp(this.missileEnergy - energyCost, 0, this.config.MISSILE_ENERGY_MAX);
             this.power = 0;
@@ -820,6 +827,7 @@ class Game {
 
         // Move pending missiles to active
         this.missilesLaunchedThisCycle = this.pendingMissiles.length;
+        this.stats.missilesLaunched += this.pendingMissiles.length;
         const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
         this.missiles.push(...this.pendingMissiles.map((missile) => ({
             ...missile,
@@ -881,6 +889,7 @@ class Game {
         if (this.isAnimating || this.isGameOver) return false;
 
         this.missilesLaunchedThisCycle = this.pendingMissiles.length;
+        this.stats.missilesLaunched += this.pendingMissiles.length;
         const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
         this.missiles.push(...this.pendingMissiles.map((missile) => ({
             ...missile,
@@ -1088,6 +1097,12 @@ class Game {
         this.levelCycles = 0;
         this.totalCycles = 0;
         this.lastWaveClearBonus = 0;
+        this.stats = {
+            missilesTargeted: 0,
+            missilesLaunched: 0,
+            kills: 0,
+            exactHitKills: 0
+        };
         this.isUpgradeMenuOpen = false;
         this.isGameOver = false;
         this.gameOverReason = '';
@@ -1119,6 +1134,8 @@ class Game {
                 alien.hp -= 1;
                 if (alien.hp <= 0) {
                     const exactHit = dist <= (alien.radius * this.config.EXACT_HIT_RADIUS_FACTOR);
+                    this.stats.kills += 1;
+                    if (exactHit) this.stats.exactHitKills += 1;
                     const reward = this.getMoneyPerKillReward(exactHit);
                     this.money += reward;
                     this.missileEnergy = this.utils.clamp(
@@ -1158,6 +1175,7 @@ class Game {
             levelCycles: this.levelCycles,
             totalCycles: this.totalCycles,
             lastWaveClearBonus: this.lastWaveClearBonus,
+            stats: { ...this.stats },
             missilesLocked: this.missilesLockedThisTurn,
             missilesPerTurn: this.getMissilesPerTurn(),
             missilesInFlight: this.missiles.length,

@@ -29,6 +29,9 @@ function avg(values) {
 }
 
 function summarizeRuns(personaName, runs) {
+    const totalKills = runs.reduce((sum, r) => sum + (Number(r.finalState.stats?.kills) || 0), 0);
+    const totalShots = runs.reduce((sum, r) => sum + (Number(r.finalState.stats?.missilesLaunched) || 0), 0);
+    const totalExactHitKills = runs.reduce((sum, r) => sum + (Number(r.finalState.stats?.exactHitKills) || 0), 0);
     return {
         persona: personaName,
         runs: runs.length,
@@ -37,11 +40,38 @@ function summarizeRuns(personaName, runs) {
         avgFinalLevel: +avg(runs.map((r) => r.finalState.level)).toFixed(2),
         avgFinalMoney: +avg(runs.map((r) => Number(r.finalState.money) || 0)).toFixed(2),
         avgFinalEnergy: +avg(runs.map((r) => Number(r.finalState.missileEnergy) || 0)).toFixed(2),
+        avgKills: +avg(runs.map((r) => Number(r.finalState.stats?.kills) || 0)).toFixed(2),
+        avgShotsLaunched: +avg(runs.map((r) => Number(r.finalState.stats?.missilesLaunched) || 0)).toFixed(2),
+        avgExactHitKills: +avg(runs.map((r) => Number(r.finalState.stats?.exactHitKills) || 0)).toFixed(2),
+        avgEnergyBlockedTurns: +avg(runs.map((r) => Number(r.simMetrics?.energyBlockedTurns) || 0)).toFixed(2),
+        killPerShot: totalShots > 0 ? +(totalKills / totalShots).toFixed(3) : 0,
+        exactHitKillRate: totalKills > 0 ? +(totalExactHitKills / totalKills).toFixed(3) : 0,
         avgHp: +avg(runs.map((r) => Number(r.finalState.hp) || 0)).toFixed(2),
         gameOverRate: +avg(runs.map((r) => r.finalState.isGameOver ? 1 : 0)).toFixed(2),
         maxLevel: Math.max(...runs.map((r) => r.finalState.level)),
         minLevel: Math.min(...runs.map((r) => r.finalState.level))
     };
+}
+
+function buildDeathLevelHistogram(runs) {
+    const hist = {};
+    for (const run of runs) {
+        const level = run.finalState.level;
+        hist[level] = (hist[level] || 0) + 1;
+    }
+    return hist;
+}
+
+function buildFirstPurchasesHistogram(runs, slots = 3) {
+    const hist = Array.from({ length: slots }, () => ({}));
+    for (const run of runs) {
+        const purchases = run.purchases || [];
+        for (let i = 0; i < slots; i++) {
+            const key = purchases[i]?.key || '(none)';
+            hist[i][key] = (hist[i][key] || 0) + 1;
+        }
+    }
+    return hist;
 }
 
 function rangeCheck(label, value, range) {
@@ -143,6 +173,10 @@ function main() {
                 finalHp: run.finalState.hp,
                 finalMoney: +Number(run.finalState.money).toFixed(2),
                 finalEnergy: +Number(run.finalState.missileEnergy).toFixed(2),
+                kills: Number(run.finalState.stats?.kills) || 0,
+                exactHitKills: Number(run.finalState.stats?.exactHitKills) || 0,
+                shotsLaunched: Number(run.finalState.stats?.missilesLaunched) || 0,
+                energyBlockedTurns: Number(run.simMetrics?.energyBlockedTurns) || 0,
                 gameOver: !!run.finalState.isGameOver,
                 gameOverReason: run.finalState.gameOverReason || '',
                 upgrades: Object.entries(run.upgrades).filter(([, lvl]) => lvl > 0).map(([k, lvl]) => `${k}:L${lvl}`).join('|')
@@ -151,8 +185,18 @@ function main() {
 
         const summary = summarizeRuns(personaName, runs);
         const criteriaEval = evaluateCriteria(persona, runs, summary);
-        aggregateRows.push(summary);
+        const deathLevels = buildDeathLevelHistogram(runs);
+        const firstPurchases = buildFirstPurchasesHistogram(runs, 3);
+        aggregateRows.push({
+            ...summary,
+            deathLevels: JSON.stringify(deathLevels),
+            firstPurchaseSlot1: JSON.stringify(firstPurchases[0] || {}),
+            firstPurchaseSlot2: JSON.stringify(firstPurchases[1] || {}),
+            firstPurchaseSlot3: JSON.stringify(firstPurchases[2] || {})
+        });
         console.log(`[batch summary] ${JSON.stringify(summary)}`);
+        console.log(`[death levels] ${JSON.stringify(deathLevels)}`);
+        console.log(`[first purchases] ${JSON.stringify(firstPurchases)}`);
         if (criteriaEval.hasCriteria) {
             console.log(`[criteria] ${criteriaEval.pass ? 'PASS' : 'FAIL'} - ${criteriaEval.designIntent || 'No design intent provided.'}`);
             for (const check of criteriaEval.checks) {

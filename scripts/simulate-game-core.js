@@ -50,9 +50,16 @@ function snapshotUpgrades(game) {
 
 function getUpgradePurchaseOrder(game, persona) {
     const strategy = persona.upgradeStrategy || 'priority';
+    const combatFirstKeys = new Set(['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'reactorRegen', 'energyHarvest', 'targetAreas']);
     if (strategy === 'none') return [];
     if (strategy === 'cheapest') {
         return game.getOrderedUpgrades().map((u) => u.key);
+    }
+    if (strategy === 'cheapestCombat') {
+        const ordered = game.getOrderedUpgrades().map((u) => u.key);
+        const combat = ordered.filter((k) => combatFirstKeys.has(k));
+        const rest = ordered.filter((k) => !combatFirstKeys.has(k));
+        return [...combat, ...rest];
     }
     if (strategy === 'priority') {
         return Array.isArray(persona.upgradePriority) ? persona.upgradePriority : [];
@@ -161,14 +168,41 @@ function applyHumanAimVariance(game, persona, rng, idealAngle, idealPower) {
     const a = rng();
     const b = rng();
     const c = rng();
+    const d = rng();
     const shouldMiss = a < effectivePersona.missChance;
 
     let angle = idealAngle + ((b * 2 - 1) * effectivePersona.angleJitterDeg);
     let power = idealPower + ((c * 2 - 1) * effectivePersona.powerJitterPct);
 
+    // Better players (and players with targeting aids) often "center" shots, not just reduce random miss rate.
+    const hasTargetAreas = !!(game.upgrades?.targetAreas?.level > 0);
+    const hasPowerMemory = !!(game.upgrades?.powerMemory?.level > 0);
+    const trajectoryLevel = game.upgrades?.trajectoryProcessor?.level || 0;
+    let exactCenterChance = Math.max(
+        0,
+        Math.min(
+            0.95,
+            ((effectivePersona.exactAimBias || 0) - 0.35) * 0.95 +
+            (hasTargetAreas ? 0.18 : 0) +
+            (hasPowerMemory ? 0.06 : 0) +
+            (trajectoryLevel * 0.03)
+        )
+    );
+    // High-skill players can intentionally center a shot when they have enough guidance.
+    if ((effectivePersona.missChance || 1) <= 0.15) {
+        exactCenterChance += 0.08;
+    }
+    if ((effectivePersona.missChance || 1) <= 0.08) {
+        exactCenterChance += 0.08;
+    }
+    exactCenterChance = Math.min(0.98, exactCenterChance);
+
     if (shouldMiss) {
         angle += (b > 0.5 ? 1 : -1) * (effectivePersona.angleJitterDeg * (1.5 + c));
         power += (c > 0.5 ? 1 : -1) * (effectivePersona.powerJitterPct * (1.8 + b));
+    } else if (d < exactCenterChance) {
+        angle = idealAngle + ((b * 2 - 1) * effectivePersona.angleJitterDeg * 0.08);
+        power = idealPower + ((c * 2 - 1) * effectivePersona.powerJitterPct * 0.05);
     } else if (a > effectivePersona.exactAimBias) {
         power += (b - 0.5) * 3;
     }
@@ -213,7 +247,7 @@ function tryPurchasePriority(game, persona, turn, purchases, verbose) {
 
 function playTurn(game, persona, rng) {
     const logs = [];
-    const actionMeta = { shotsAttempted: 0, shotsLocked: 0, autoCycleTriggered: false };
+    const actionMeta = { shotsAttempted: 0, shotsLocked: 0, autoCycleTriggered: false, energyBlocked: false };
     const startCycleCount = game.levelCycles;
 
     let shotIndex = 0;
@@ -248,6 +282,11 @@ function playTurn(game, persona, rng) {
         game.advanceImmediate();
     }
 
+    const missilesLeft = game.getMissilesPerTurn() - game.missilesLockedThisTurn;
+    if (!game.isGameOver && !game.isAnimating && game.aliens.length > 0 && missilesLeft > 0 && !game.canCharge()) {
+        actionMeta.energyBlocked = true;
+    }
+
     return { logs, actionMeta };
 }
 
@@ -259,6 +298,7 @@ function runSingleSimulation(persona, options) {
 
         const purchases = [];
         const turnLogs = [];
+        const simMetrics = { energyBlockedTurns: 0 };
         let turnCount = 0;
 
         if (options.verbose) {
@@ -271,6 +311,7 @@ function runSingleSimulation(persona, options) {
             const pre = game.getState();
             const purchasedThisTurn = tryPurchasePriority(game, persona, turnCount + 1, purchases, options.verbose);
             const actions = playTurn(game, persona, rng);
+            if (actions.actionMeta.energyBlocked) simMetrics.energyBlockedTurns += 1;
             const post = game.getState();
             turnCount += 1;
 
@@ -306,13 +347,14 @@ function runSingleSimulation(persona, options) {
             finalState: game.getState(),
             upgrades: snapshotUpgrades(game),
             purchases,
-            turnLogs
+            turnLogs,
+            simMetrics
         };
     });
 }
 
 function printRunSummary(run, i, total) {
-    console.log(`\n[summary run ${i + 1}/${total}] decisions=${run.turnsPlayed} cycles=${run.finalState.totalCycles} level=${run.finalState.level} hp=${run.finalState.hp} EN=${run.finalState.missileEnergy} $=${run.finalState.money} gameOver=${run.finalState.isGameOver} reason="${run.finalState.gameOverReason || ''}"`);
+    console.log(`\n[summary run ${i + 1}/${total}] decisions=${run.turnsPlayed} cycles=${run.finalState.totalCycles} level=${run.finalState.level} hp=${run.finalState.hp} EN=${run.finalState.missileEnergy} $=${run.finalState.money} kills=${run.finalState.stats?.kills ?? 0} shots=${run.finalState.stats?.missilesLaunched ?? 0} blockedTurns=${run.simMetrics?.energyBlockedTurns ?? 0} gameOver=${run.finalState.isGameOver} reason="${run.finalState.gameOverReason || ''}"`);
     console.log(`[summary upgrades] ${Object.entries(run.upgrades).filter(([, lvl]) => lvl > 0).map(([k, lvl]) => `${k}:L${lvl}`).join(', ') || '(none)'}`);
 }
 
@@ -342,6 +384,10 @@ function main() {
             avgFinalLevel: +avg(runs.map((r) => r.finalState.level)).toFixed(2),
             avgFinalMoney: +avg(runs.map((r) => Number(r.finalState.money) || 0)).toFixed(2),
             avgFinalEnergy: +avg(runs.map((r) => Number(r.finalState.missileEnergy) || 0)).toFixed(2),
+            avgKills: +avg(runs.map((r) => Number(r.finalState.stats?.kills) || 0)).toFixed(2),
+            avgShotsLaunched: +avg(runs.map((r) => Number(r.finalState.stats?.missilesLaunched) || 0)).toFixed(2),
+            avgExactHitKills: +avg(runs.map((r) => Number(r.finalState.stats?.exactHitKills) || 0)).toFixed(2),
+            avgEnergyBlockedTurns: +avg(runs.map((r) => Number(r.simMetrics?.energyBlockedTurns) || 0)).toFixed(2),
             gameOverRate: +avg(runs.map((r) => r.finalState.isGameOver ? 1 : 0)).toFixed(2)
         }, null, 2));
     }
@@ -360,11 +406,13 @@ function main() {
                 hp: r.finalState.hp,
                 missileEnergy: r.finalState.missileEnergy,
                 money: r.finalState.money,
+                stats: r.finalState.stats,
                 isGameOver: r.finalState.isGameOver,
                 gameOverReason: r.finalState.gameOverReason
             },
             upgrades: r.upgrades,
-            purchases: r.purchases
+            purchases: r.purchases,
+            simMetrics: r.simMetrics
         }))
     }, null, 2));
 }

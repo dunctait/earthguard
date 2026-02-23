@@ -99,12 +99,19 @@ async function runSingleSimulation(page, personaConfig, options) {
         let purchaseLoopGuard = 0;
         while (purchaseLoopGuard++ < 20) {
             let didPurchase = false;
-            const purchaseKeys = await page.evaluate((personaCfg) => {
-                const g = window.game;
-                const strategy = personaCfg.upgradeStrategy || 'priority';
-                if (strategy === 'none') return [];
-                if (strategy === 'cheapest') return g.getOrderedUpgrades().map((u) => u.key);
-                if (strategy === 'priorityThenCheapest') {
+                const purchaseKeys = await page.evaluate((personaCfg) => {
+                    const g = window.game;
+                    const strategy = personaCfg.upgradeStrategy || 'priority';
+                    const combatFirstKeys = new Set(['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'reactorRegen', 'energyHarvest', 'targetAreas']);
+                    if (strategy === 'none') return [];
+                    if (strategy === 'cheapest') return g.getOrderedUpgrades().map((u) => u.key);
+                    if (strategy === 'cheapestCombat') {
+                        const ordered = g.getOrderedUpgrades().map((u) => u.key);
+                        const combat = ordered.filter((k) => combatFirstKeys.has(k));
+                        const rest = ordered.filter((k) => !combatFirstKeys.has(k));
+                        return [...combat, ...rest];
+                    }
+                    if (strategy === 'priorityThenCheapest') {
                     return [...new Set([...(personaCfg.upgradePriority || []), ...g.getOrderedUpgrades().map((u) => u.key)])];
                 }
                 return personaCfg.upgradePriority || [];
@@ -191,7 +198,7 @@ async function runSingleSimulation(page, personaConfig, options) {
                     effectivePersona.exactAimBias = Math.min(0.999, (effectivePersona.exactAimBias || 0) + 0.12);
                 }
 
-                const r = randoms[shotIndex] || { a: 0.5, b: 0.5, c: 0.5 };
+                const r = randoms[shotIndex] || { a: 0.5, b: 0.5, c: 0.5, d: 0.5 };
                 const missRoll = r.a;
                 const shouldMiss = missRoll < effectivePersona.missChance;
 
@@ -201,10 +208,27 @@ async function runSingleSimulation(page, personaConfig, options) {
                 let angle = idealAngle + angleJitter;
                 let power = idealPower + powerJitter;
 
+                let exactCenterChance = Math.max(
+                    0,
+                    Math.min(
+                        0.95,
+                        ((effectivePersona.exactAimBias || 0) - 0.35) * 0.95 +
+                        (hasTargetAreas ? 0.18 : 0) +
+                        (hasPowerMemory ? 0.06 : 0) +
+                        (trajectoryLevel * 0.03)
+                    )
+                );
+                if ((effectivePersona.missChance || 1) <= 0.15) exactCenterChance += 0.08;
+                if ((effectivePersona.missChance || 1) <= 0.08) exactCenterChance += 0.08;
+                exactCenterChance = Math.min(0.98, exactCenterChance);
+
                 if (shouldMiss) {
                     // Intentional human miss: push error farther, sometimes under/overshoot.
                     angle += (r.b > 0.5 ? 1 : -1) * (effectivePersona.angleJitterDeg * (1.5 + r.c));
                     power += (r.c > 0.5 ? 1 : -1) * (effectivePersona.powerJitterPct * (1.8 + r.b));
+                } else if ((r.d ?? 0.5) < exactCenterChance) {
+                    angle = idealAngle + ((r.b * 2 - 1) * effectivePersona.angleJitterDeg * 0.08);
+                    power = idealPower + ((r.c * 2 - 1) * effectivePersona.powerJitterPct * 0.05);
                 } else if (r.a > effectivePersona.exactAimBias) {
                     // Small "good but not perfect" variance even on hits.
                     power += (r.b - 0.5) * 3;
@@ -257,7 +281,7 @@ async function runSingleSimulation(page, personaConfig, options) {
             return { logs, actionMeta: { ...actionMeta, lockedBeforeCycle } };
         }, {
             persona: personaConfig,
-            randoms: Array.from({ length: 8 }, () => ({ a: rng(), b: rng(), c: rng() }))
+            randoms: Array.from({ length: 8 }, () => ({ a: rng(), b: rng(), c: rng(), d: rng() }))
         });
 
         await page.waitForFunction(() => window.game && !window.game.isAnimating, null, { timeout: 20000 });
