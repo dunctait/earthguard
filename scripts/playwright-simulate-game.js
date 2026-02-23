@@ -77,6 +77,7 @@ async function runSingleSimulation(page, personaConfig, options) {
     let gameOver = false;
 
     const initial = await page.evaluate(() => window.game.getState());
+    await page.evaluate((persona) => { window.__simPersonaConfig = persona; }, personaConfig);
     if (options.verbose) {
         console.log(`\n[sim] persona=${personaConfig.name} seed=${options.seed}`);
         console.log(`[sim] start level=${initial.level} hp=${initial.hp} en=${initial.missileEnergy} $=${initial.money}`);
@@ -93,15 +94,32 @@ async function runSingleSimulation(page, personaConfig, options) {
             break;
         }
 
-        // Purchase upgrades greedily by persona priority.
+        // Purchase upgrades using persona strategy.
         let purchasedThisTurn = [];
         let purchaseLoopGuard = 0;
         while (purchaseLoopGuard++ < 20) {
             let didPurchase = false;
-            for (const key of personaConfig.upgradePriority) {
+            const purchaseKeys = await page.evaluate((personaCfg) => {
+                const g = window.game;
+                const strategy = personaCfg.upgradeStrategy || 'priority';
+                if (strategy === 'none') return [];
+                if (strategy === 'cheapest') return g.getOrderedUpgrades().map((u) => u.key);
+                if (strategy === 'priorityThenCheapest') {
+                    return [...new Set([...(personaCfg.upgradePriority || []), ...g.getOrderedUpgrades().map((u) => u.key)])];
+                }
+                return personaCfg.upgradePriority || [];
+            }, personaConfig);
+
+            for (const key of purchaseKeys) {
                 const bought = await page.evaluate((upgradeKey) => {
                     const g = window.game;
                     if (!g.upgrades[upgradeKey]) return { ok: false };
+                    const tier = g.getNextUpgradeTier(upgradeKey);
+                    if (!tier) return { ok: false };
+                    const personaCfg = window.__simPersonaConfig || {};
+                    const bankMultiplier = Number(personaCfg.bankMultiplier) > 0 ? Number(personaCfg.bankMultiplier) : 1;
+                    if (g.money < ((tier.moneyCost || 0) * bankMultiplier)) return { ok: false };
+                    if (g.missileEnergy < ((tier.energyCost || 0) * bankMultiplier)) return { ok: false };
                     const before = { money: g.money, energy: g.missileEnergy, level: g.upgrades[upgradeKey].level };
                     const ok = g.purchaseUpgrade(upgradeKey);
                     const after = { money: g.money, energy: g.missileEnergy, level: g.upgrades[upgradeKey]?.level ?? 0 };
@@ -152,21 +170,42 @@ async function runSingleSimulation(page, personaConfig, options) {
             }
 
             function applyHumanAimVariance(idealAngle, idealPower, shotIndex) {
+                const trajectoryLevel = g.upgrades?.trajectoryProcessor?.level || 0;
+                const hasTargetAreas = !!(g.upgrades?.targetAreas?.level > 0);
+                const hasPowerMemory = !!(g.upgrades?.powerMemory?.level > 0);
+                const effectivePersona = { ...persona };
+                if (trajectoryLevel > 0) {
+                    const factor = Math.max(0.75, 1 - (trajectoryLevel * 0.06));
+                    effectivePersona.angleJitterDeg *= factor;
+                    effectivePersona.powerJitterPct *= factor;
+                    effectivePersona.missChance *= Math.max(0.8, 1 - (trajectoryLevel * 0.05));
+                }
+                if (hasPowerMemory) {
+                    effectivePersona.powerJitterPct *= 0.88;
+                    effectivePersona.missChance *= 0.95;
+                }
+                if (hasTargetAreas) {
+                    effectivePersona.powerJitterPct *= 0.65;
+                    effectivePersona.angleJitterDeg *= 0.9;
+                    effectivePersona.missChance *= 0.7;
+                    effectivePersona.exactAimBias = Math.min(0.999, (effectivePersona.exactAimBias || 0) + 0.12);
+                }
+
                 const r = randoms[shotIndex] || { a: 0.5, b: 0.5, c: 0.5 };
                 const missRoll = r.a;
-                const shouldMiss = missRoll < persona.missChance;
+                const shouldMiss = missRoll < effectivePersona.missChance;
 
-                const angleJitter = (r.b * 2 - 1) * persona.angleJitterDeg;
-                const powerJitter = (r.c * 2 - 1) * persona.powerJitterPct;
+                const angleJitter = (r.b * 2 - 1) * effectivePersona.angleJitterDeg;
+                const powerJitter = (r.c * 2 - 1) * effectivePersona.powerJitterPct;
 
                 let angle = idealAngle + angleJitter;
                 let power = idealPower + powerJitter;
 
                 if (shouldMiss) {
                     // Intentional human miss: push error farther, sometimes under/overshoot.
-                    angle += (r.b > 0.5 ? 1 : -1) * (persona.angleJitterDeg * (1.5 + r.c));
-                    power += (r.c > 0.5 ? 1 : -1) * (persona.powerJitterPct * (1.8 + r.b));
-                } else if (r.a > persona.exactAimBias) {
+                    angle += (r.b > 0.5 ? 1 : -1) * (effectivePersona.angleJitterDeg * (1.5 + r.c));
+                    power += (r.c > 0.5 ? 1 : -1) * (effectivePersona.powerJitterPct * (1.8 + r.b));
+                } else if (r.a > effectivePersona.exactAimBias) {
                     // Small "good but not perfect" variance even on hits.
                     power += (r.b - 0.5) * 3;
                 }

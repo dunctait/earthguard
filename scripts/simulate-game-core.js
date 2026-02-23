@@ -48,6 +48,39 @@ function snapshotUpgrades(game) {
     return Object.fromEntries(Object.entries(game.upgrades).map(([k, v]) => [k, v.level]));
 }
 
+function getUpgradePurchaseOrder(game, persona) {
+    const strategy = persona.upgradeStrategy || 'priority';
+    if (strategy === 'none') return [];
+    if (strategy === 'cheapest') {
+        return game.getOrderedUpgrades().map((u) => u.key);
+    }
+    if (strategy === 'priority') {
+        return Array.isArray(persona.upgradePriority) ? persona.upgradePriority : [];
+    }
+    if (strategy === 'priorityThenCheapest') {
+        const priority = Array.isArray(persona.upgradePriority) ? persona.upgradePriority : [];
+        const ordered = game.getOrderedUpgrades().map((u) => u.key);
+        return [...new Set([...priority, ...ordered])];
+    }
+    return Array.isArray(persona.upgradePriority) ? persona.upgradePriority : [];
+}
+
+function getBankMultiplier(persona) {
+    const value = Number(persona.bankMultiplier);
+    return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function meetsBankThreshold(game, key, persona) {
+    const tier = game.getNextUpgradeTier(key);
+    if (!tier) return false;
+    const bankMultiplier = getBankMultiplier(persona);
+    const moneyNeed = (tier.moneyCost || 0) * bankMultiplier;
+    const energyNeed = (tier.energyCost || 0) * bankMultiplier;
+    if (game.money < moneyNeed) return false;
+    if (game.missileEnergy < energyNeed) return false;
+    return true;
+}
+
 function computeIdealPowerForAlien(game, alien) {
     const launcher = game.getLauncherOrigin();
     const dx = alien.x - launcher.x;
@@ -60,19 +93,83 @@ function computeIdealPowerForAlien(game, alien) {
     return Math.max(game.config.MISSILE_MIN_ENERGY_COST, Math.min(100, power));
 }
 
+function chooseTargetIndex(game, persona, shotIndex) {
+    const strategy = persona.targetingStrategy || 'threatCluster';
+    if (!game.aliens.length) return -1;
+    if (strategy === 'sequential') {
+        return Math.min(shotIndex, game.aliens.length - 1);
+    }
+
+    const blastRadius = game.getCurrentExplosionRadius ? game.getCurrentExplosionRadius() : (game.config.EXPLOSION_RADIUS || 6);
+    let bestIndex = 0;
+    let bestScore = -Infinity;
+    for (let i = 0; i < game.aliens.length; i++) {
+        const a = game.aliens[i];
+        const threatScore = (game.config.WORLD_HEIGHT - a.y); // lower y => more threat
+        let clusterScore = 0;
+        for (let j = 0; j < game.aliens.length; j++) {
+            if (i === j) continue;
+            const b = game.aliens[j];
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d <= (blastRadius * 2.2)) {
+                clusterScore += 1;
+            }
+        }
+        const centerBias = -Math.abs((game.config.WORLD_WIDTH / 2) - a.x) * 0.03;
+        let score = (threatScore * 1.8) + (clusterScore * 2.5) + centerBias;
+        if (strategy === 'threatOnly') {
+            score = (threatScore * 2.2) + centerBias;
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            bestIndex = i;
+        }
+    }
+    return bestIndex;
+}
+
+function getEffectiveAimPersona(game, persona) {
+    const effective = { ...persona };
+    const trajectoryLevel = game.upgrades?.trajectoryProcessor?.level || 0;
+    const hasTargetAreas = !!(game.upgrades?.targetAreas?.level > 0);
+    const hasPowerMemory = !!(game.upgrades?.powerMemory?.level > 0);
+
+    if (trajectoryLevel > 0) {
+        const factor = Math.max(0.75, 1 - (trajectoryLevel * 0.06)); // small benefit
+        effective.angleJitterDeg *= factor;
+        effective.powerJitterPct *= factor;
+        effective.missChance *= Math.max(0.8, 1 - (trajectoryLevel * 0.05));
+    }
+    if (hasPowerMemory) {
+        effective.powerJitterPct *= 0.88;
+        effective.missChance *= 0.95;
+    }
+    if (hasTargetAreas) {
+        effective.powerJitterPct *= 0.65;
+        effective.angleJitterDeg *= 0.9;
+        effective.missChance *= 0.7; // meaningful benefit
+        effective.exactAimBias = Math.min(0.999, (effective.exactAimBias || 0) + 0.12);
+    }
+
+    return effective;
+}
+
 function applyHumanAimVariance(game, persona, rng, idealAngle, idealPower) {
+    const effectivePersona = getEffectiveAimPersona(game, persona);
     const a = rng();
     const b = rng();
     const c = rng();
-    const shouldMiss = a < persona.missChance;
+    const shouldMiss = a < effectivePersona.missChance;
 
-    let angle = idealAngle + ((b * 2 - 1) * persona.angleJitterDeg);
-    let power = idealPower + ((c * 2 - 1) * persona.powerJitterPct);
+    let angle = idealAngle + ((b * 2 - 1) * effectivePersona.angleJitterDeg);
+    let power = idealPower + ((c * 2 - 1) * effectivePersona.powerJitterPct);
 
     if (shouldMiss) {
-        angle += (b > 0.5 ? 1 : -1) * (persona.angleJitterDeg * (1.5 + c));
-        power += (c > 0.5 ? 1 : -1) * (persona.powerJitterPct * (1.8 + b));
-    } else if (a > persona.exactAimBias) {
+        angle += (b > 0.5 ? 1 : -1) * (effectivePersona.angleJitterDeg * (1.5 + c));
+        power += (c > 0.5 ? 1 : -1) * (effectivePersona.powerJitterPct * (1.8 + b));
+    } else if (a > effectivePersona.exactAimBias) {
         power += (b - 0.5) * 3;
     }
 
@@ -88,8 +185,9 @@ function tryPurchasePriority(game, persona, turn, purchases, verbose) {
     let guard = 0;
     while (guard++ < 20) {
         let didPurchase = false;
-        for (const key of persona.upgradePriority) {
+        for (const key of getUpgradePurchaseOrder(game, persona)) {
             if (!game.upgrades[key]) continue;
+            if (!meetsBankThreshold(game, key, persona)) continue;
             const before = { money: game.money, energy: game.missileEnergy, level: game.upgrades[key].level };
             const ok = game.purchaseUpgrade(key);
             if (!ok) continue;
@@ -120,7 +218,7 @@ function playTurn(game, persona, rng) {
 
     let shotIndex = 0;
     while (!game.isGameOver && game.canCharge() && (game.getMissilesPerTurn() - game.missilesLockedThisTurn) > 0 && game.aliens.length > 0) {
-        const targetIndex = Math.min(shotIndex, game.aliens.length - 1);
+        const targetIndex = chooseTargetIndex(game, persona, shotIndex);
         const alien = game.aliens[targetIndex];
         if (!alien) break;
         actionMeta.shotsAttempted += 1;

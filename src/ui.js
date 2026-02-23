@@ -74,8 +74,9 @@ class EarthGuardUI {
     }
 
     formatHudNumber(value) {
-        const rounded = Math.round(Number(value) * 10) / 10;
-        return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+        const num = Number(value);
+        if (!Number.isFinite(num)) return '0';
+        return String(Math.floor(num));
     }
 
     formatUpgradeLevelText(upgrade) {
@@ -127,7 +128,7 @@ class EarthGuardUI {
                 ? game.getTargetRangeProgressForPower(lastLockedPower)
                 : (lastLockedPower / 100);
             marker.style.left = `${Math.max(0, Math.min(100, markerScale * 100))}%`;
-            marker.classList.toggle('is-visible', lastLockedPower > 0);
+            marker.classList.toggle('is-visible', !!(lastLockedPower > 0 && game.hasPowerMemory && game.hasPowerMemory()));
         }
     }
 

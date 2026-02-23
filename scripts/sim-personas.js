@@ -6,7 +6,7 @@ const PERSONAS = {
         angleJitterDeg: 0.7,
         powerJitterPct: 2.5,
         exactAimBias: 0.98,
-        upgradePriority: ['autoCycle', 'blastRadius', 'missileRacks', 'energyEfficiency', 'energyHarvest', 'reactorRegen', 'bountyLink', 'energyResupply', 'trajectoryProcessor', 'targetAreas'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'energyHarvest', 'reactorRegen', 'bountyLink', 'energyResupply', 'trajectoryProcessor', 'targetAreas'],
         criteria: {
             designIntent: 'Skilled players who engage with upgrades should survive meaningfully longer than average and usually reach mid-game.',
             aggregate: {
@@ -23,7 +23,7 @@ const PERSONAS = {
         angleJitterDeg: 3.5,
         powerJitterPct: 10,
         exactAimBias: 0.55,
-        upgradePriority: ['autoCycle', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas'],
         criteria: {
             designIntent: 'Typical engaged player should reach early-mid game, benefit from upgrades, but still lose consistently.',
             aggregate: {
@@ -40,6 +40,7 @@ const PERSONAS = {
         angleJitterDeg: 4.0,
         powerJitterPct: 11,
         exactAimBias: 0.45,
+        upgradeStrategy: 'none',
         upgradePriority: [],
         criteria: {
             designIntent: 'Baseline: no-upgrade players should die early enough to motivate upgrades.',
@@ -60,6 +61,7 @@ const PERSONAS = {
         angleJitterDeg: 0.4,
         powerJitterPct: 1.4,
         exactAimBias: 0.995,
+        upgradeStrategy: 'none',
         upgradePriority: [],
         criteria: {
             designIntent: 'Even near-perfect aim without upgrades should still hit a fairly early game over.',
@@ -80,7 +82,7 @@ const PERSONAS = {
         angleJitterDeg: 3.0,
         powerJitterPct: 8,
         exactAimBias: 0.6,
-        upgradePriority: ['autoCycle', 'bountyLink', 'energyResupply'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'bountyLink', 'energyResupply'],
         criteria: {
             designIntent: 'Cash-focused path should improve money accumulation, but not necessarily survival.',
             aggregate: {
@@ -96,7 +98,7 @@ const PERSONAS = {
         angleJitterDeg: 3.2,
         powerJitterPct: 9,
         exactAimBias: 0.55,
-        upgradePriority: ['autoCycle', 'energyResupply', 'energyHarvest', 'reactorRegen', 'energyEfficiency'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyHarvest', 'reactorRegen', 'energyEfficiency'],
         criteria: {
             designIntent: 'Energy-focused path should preserve higher ending energy than no-upgrade baseline.',
             aggregate: {
@@ -112,7 +114,7 @@ const PERSONAS = {
         angleJitterDeg: 0.4,
         powerJitterPct: 1.4,
         exactAimBias: 0.995,
-        upgradePriority: ['autoCycle', 'bountyLink', 'energyHarvest', 'energyEfficiency', 'reactorRegen', 'missileRacks', 'blastRadius', 'trajectoryProcessor', 'targetAreas'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'bountyLink', 'energyHarvest', 'energyEfficiency', 'reactorRegen', 'missileRacks', 'blastRadius', 'trajectoryProcessor', 'targetAreas'],
         criteria: {
             designIntent: 'Exact-hit farming should increase money strongly but still not guarantee deep runs.',
             aggregate: {
@@ -128,7 +130,7 @@ const PERSONAS = {
         angleJitterDeg: 7.5,
         powerJitterPct: 18,
         exactAimBias: 0.15,
-        upgradePriority: ['autoCycle', 'energyResupply', 'reactorRegen', 'trajectoryProcessor', 'blastRadius'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'reactorRegen', 'trajectoryProcessor', 'blastRadius'],
         criteria: {
             designIntent: 'Low-skill players should usually die very early, but still experience upgrade prompts.',
             aggregate: {
@@ -137,8 +139,146 @@ const PERSONAS = {
                 gameOverRate: { min: 0.95, max: 1.0 }
             }
         }
+    },
+    cashFocus: {
+        name: 'cashFocus',
+        description: 'Explicit cash-upgrade persona for balancing reward scaling.',
+        missChance: 0.17,
+        angleJitterDeg: 2.8,
+        powerJitterPct: 7.5,
+        exactAimBias: 0.62,
+        upgradePriority: ['autoCycle', 'powerMemory', 'bountyLink', 'targetAreas', 'trajectoryProcessor', 'energyResupply', 'blastRadius'],
+        criteria: {
+            designIntent: 'Cash-focused players should end with more money than generalist good players on average.',
+            aggregate: {
+                avgFinalMoney: { min: 20 }
+            }
+        }
+    },
+    '75_cheapestUpgrades': {
+        name: '75_cheapestUpgrades',
+        description: 'Average-ish player (~75% hit) who buys the cheapest available upgrade immediately.',
+        missChance: 0.25,
+        angleJitterDeg: 3.8,
+        powerJitterPct: 10.5,
+        exactAimBias: 0.5,
+        upgradeStrategy: 'cheapest'
+    },
+    '90_noUpgrades': {
+        name: '90_noUpgrades',
+        description: 'High-accuracy player (~90% hit) who never upgrades.',
+        missChance: 0.10,
+        angleJitterDeg: 1.6,
+        powerJitterPct: 4.8,
+        exactAimBias: 0.82,
+        upgradeStrategy: 'none'
+    },
+    '90_cheapestUpgrades': {
+        name: '90_cheapestUpgrades',
+        description: 'High-accuracy player (~90% hit) who buys cheapest upgrades first.',
+        missChance: 0.10,
+        angleJitterDeg: 1.8,
+        powerJitterPct: 5.2,
+        exactAimBias: 0.8,
+        upgradeStrategy: 'cheapest'
+    },
+    '90_prioritiseMoney': {
+        name: '90_prioritiseMoney',
+        description: 'High-accuracy player who prioritises cash generation upgrades.',
+        missChance: 0.10,
+        angleJitterDeg: 1.8,
+        powerJitterPct: 5.2,
+        exactAimBias: 0.8,
+        upgradeStrategy: 'priorityThenCheapest',
+        upgradePriority: ['autoCycle', 'powerMemory', 'bountyLink', 'targetAreas', 'trajectoryProcessor', 'blastRadius', 'missileRacks', 'energyResupply']
+    },
+    '60_prioritiseEnergy': {
+        name: '60_prioritiseEnergy',
+        description: 'Lower-skill player (~60% hit) who prioritises energy economy upgrades.',
+        missChance: 0.40,
+        angleJitterDeg: 5.2,
+        powerJitterPct: 13.5,
+        exactAimBias: 0.35,
+        upgradeStrategy: 'priorityThenCheapest',
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyHarvest', 'reactorRegen', 'energyEfficiency', 'trajectoryProcessor']
+    },
+    energyFocus: {
+        name: 'energyFocus',
+        description: 'Explicit energy-upgrade persona for balancing reactor/harvest/cost upgrades.',
+        missChance: 0.19,
+        angleJitterDeg: 3.0,
+        powerJitterPct: 8.5,
+        exactAimBias: 0.58,
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyHarvest', 'reactorRegen', 'energyEfficiency', 'trajectoryProcessor'],
+        criteria: {
+            designIntent: 'Energy-focused players should preserve substantial energy by game end.',
+            aggregate: {
+                avgFinalEnergy: { min: 25 }
+            }
+        }
     }
 };
+
+function lerp(a, b, t) {
+    return a + ((b - a) * t);
+}
+
+function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+}
+
+function buildAccuracyProfile(accuracyPct) {
+    const a = clamp(Number(accuracyPct) || 50, 1, 99);
+    const t = (a - 50) / 40; // map 50..90 -> 0..1
+    return {
+        missChance: +(1 - (a / 100)).toFixed(3),
+        angleJitterDeg: +lerp(6.0, 1.6, clamp(t, 0, 1)).toFixed(2),
+        powerJitterPct: +lerp(15.0, 5.0, clamp(t, 0, 1)).toFixed(2),
+        exactAimBias: +lerp(0.28, 0.82, clamp(t, 0, 1)).toFixed(3)
+    };
+}
+
+const MATRIX_STRATEGIES = {
+    noUpgrades: {
+        upgradeStrategy: 'none',
+        upgradePriority: []
+    },
+    cheapestUpgrade: {
+        upgradeStrategy: 'cheapest',
+        upgradePriority: []
+    },
+    prioritiseMoney: {
+        upgradeStrategy: 'priorityThenCheapest',
+        upgradePriority: ['autoCycle', 'powerMemory', 'bountyLink', 'targetAreas', 'trajectoryProcessor', 'blastRadius', 'missileRacks', 'energyResupply']
+    },
+    prioritiseEnergy: {
+        upgradeStrategy: 'priorityThenCheapest',
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyHarvest', 'reactorRegen', 'energyEfficiency', 'trajectoryProcessor']
+    }
+};
+
+function addMatrixPersonas() {
+    const accuracies = [50, 60, 75, 90];
+    const bankMultipliers = [1, 2];
+    for (const acc of accuracies) {
+        const accuracyProfile = buildAccuracyProfile(acc);
+        for (const [strategyName, strategy] of Object.entries(MATRIX_STRATEGIES)) {
+            for (const bankMultiplier of bankMultipliers) {
+                const name = `${acc}acc_${strategyName}_${bankMultiplier}xBanked`;
+                if (PERSONAS[name]) continue;
+                PERSONAS[name] = {
+                    name,
+                    description: `${acc}% hit-target persona using ${strategyName} strategy with ${bankMultiplier}x resource bank threshold before upgrades.`,
+                    ...accuracyProfile,
+                    ...strategy,
+                    bankMultiplier
+                };
+            }
+        }
+    }
+}
+
+addMatrixPersonas();
 
 function getPersona(name) {
     return PERSONAS[name] || null;

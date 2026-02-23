@@ -66,7 +66,7 @@ const UpgradeDefinitions = {
         description: 'Shows predicted impact circles for locked missiles.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 140, energyCost: 20, label: 'Unlock preview' }
+            { moneyCost: 140, energyCost: 8, label: 'Unlock preview' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -92,8 +92,8 @@ const UpgradeDefinitions = {
         description: 'Increase explosion radius for all missiles.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 20, energyCost: 4, radiusMultiplier: 1.25, label: '+25%' },
-            { moneyCost: 45, energyCost: 6, radiusMultiplier: 1.50, label: '+50%' },
+            { moneyCost: 20, energyCost: 2, radiusMultiplier: 1.25, label: '+25%' },
+            { moneyCost: 45, energyCost: 4, radiusMultiplier: 1.50, label: '+50%' },
             { moneyCost: 80, energyCost: 8, radiusMultiplier: 1.80, label: '+80%' }
         ],
         uiLabelForTier: (tier) => tier.label || `x${tier.radiusMultiplier ?? 1}`,
@@ -107,8 +107,8 @@ const UpgradeDefinitions = {
         description: 'Adds one missile slot per cycle per level.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 32, energyCost: 6, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
-            { moneyCost: 70, energyCost: 8, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
+            { moneyCost: 32, energyCost: 3, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
+            { moneyCost: 70, energyCost: 5, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
             { moneyCost: 120, energyCost: 10, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || `+${tier.missilesPerTurnBonus || 0} missile/cycle`,
@@ -122,8 +122,8 @@ const UpgradeDefinitions = {
         description: 'Multiply cash paid per enemy kill.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 20, energyCost: 2, moneyPerKillMultiplier: 1.20, label: '1.20x $ / kill' },
-            { moneyCost: 45, energyCost: 4, moneyPerKillMultiplier: 1.40, label: '1.40x $ / kill' },
+            { moneyCost: 20, energyCost: 1, moneyPerKillMultiplier: 1.20, label: '1.20x $ / kill' },
+            { moneyCost: 45, energyCost: 2, moneyPerKillMultiplier: 1.40, label: '1.40x $ / kill' },
             { moneyCost: 80, energyCost: 6, moneyPerKillMultiplier: 1.60, label: '1.60x $ / kill' }
         ],
         uiLabelForTier: (tier) => tier.label || `${tier.moneyPerKillMultiplier || 1}x $ / kill`,
@@ -137,8 +137,8 @@ const UpgradeDefinitions = {
         description: 'Multiply energy restored per enemy kill.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 24, energyCost: 2, energyPerKillMultiplier: 1.20, label: '1.20x EN / kill' },
-            { moneyCost: 50, energyCost: 4, energyPerKillMultiplier: 1.40, label: '1.40x EN / kill' },
+            { moneyCost: 24, energyCost: 1, energyPerKillMultiplier: 1.20, label: '1.20x EN / kill' },
+            { moneyCost: 50, energyCost: 2, energyPerKillMultiplier: 1.40, label: '1.40x EN / kill' },
             { moneyCost: 90, energyCost: 6, energyPerKillMultiplier: 1.60, label: '1.60x EN / kill' }
         ],
         uiLabelForTier: (tier) => tier.label || `${tier.energyPerKillMultiplier || 1}x EN / kill`,
@@ -152,8 +152,8 @@ const UpgradeDefinitions = {
         description: 'Reduce missile energy cost by 10% per level.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 28, energyCost: 4, costReductionPct: 15, label: '-15% cost' },
-            { moneyCost: 55, energyCost: 6, costReductionPct: 30, label: '-30% cost' },
+            { moneyCost: 28, energyCost: 2, costReductionPct: 15, label: '-15% cost' },
+            { moneyCost: 55, energyCost: 4, costReductionPct: 30, label: '-30% cost' },
             { moneyCost: 95, energyCost: 8, costReductionPct: 45, label: '-45% cost' }
         ],
         uiLabelForTier: (tier) => tier.label || `-${tier.costReductionPct || 0}% cost`,
@@ -167,8 +167,8 @@ const UpgradeDefinitions = {
         description: 'Restore more energy after each cycle.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 24, energyCost: 4, regenBonus: 2, label: '+2 EN / cycle' },
-            { moneyCost: 50, energyCost: 6, regenBonus: 4, label: '+4 EN / cycle' },
+            { moneyCost: 24, energyCost: 2, regenBonus: 2, label: '+2 EN / cycle' },
+            { moneyCost: 50, energyCost: 4, regenBonus: 4, label: '+4 EN / cycle' },
             { moneyCost: 90, energyCost: 8, regenBonus: 6, label: '+6 EN / cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || `+${tier.regenBonus || 0} EN / cycle`,
@@ -182,13 +182,26 @@ const UpgradeDefinitions = {
         description: 'Extends aiming guide visibility by reducing fade falloff.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 18, energyCost: 2, fadeStrengthMultiplier: 0.85, label: 'Longer guide I' },
-            { moneyCost: 40, energyCost: 4, fadeStrengthMultiplier: 0.70, label: 'Longer guide II' },
+            { moneyCost: 18, energyCost: 0, fadeStrengthMultiplier: 0.85, label: 'Longer guide I' },
+            { moneyCost: 40, energyCost: 2, fadeStrengthMultiplier: 0.70, label: 'Longer guide II' },
             { moneyCost: 75, energyCost: 6, fadeStrengthMultiplier: 0.55, label: 'Longer guide III' }
         ],
         uiLabelForTier: (tier) => tier.label || 'Longer guide',
         apply: ({ effects, tier }) => {
             effects.trajectoryFadeStrengthMultiplier = tier.fadeStrengthMultiplier || 1;
+        }
+    },
+    powerMemory: {
+        key: 'powerMemory',
+        name: 'Power Memory',
+        description: 'Shows a marker for the previous target power on the charge bar.',
+        stackingMode: 'unlock',
+        tiers: [
+            { moneyCost: 12, energyCost: 0, label: 'Unlock power marker' }
+        ],
+        uiLabelForTier: (tier) => tier.label || 'UNLOCK',
+        apply: ({ effects }) => {
+            effects.powerMemoryEnabled = true;
         }
     },
     energyResupply: {
@@ -326,7 +339,8 @@ class Game {
             energyPerKillMultiplier: 1,
             energyCostReductionPct: 0,
             energyRegenBonus: 0,
-            trajectoryFadeStrengthMultiplier: 1
+            trajectoryFadeStrengthMultiplier: 1,
+            powerMemoryEnabled: false
         };
     }
 
@@ -731,6 +745,10 @@ class Game {
 
     hasAutoCycle() {
         return !!this.upgradeEffects.autoCycleEnabled;
+    }
+
+    hasPowerMemory() {
+        return !!this.upgradeEffects.powerMemoryEnabled;
     }
 
     getEnergyRegenPerTurn() {
