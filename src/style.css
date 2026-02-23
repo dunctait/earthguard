@@ -75,6 +75,32 @@ html, body {
     pointer-events: none;
 }
 
+#ui-bottom-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+}
+
+#missiles-status {
+    color: var(--green-secondary);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px var(--green-glow-subtle);
+    background: rgba(0, 10, 4, 0.45);
+    padding: 2px 8px;
+    border-radius: 2px;
+}
+
+.hud-inline-value {
+    color: var(--green-primary);
+    font-weight: 700;
+}
+
 #status {
     display: flex;
     justify-content: space-between;

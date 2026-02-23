@@ -16,6 +16,7 @@ class Renderer {
         this.dom = this.utils.cacheDom([
             'game-canvas',
             'controls',
+            'ui-bottom-overlay',
             'upgrade-menu-btn',
             'upgrade-modal-overlay',
             'upgrade-menu',
@@ -157,7 +158,23 @@ class Renderer {
         this.canvas.style.marginRight = `${Math.max(0, (availableWidth - canvasWidth) / 2)}px`;
 
         this.generateTerrain();
+        this.positionBottomHudOverlay();
         this.render();
+    }
+
+    positionBottomHudOverlay() {
+        const overlay = this.dom['ui-bottom-overlay'];
+        const container = this.canvas?.parentElement;
+        if (!overlay || !container || !this.canvas) return;
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const left = canvasRect.left - containerRect.left;
+        const top = (canvasRect.bottom - containerRect.top) - 22;
+        overlay.style.left = `${left}px`;
+        overlay.style.width = `${canvasRect.width}px`;
+        overlay.style.right = 'auto';
+        overlay.style.top = `${top}px`;
+        overlay.style.bottom = 'auto';
     }
 
     generateTerrain() {
@@ -406,7 +423,7 @@ class Renderer {
                 title: event.title,
                 subtitle: event.subtitle || '',
                 age: 0,
-                maxAge: 125
+                maxAge: event.maxAge || 125
             });
         }
     }
@@ -610,34 +627,26 @@ class Renderer {
         // Cannon
         this.drawCannon(cannonX, cannonY, angleRad);
 
-        // Pending (locked) missiles: show a short launched segment immediately after firing,
-        // before ADVANCE resolves the cycle, so the player gets instant visual confirmation.
+        // Pending (locked) missiles: show only a direction/targeting indicator while time is paused.
         for (const missile of (this.game.pendingMissiles || [])) {
             const endPos = this.worldToScreen(missile.targetX, missile.targetY);
             const startPos = this.worldToScreen(missile.startX ?? (this.game.WORLD_WIDTH / 2), missile.startY ?? this.game.config.LAUNCHER_Y);
-            const launchProgress = this.game.config.MISSILE_LAUNCH_START_PROGRESS || 0.10;
-            const currentX = startPos.x + (endPos.x - startPos.x) * launchProgress;
-            const currentY = startPos.y + (endPos.y - startPos.y) * launchProgress;
-            const missileAlpha = this.getDepthBrightness(currentY) * 0.9;
+            const lockAgeMs = Math.max(0, Date.now() - (missile.lockedAtMs || Date.now()));
+            const lockFade = Math.max(0.12, 1 - (lockAgeMs / 1400));
 
-            this.setGlow(c.primaryGlow, 16);
-            ctx.fillStyle = `rgba(0, 255, 102, ${missileAlpha})`;
-            ctx.beginPath();
-            ctx.arc(currentX, currentY, 3.4, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = c.white;
-            ctx.beginPath();
-            ctx.arc(currentX, currentY, 1.6, 0, Math.PI * 2);
-            ctx.fill();
-            this.clearGlow();
-
-            ctx.strokeStyle = `rgba(0, 170, 68, ${Math.max(0.25, missileAlpha * 0.45)})`;
-            ctx.lineWidth = 1.5;
+            // Locked-shot direction indicator (behind the stub): thicker, different color than aiming line.
+            ctx.save();
+            ctx.setLineDash([7, 7]);
+            ctx.lineDashOffset = -(this.frameCount * 0.7);
+            ctx.strokeStyle = `rgba(0, 255, 255, ${0.22 * lockFade})`;
+            ctx.lineWidth = 3;
+            this.setGlow('rgba(0, 255, 255, 0.18)', 8);
             ctx.beginPath();
             ctx.moveTo(startPos.x, startPos.y);
-            ctx.lineTo(currentX, currentY);
+            ctx.lineTo(endPos.x, endPos.y);
             ctx.stroke();
+            this.clearGlow();
+            ctx.restore();
         }
 
         // Missiles in flight
@@ -1126,7 +1135,8 @@ class Renderer {
 
         const pulse = 1 + Math.sin(this.frameCount * 0.12) * 0.01;
         const centerX = w / 2;
-        const centerY = h * 0.46;
+        const isTargetMsg = banner.title === 'MISSILE TARGETED';
+        const centerY = isTargetMsg ? (h * 0.62) : (h * 0.46);
 
         ctx.save();
         ctx.translate(centerX, centerY);
@@ -1134,18 +1144,24 @@ class Renderer {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        ctx.font = "700 18px Orbitron, 'Share Tech Mono', monospace";
-        ctx.fillStyle = `rgba(0, 255, 102, ${alpha * 0.9})`;
-        ctx.shadowColor = 'rgba(0, 255, 102, 0.35)';
-        ctx.shadowBlur = 12;
+        ctx.font = isTargetMsg
+            ? "700 13px 'Share Tech Mono', monospace"
+            : "700 18px Orbitron, 'Share Tech Mono', monospace";
+        ctx.fillStyle = isTargetMsg
+            ? `rgba(0, 255, 255, ${alpha * 0.7})`
+            : `rgba(0, 255, 102, ${alpha * 0.9})`;
+        ctx.shadowColor = isTargetMsg ? 'rgba(0, 255, 255, 0.20)' : 'rgba(0, 255, 102, 0.35)';
+        ctx.shadowBlur = isTargetMsg ? 8 : 12;
         ctx.fillText(banner.title, 0, 0);
 
         if (banner.subtitle) {
             ctx.font = "700 12px 'Share Tech Mono', monospace";
-            ctx.fillStyle = `rgba(255, 170, 0, ${alpha * 0.85})`;
-            ctx.shadowColor = 'rgba(255, 170, 0, 0.22)';
+            ctx.fillStyle = isTargetMsg
+                ? `rgba(255, 220, 120, ${alpha * 0.75})`
+                : `rgba(255, 170, 0, ${alpha * 0.85})`;
+            ctx.shadowColor = isTargetMsg ? 'rgba(255, 220, 120, 0.16)' : 'rgba(255, 170, 0, 0.22)';
             ctx.shadowBlur = 8;
-            ctx.fillText(banner.subtitle, 0, 18);
+            ctx.fillText(banner.subtitle, 0, isTargetMsg ? 14 : 18);
         }
 
         ctx.restore();

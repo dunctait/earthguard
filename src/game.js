@@ -9,7 +9,7 @@ const GameConfig = {
     WORLD_WIDTH: 60,
 
     // Launcher
-    LAUNCHER_Y: 5,
+    LAUNCHER_Y: 6.5,
     MISSILE_LAUNCH_TIP_OFFSET: 4.8, // World units from launcher pivot to barrel tip
     MIN_ANGLE: -80,      // Max left
     MAX_ANGLE: 80,       // Max right
@@ -41,6 +41,7 @@ const GameConfig = {
     WAVE_ENTRY_FAST_FORWARD_CYCLES: 2,
     WAVE_ENTRY_MIN_ACTIVE_Y: 88,
     MONEY_PER_KILL: 10,
+    ENERGY_PER_KILL: 2,
     EXACT_HIT_MONEY_MULTIPLIER: 2,
     EXACT_HIT_RADIUS_FACTOR: 0.35,
     WAVE_CLEAR_BONUS_BASE: 12,
@@ -69,6 +70,19 @@ const UpgradeDefinitions = {
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
             effects.targetAreasEnabled = true;
+        }
+    },
+    autoCycle: {
+        key: 'autoCycle',
+        name: 'Auto Cycle',
+        description: 'Automatically cycles when all targets are locked.',
+        stackingMode: 'unlock',
+        tiers: [
+            { moneyCost: 10, energyCost: 2, label: 'Unlock auto-cycle' }
+        ],
+        uiLabelForTier: (tier) => tier.label || 'UNLOCK',
+        apply: ({ effects }) => {
+            effects.autoCycleEnabled = true;
         }
     },
     blastRadius: {
@@ -104,16 +118,31 @@ const UpgradeDefinitions = {
     bountyLink: {
         key: 'bountyLink',
         name: 'Bounty Link',
-        description: 'Increase cash paid per enemy kill.',
+        description: 'Multiply cash paid per enemy kill.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 25, energyCost: 8, moneyPerKillBonus: 5, label: '+$5 / kill' },
-            { moneyCost: 55, energyCost: 12, moneyPerKillBonus: 10, label: '+$10 / kill' },
-            { moneyCost: 95, energyCost: 16, moneyPerKillBonus: 15, label: '+$15 / kill' }
+            { moneyCost: 25, energyCost: 8, moneyPerKillMultiplier: 1.10, label: '1.10x $ / kill' },
+            { moneyCost: 55, energyCost: 12, moneyPerKillMultiplier: 1.25, label: '1.25x $ / kill' },
+            { moneyCost: 95, energyCost: 16, moneyPerKillMultiplier: 1.50, label: '1.50x $ / kill' }
         ],
-        uiLabelForTier: (tier) => tier.label || `+$${tier.moneyPerKillBonus || 0} / kill`,
+        uiLabelForTier: (tier) => tier.label || `${tier.moneyPerKillMultiplier || 1}x $ / kill`,
         apply: ({ effects, tier }) => {
-            effects.moneyPerKillBonus = tier.moneyPerKillBonus || 0;
+            effects.moneyPerKillMultiplier = tier.moneyPerKillMultiplier || 1;
+        }
+    },
+    energyHarvest: {
+        key: 'energyHarvest',
+        name: 'Energy Harvest',
+        description: 'Multiply energy restored per enemy kill.',
+        stackingMode: 'replace',
+        tiers: [
+            { moneyCost: 28, energyCost: 8, energyPerKillMultiplier: 1.10, label: '1.10x EN / kill' },
+            { moneyCost: 62, energyCost: 12, energyPerKillMultiplier: 1.25, label: '1.25x EN / kill' },
+            { moneyCost: 110, energyCost: 16, energyPerKillMultiplier: 1.50, label: '1.50x EN / kill' }
+        ],
+        uiLabelForTier: (tier) => tier.label || `${tier.energyPerKillMultiplier || 1}x EN / kill`,
+        apply: ({ effects, tier }) => {
+            effects.energyPerKillMultiplier = tier.energyPerKillMultiplier || 1;
         }
     },
     energyEfficiency: {
@@ -186,6 +215,28 @@ const UpgradeDefinitions = {
                 game.config.MISSILE_ENERGY_MAX
             );
         }
+    }
+};
+
+const LevelDefinitions = {
+    1: {
+        enemies: [
+            { type: 'saucer', sizeMultiplier: 2.0 },
+            { type: 'saucer', sizeMultiplier: 2.0 }
+        ]
+    },
+    2: {
+        enemies: [
+            { type: 'saucer', sizeMultiplier: 1.5 },
+            { type: 'saucer', sizeMultiplier: 1.5 }
+        ]
+    },
+    3: {
+        enemies: [
+            { type: 'saucer', sizeMultiplier: 1.2 },
+            { type: 'saucer', sizeMultiplier: 1.2 },
+            { type: 'saucer', sizeMultiplier: 1.2 }
+        ]
     }
 };
 
@@ -263,9 +314,11 @@ class Game {
     getDefaultUpgradeEffects() {
         return {
             targetAreasEnabled: false,
+            autoCycleEnabled: false,
             blastRadiusMultiplier: 1,
             missilesPerTurnBonus: 0,
-            moneyPerKillBonus: 0,
+            moneyPerKillMultiplier: 1,
+            energyPerKillMultiplier: 1,
             energyCostReductionPct: 0,
             energyRegenBonus: 0,
             trajectoryFadeStrengthMultiplier: 1
@@ -292,17 +345,45 @@ class Game {
     }
 
     getWaveSpec(level) {
+        const levelDef = this.getLevelDefinition(level);
+        const enemyTemplates = this.getWaveEnemyTemplates(level);
+        const maxSizeMultiplier = enemyTemplates.reduce((max, enemy) => Math.max(max, enemy.sizeMultiplier || 1), 1);
         return {
             level,
-            alienCount: Math.min(2 + Math.floor((level - 1) / 2), 8),
+            levelDef,
+            enemies: enemyTemplates,
+            alienCount: enemyTemplates.length,
             speed: this.config.BASE_ALIEN_SPEED + (level * this.config.ALIEN_SPEED_PER_LEVEL),
-            activeTopY: level === 1 ? 78 : (this.config.ALIEN_ACTIVE_SPAWN_TOP_Y || (this.config.WORLD_HEIGHT - 5))
+            activeTopY: level === 1 ? 78 : (this.config.ALIEN_ACTIVE_SPAWN_TOP_Y || (this.config.WORLD_HEIGHT - 5)),
+            maxSizeMultiplier
         };
+    }
+
+    getLevelDefinition(level) {
+        return LevelDefinitions[level] || null;
+    }
+
+    getWaveEnemyTemplates(level) {
+        const levelDef = this.getLevelDefinition(level);
+        if (levelDef && Array.isArray(levelDef.enemies) && levelDef.enemies.length > 0) {
+            return levelDef.enemies.map((enemy) => ({
+                type: enemy.type || 'saucer',
+                sizeMultiplier: enemy.sizeMultiplier || 1
+            }));
+        }
+
+        const alienCount = Math.min(Math.max(2, level), 10);
+        const sizeMultiplier = level <= 4 ? 1 : Math.max(0.8, 1.1 - ((level - 4) * 0.03));
+        return Array.from({ length: alienCount }, () => ({
+            type: 'saucer',
+            sizeMultiplier
+        }));
     }
 
     createAliensFromWaveSpec(spec, incoming = false) {
         const aliens = [];
-        const spacing = this.config.ALIEN_WAVE_VERTICAL_SPACING || 8;
+        const minSpacing = this.config.ALIEN_WAVE_VERTICAL_SPACING || 8;
+        const spacing = Math.max(minSpacing, (this.config.ALIEN_RADIUS * (spec.maxSizeMultiplier || 1) * 2.6));
         const activeTopY = spec.activeTopY ?? this.config.ALIEN_ACTIVE_SPAWN_TOP_Y ?? (this.config.WORLD_HEIGHT - 5);
         // Ensure incoming wave never vertically overlaps the highest possible active-wave enemy:
         // incoming lowest enemy sits above activeTopY by a fixed gap.
@@ -310,13 +391,17 @@ class Game {
         const incomingStartY = incomingLowestY + ((spec.alienCount - 1) * spacing);
         const startY = incoming ? incomingStartY : activeTopY;
         for (let i = 0; i < spec.alienCount; i++) {
+            const enemyTemplate = spec.enemies[i] || { type: 'saucer', sizeMultiplier: 1 };
+            const sizeMultiplier = enemyTemplate.sizeMultiplier || 1;
             aliens.push({
                 x: 10 + Math.random() * (this.config.WORLD_WIDTH - 20),
                 y: startY - (i * spacing),
                 speed: spec.speed,
                 hp: 1,
                 damage: this.config.ALIEN_DAMAGE,
-                radius: this.config.ALIEN_RADIUS,
+                radius: this.config.ALIEN_RADIUS * sizeMultiplier,
+                type: enemyTemplate.type || 'saucer',
+                sizeMultiplier,
                 waveLevel: spec.level,
                 incoming
             });
@@ -379,10 +464,15 @@ class Game {
 
     emitWaveClearFx(waveLevel, bonus) {
         const subtitle = bonus > 0 ? `CYCLES BONUS +$${bonus}` : '';
+        this.emitStatusFx(`WAVE ${waveLevel} CLEARED!`, subtitle, 125);
+    }
+
+    emitStatusFx(title, subtitle = '', maxAge = 85) {
         this.waveClearFxEvents.push({
             id: this.nextFxEventId++,
-            title: `WAVE ${waveLevel} CLEARED!`,
-            subtitle
+            title,
+            subtitle,
+            maxAge
         });
         if (this.waveClearFxEvents.length > 20) {
             this.waveClearFxEvents.shift();
@@ -503,6 +593,7 @@ class Game {
                 startY: launcher.y,
                 targetX: target.x,
                 targetY: target.y,
+                lockedAtMs: Date.now(),
                 explosionRadius: this.getCurrentExplosionRadius(),
                 progress: 0,
                 exploded: false
@@ -511,13 +602,14 @@ class Game {
             this.missilesLockedThisTurn++;
             this.missileEnergy = this.utils.clamp(this.missileEnergy - energyCost, 0, this.config.MISSILE_ENERGY_MAX);
             this.power = 0;
-
-            // Auto-advance when all missiles locked
-            if (this.missilesLockedThisTurn >= this.getMissilesPerTurn()) {
+            // Auto-cycle when all missiles are locked (upgrade-gated).
+            if (this.hasAutoCycle() && this.missilesLockedThisTurn >= this.getMissilesPerTurn()) {
+                this.emitStatusFx('MISSILE TARGETED', 'AUTO-CYCLED', 70);
                 this.notify();
                 setTimeout(() => this.advance(), 100);
                 return;
             }
+            this.emitStatusFx('MISSILE TARGETED', '', 55);
         }
 
         this.notify();
@@ -618,6 +710,10 @@ class Game {
         return this.config.MISSILES_PER_TURN + (this.upgradeEffects.missilesPerTurnBonus || 0);
     }
 
+    hasAutoCycle() {
+        return !!this.upgradeEffects.autoCycleEnabled;
+    }
+
     getEnergyRegenPerTurn() {
         return this.config.MISSILE_ENERGY_REGEN_PER_TURN + (this.upgradeEffects.energyRegenBonus || 0);
     }
@@ -628,8 +724,12 @@ class Game {
     }
 
     getMoneyPerKillReward(exactHit = false) {
-        const baseReward = this.config.MONEY_PER_KILL + (this.upgradeEffects.moneyPerKillBonus || 0);
+        const baseReward = this.config.MONEY_PER_KILL * (this.upgradeEffects.moneyPerKillMultiplier || 1);
         return exactHit ? baseReward * this.config.EXACT_HIT_MONEY_MULTIPLIER : baseReward;
+    }
+
+    getEnergyPerKillReward() {
+        return this.config.ENERGY_PER_KILL * (this.upgradeEffects.energyPerKillMultiplier || 1);
     }
 
     toggleUpgradeMenu() {
@@ -909,7 +1009,7 @@ class Game {
 
         if (this.hasInevitableEarthBreach()) {
             this.baseHP = 0;
-            this.triggerGameOver('BREACH INEVITABLE');
+            this.triggerGameOver('DEFENSE BREACHED!');
             return;
         }
 
@@ -960,6 +1060,11 @@ class Game {
                     const exactHit = dist <= (alien.radius * this.config.EXACT_HIT_RADIUS_FACTOR);
                     const reward = this.getMoneyPerKillReward(exactHit);
                     this.money += reward;
+                    this.missileEnergy = this.utils.clamp(
+                        this.missileEnergy + this.getEnergyPerKillReward(),
+                        0,
+                        this.config.MISSILE_ENERGY_MAX
+                    );
                     this.queueEnemyDeathFx(alien, exactHit);
                 }
             }

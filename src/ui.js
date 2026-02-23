@@ -18,6 +18,7 @@ class EarthGuardUI {
             'hp',
             'energy',
             'money',
+            'missiles-status',
             'angle-display',
             'power-bar',
             'fire-btn',
@@ -57,7 +58,7 @@ class EarthGuardUI {
         const prevValue = this.prevHudValues[key];
         if (typeof prevValue === 'number' && nextValue > prevValue) {
             this.hudDeltaFx[key] = {
-                text: `+${prefix === '$' ? '$' : ''}${nextValue - prevValue}`,
+                text: `+${prefix === '$' ? '$' : ''}${this.formatHudNumber(nextValue - prevValue)}`,
                 until: Date.now() + 1400
             };
         }
@@ -68,6 +69,11 @@ class EarthGuardUI {
         const fx = this.hudDeltaFx[key];
         if (!fx || Date.now() > fx.until) return '';
         return `<span class="hud-delta">${fx.text}</span>`;
+    }
+
+    formatHudNumber(value) {
+        const rounded = Math.round(Number(value) * 10) / 10;
+        return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
     }
 
     formatUpgradeLevelText(upgrade) {
@@ -90,8 +96,11 @@ class EarthGuardUI {
         const liveBonus = game.getWaveClearSpeedBonus(displayedCycle, game.level);
         this.el.level.innerHTML = `<span class="hud-line"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-line"><span class="hud-label">CYCLE</span><span class="hud-value">${displayedCycle}</span></span><span class="hud-line"><span class="hud-label">BONUS</span><span class="hud-value hud-value-hypo">+$${liveBonus}</span></span>`;
         this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
-        this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${game.missileEnergy}/${game.config.MISSILE_ENERGY_MAX}</span>${this.getHudDeltaMarkup('energy')}`;
-        this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${game.money}</span>${this.getHudDeltaMarkup('money')}`;
+        this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${this.formatHudNumber(game.missileEnergy)}/${this.formatHudNumber(game.config.MISSILE_ENERGY_MAX)}</span>${this.getHudDeltaMarkup('energy')}`;
+        this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${this.formatHudNumber(game.money)}</span>${this.getHudDeltaMarkup('money')}`;
+        if (this.el['missiles-status']) {
+            this.el['missiles-status'].innerHTML = `MISSILES TARGETED: <span class="hud-inline-value">${game.missilesLockedThisTurn}/${game.getMissilesPerTurn()}</span>`;
+        }
     }
 
     renderAngle(game) {
@@ -110,13 +119,13 @@ class EarthGuardUI {
         const currentCost = game.getMissileEnergyCostForPower(game.power || game.config.MISSILE_MIN_ENERGY_COST);
 
         if (game.isCharging) {
-            fireBtn.textContent = `CHARGING | COST ${currentCost}`;
+            fireBtn.textContent = `TARGETING | COST ${currentCost}`;
             fireBtn.className = 'terminal-btn charging';
         } else if (missilesLeft === 0) {
-            fireBtn.textContent = 'LAUNCHING...';
+            fireBtn.textContent = 'TARGETS LOCKED';
             fireBtn.className = 'terminal-btn charged';
         } else {
-            fireBtn.textContent = `FIRE (${missilesLeft} | COST ${idleCost})`;
+            fireBtn.textContent = `TARGET (${missilesLeft} LEFT | COST ${idleCost})`;
             fireBtn.className = (!game.isAnimating && missilesLeft > 0) ? 'terminal-btn pulse' : 'terminal-btn';
         }
 
@@ -125,6 +134,7 @@ class EarthGuardUI {
 
         advanceBtn.disabled = game.isAnimating || game.isGameOver;
         advanceBtn.classList.toggle('is-disabled', game.isAnimating || game.isGameOver);
+        advanceBtn.textContent = game.isAnimating ? 'CYCLING...' : 'CYCLE';
     }
 
     renderUpgrades(game) {
