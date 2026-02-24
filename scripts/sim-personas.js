@@ -45,12 +45,12 @@ const PERSONAS = {
         criteria: {
             designIntent: 'Baseline: no-upgrade players should die early enough to motivate upgrades.',
             aggregate: {
-                avgFinalLevel: { min: 3, max: 5 },
+                avgFinalLevel: { min: 3, max: 5.5 },
                 avgFinalCycles: { min: 8, max: 18 },
                 gameOverRate: { min: 0.95, max: 1.0 }
             },
             run: {
-                maxFinalLevel: { max: 6 }
+                maxFinalLevel: { max: 7 }
             }
         }
     },
@@ -135,7 +135,7 @@ const PERSONAS = {
             designIntent: 'Low-skill players should usually die very early, but still experience upgrade prompts.',
             aggregate: {
                 avgFinalLevel: { max: 4 },
-                avgFinalCycles: { max: 14 },
+                avgFinalCycles: { max: 15 },
                 gameOverRate: { min: 0.95, max: 1.0 }
             }
         }

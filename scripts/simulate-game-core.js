@@ -293,6 +293,9 @@ function playTurn(game, persona, rng) {
 function runSingleSimulation(persona, options) {
     return withSeededMathRandom(options.seed, (rng) => {
         const game = new Game({ root: {}, ui: null, instantAutoCycle: true });
+        if (options.configOverrides && typeof options.configOverrides === 'object') {
+            Object.assign(game.config, options.configOverrides);
+        }
         game.config.ANIMATION_FRAMES = 2;
         game.config.ANIMATION_FRAME_MS = 1;
 

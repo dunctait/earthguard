@@ -23,7 +23,7 @@ const GameConfig = {
     MAX_MISSILE_RANGE: 85,          // % of world height
     MISSILE_ENERGY_MAX: 100,
     MISSILE_ENERGY_REGEN_PER_TURN: 5,
-    MISSILE_MIN_ENERGY_COST: 10,
+    MISSILE_MIN_ENERGY_COST: 8,
     TRAJECTORY_FADE_STRENGTH: 2.4,
 
     // Power/Charging
@@ -32,8 +32,12 @@ const GameConfig = {
     POWER_TO_DISTANCE_EXPONENT: 1.5,
 
     // Aliens
-    BASE_ALIEN_SPEED: 6,
-    ALIEN_SPEED_PER_LEVEL: 0.85,
+    BASE_ALIEN_SPEED: 6.2,
+    ALIEN_SPEED_PER_LEVEL: 0.9,
+    ALIEN_SPEED_MIDGAME_BONUS_START_LEVEL: 5,
+    ALIEN_SPEED_MIDGAME_BONUS_PER_LEVEL: 0.35,
+    ALIEN_SPEED_LATEGAME_BONUS_START_LEVEL: 8,
+    ALIEN_SPEED_LATEGAME_BONUS_PER_LEVEL: 0.4,
     ALIEN_RADIUS: 3,
     ALIEN_DAMAGE: 10,
     ALIEN_WAVE_VERTICAL_SPACING: 8,
@@ -49,6 +53,10 @@ const GameConfig = {
     WAVE_CLEAR_BONUS_DECAY_PER_CYCLE: 2,
     WAVE_CLEAR_BONUS_MIN: 0,
     WAVE_CLEAR_BONUS_LEVEL_SCALE: 0.04,
+    WAVE_CLEAR_ENERGY_BONUS_BASE: 3,
+    WAVE_CLEAR_ENERGY_BONUS_DECAY_PER_CYCLE: 1,
+    WAVE_CLEAR_ENERGY_BONUS_MIN: 0,
+    WAVE_CLEAR_ENERGY_BONUS_LEVEL_SCALE: 0.02,
     INCOMING_PREVIEW_REVEAL_CYCLE: 2,
 
     // Player
@@ -66,7 +74,7 @@ const UpgradeDefinitions = {
         description: 'Shows predicted impact circles for locked missiles.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 110, energyCost: 4, label: 'Unlock preview' }
+            { moneyCost: 110, energyCost: 8, label: 'Unlock preview' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -79,7 +87,7 @@ const UpgradeDefinitions = {
         description: 'Automatically cycles when all targets are locked.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 10, energyCost: 0, label: 'Unlock auto-cycle' }
+            { moneyCost: 10, energyCost: 1, label: 'Unlock auto-cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -92,8 +100,8 @@ const UpgradeDefinitions = {
         description: 'Increase explosion radius for all missiles.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 18, energyCost: 1, radiusMultiplier: 1.35, label: '+35%' },
-            { moneyCost: 40, energyCost: 3, radiusMultiplier: 1.70, label: '+70%' },
+            { moneyCost: 18, energyCost: 2, radiusMultiplier: 1.35, label: '+35%' },
+            { moneyCost: 40, energyCost: 5, radiusMultiplier: 1.70, label: '+70%' },
             { moneyCost: 75, energyCost: 6, radiusMultiplier: 2.10, label: '+110%' }
         ],
         uiLabelForTier: (tier) => tier.label || `x${tier.radiusMultiplier ?? 1}`,
@@ -107,8 +115,8 @@ const UpgradeDefinitions = {
         description: 'Adds one missile slot per cycle per level.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 26, energyCost: 2, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
-            { moneyCost: 55, energyCost: 3, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
+            { moneyCost: 26, energyCost: 4, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
+            { moneyCost: 55, energyCost: 6, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
             { moneyCost: 95, energyCost: 6, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || `+${tier.missilesPerTurnBonus || 0} missile/cycle`,
@@ -122,8 +130,8 @@ const UpgradeDefinitions = {
         description: 'Multiply cash paid per enemy kill.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 20, energyCost: 1, moneyPerKillMultiplier: 1.20, label: '1.20x $ / kill' },
-            { moneyCost: 45, energyCost: 2, moneyPerKillMultiplier: 1.40, label: '1.40x $ / kill' },
+            { moneyCost: 20, energyCost: 2, moneyPerKillMultiplier: 1.20, label: '1.20x $ / kill' },
+            { moneyCost: 45, energyCost: 4, moneyPerKillMultiplier: 1.40, label: '1.40x $ / kill' },
             { moneyCost: 80, energyCost: 6, moneyPerKillMultiplier: 1.60, label: '1.60x $ / kill' }
         ],
         uiLabelForTier: (tier) => tier.label || `${tier.moneyPerKillMultiplier || 1}x $ / kill`,
@@ -137,8 +145,8 @@ const UpgradeDefinitions = {
         description: 'Multiply energy restored per enemy kill.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 24, energyCost: 1, energyPerKillMultiplier: 1.20, label: '1.20x EN / kill' },
-            { moneyCost: 50, energyCost: 2, energyPerKillMultiplier: 1.40, label: '1.40x EN / kill' },
+            { moneyCost: 24, energyCost: 2, energyPerKillMultiplier: 1.20, label: '1.20x EN / kill' },
+            { moneyCost: 50, energyCost: 4, energyPerKillMultiplier: 1.40, label: '1.40x EN / kill' },
             { moneyCost: 90, energyCost: 6, energyPerKillMultiplier: 1.60, label: '1.60x EN / kill' }
         ],
         uiLabelForTier: (tier) => tier.label || `${tier.energyPerKillMultiplier || 1}x EN / kill`,
@@ -152,8 +160,8 @@ const UpgradeDefinitions = {
         description: 'Reduce missile energy cost by 10% per level.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 24, energyCost: 1, costReductionPct: 20, label: '-20% cost' },
-            { moneyCost: 48, energyCost: 3, costReductionPct: 40, label: '-40% cost' },
+            { moneyCost: 24, energyCost: 3, costReductionPct: 20, label: '-20% cost' },
+            { moneyCost: 48, energyCost: 5, costReductionPct: 40, label: '-40% cost' },
             { moneyCost: 85, energyCost: 6, costReductionPct: 60, label: '-60% cost' }
         ],
         uiLabelForTier: (tier) => tier.label || `-${tier.costReductionPct || 0}% cost`,
@@ -167,8 +175,8 @@ const UpgradeDefinitions = {
         description: 'Restore more energy after each cycle.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 22, energyCost: 1, regenBonus: 3, label: '+3 EN / cycle' },
-            { moneyCost: 45, energyCost: 3, regenBonus: 6, label: '+6 EN / cycle' },
+            { moneyCost: 22, energyCost: 3, regenBonus: 3, label: '+3 EN / cycle' },
+            { moneyCost: 45, energyCost: 5, regenBonus: 6, label: '+6 EN / cycle' },
             { moneyCost: 80, energyCost: 6, regenBonus: 9, label: '+9 EN / cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || `+${tier.regenBonus || 0} EN / cycle`,
@@ -182,8 +190,8 @@ const UpgradeDefinitions = {
         description: 'Extends aiming guide visibility by reducing fade falloff.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 18, energyCost: 0, fadeStrengthMultiplier: 0.85, label: 'Longer guide I' },
-            { moneyCost: 40, energyCost: 2, fadeStrengthMultiplier: 0.70, label: 'Longer guide II' },
+            { moneyCost: 18, energyCost: 1, fadeStrengthMultiplier: 0.85, label: 'Longer guide I' },
+            { moneyCost: 40, energyCost: 3, fadeStrengthMultiplier: 0.70, label: 'Longer guide II' },
             { moneyCost: 75, energyCost: 6, fadeStrengthMultiplier: 0.55, label: 'Longer guide III' }
         ],
         uiLabelForTier: (tier) => tier.label || 'Longer guide',
@@ -197,7 +205,7 @@ const UpgradeDefinitions = {
         description: 'Shows a marker for the previous target power on the charge bar.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 12, energyCost: 0, label: 'Unlock power marker' }
+            { moneyCost: 12, energyCost: 1, label: 'Unlock power marker' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -284,6 +292,7 @@ class Game {
         this.levelCycles = 0;
         this.totalCycles = 0;
         this.lastWaveClearBonus = 0;
+        this.lastWaveClearEnergyBonus = 0;
         this.stats = {
             missilesTargeted: 0,
             missilesLaunched: 0,
@@ -380,7 +389,7 @@ class Game {
             levelDef,
             enemies: enemyTemplates,
             alienCount: enemyTemplates.length,
-            speed: this.config.BASE_ALIEN_SPEED + (level * this.config.ALIEN_SPEED_PER_LEVEL),
+            speed: this.getAlienSpeedForLevel(level),
             activeTopY: level === 1 ? 78 : (this.config.ALIEN_ACTIVE_SPAWN_TOP_Y || (this.config.WORLD_HEIGHT - 5)),
             maxSizeMultiplier
         };
@@ -395,16 +404,51 @@ class Game {
         if (levelDef && Array.isArray(levelDef.enemies) && levelDef.enemies.length > 0) {
             return levelDef.enemies.map((enemy) => ({
                 type: enemy.type || 'saucer',
-                sizeMultiplier: enemy.sizeMultiplier || 1
+                sizeMultiplier: enemy.sizeMultiplier || 1,
+                yBand: enemy.yBand || 0
             }));
         }
 
-        const alienCount = Math.min(Math.max(2, level), 10);
-        const sizeMultiplier = level <= 4 ? 1 : Math.max(0.8, 1.1 - ((level - 4) * 0.03));
+        let alienCount = Math.min(Math.max(2, level), 10);
+        if (level >= 5) {
+            alienCount += Math.floor((level - 4) / 2);
+        }
+        if (level >= 6) {
+            alienCount += 1;
+        }
+        if (level >= 9) {
+            alienCount += 1;
+        }
+        alienCount = Math.min(alienCount, 14);
+        let sizeMultiplier = level <= 4 ? 1 : Math.max(0.8, 1.1 - ((level - 4) * 0.03));
+        if (level >= 8) {
+            sizeMultiplier = Math.max(0.55, 0.9 - ((level - 8) * 0.05));
+        }
+
+        if (level >= 8) {
+            // Flatter formations with small banded Y offsets make later waves feel more "swarm / bullet hell".
+            const bandCount = Math.min(3, Math.max(2, Math.ceil(alienCount / 4)));
+            return Array.from({ length: alienCount }, (_, i) => ({
+                type: 'saucer',
+                sizeMultiplier,
+                yBand: i % bandCount
+            }));
+        }
+
         return Array.from({ length: alienCount }, () => ({
             type: 'saucer',
-            sizeMultiplier
+            sizeMultiplier,
+            yBand: 0
         }));
+    }
+
+    getAlienSpeedForLevel(level) {
+        const base = this.config.BASE_ALIEN_SPEED + (level * this.config.ALIEN_SPEED_PER_LEVEL);
+        const midStart = this.config.ALIEN_SPEED_MIDGAME_BONUS_START_LEVEL || 5;
+        const lateStart = this.config.ALIEN_SPEED_LATEGAME_BONUS_START_LEVEL || 8;
+        const midBonus = Math.max(0, level - midStart + 1) * (this.config.ALIEN_SPEED_MIDGAME_BONUS_PER_LEVEL || 0);
+        const lateBonus = Math.max(0, level - lateStart + 1) * (this.config.ALIEN_SPEED_LATEGAME_BONUS_PER_LEVEL || 0);
+        return base + midBonus + lateBonus;
     }
 
     createAliensFromWaveSpec(spec, incoming = false) {
@@ -412,17 +456,42 @@ class Game {
         const minSpacing = this.config.ALIEN_WAVE_VERTICAL_SPACING || 8;
         const spacing = Math.max(minSpacing, (this.config.ALIEN_RADIUS * (spec.maxSizeMultiplier || 1) * 2.6));
         const activeTopY = spec.activeTopY ?? this.config.ALIEN_ACTIVE_SPAWN_TOP_Y ?? (this.config.WORLD_HEIGHT - 5);
+        const isSwarm = spec.level >= 8;
+        const bandStep = isSwarm ? Math.max(2.2, spacing * 0.38) : spacing;
+        const bandJitter = isSwarm ? Math.max(0.6, bandStep * 0.25) : 0;
+
+        const maxBandIndex = spec.enemies.reduce((max, e) => Math.max(max, e.yBand || 0), 0);
+        const formationHeight = (maxBandIndex * bandStep) + (bandJitter * 2);
+
         // Ensure incoming wave never vertically overlaps the highest possible active-wave enemy:
         // incoming lowest enemy sits above activeTopY by a fixed gap.
         const incomingLowestY = activeTopY + (this.config.ALIEN_INCOMING_WAVE_GAP || 4);
-        const incomingStartY = incomingLowestY + ((spec.alienCount - 1) * spacing);
+        const incomingStartY = incomingLowestY + formationHeight;
         const startY = incoming ? incomingStartY : activeTopY;
+
+        const clusterCount = isSwarm ? Math.min(3, Math.max(2, Math.round(spec.alienCount / 4))) : 0;
+        const clusterCenters = isSwarm
+            ? Array.from({ length: clusterCount }, (_, i) => {
+                const lane = (i + 1) / (clusterCount + 1);
+                const laneJitter = (Math.random() - 0.5) * 6;
+                return this.utils.clamp((lane * this.config.WORLD_WIDTH) + laneJitter, 8, this.config.WORLD_WIDTH - 8);
+            })
+            : null;
         for (let i = 0; i < spec.alienCount; i++) {
             const enemyTemplate = spec.enemies[i] || { type: 'saucer', sizeMultiplier: 1 };
             const sizeMultiplier = enemyTemplate.sizeMultiplier || 1;
+            let x;
+            if (isSwarm && clusterCenters) {
+                const center = clusterCenters[i % clusterCenters.length];
+                x = this.utils.clamp(center + ((Math.random() - 0.5) * 10), 6, this.config.WORLD_WIDTH - 6);
+            } else {
+                x = 10 + Math.random() * (this.config.WORLD_WIDTH - 20);
+            }
+            const bandOffset = (enemyTemplate.yBand || 0) * bandStep;
+            const jitterY = isSwarm ? ((Math.random() - 0.5) * bandJitter * 2) : 0;
             aliens.push({
-                x: 10 + Math.random() * (this.config.WORLD_WIDTH - 20),
-                y: startY - (i * spacing),
+                x,
+                y: startY - bandOffset - jitterY,
                 speed: spec.speed,
                 hp: 1,
                 damage: this.config.ALIEN_DAMAGE,
@@ -471,7 +540,10 @@ class Game {
         // Pull the formation down just enough to bring its highest alien into the
         // visible battlefield band.
         const neededShift = Math.max(0, highestAlienY - minActiveY);
-        const appliedShift = neededShift;
+        const lowestAlienY = Math.min(...aliens.map((alien) => alien.y - (alien.radius || 0)));
+        const minBreachBuffer = (this.config.LAUNCHER_Y || 0) + 16;
+        const maxSafeShift = Math.max(0, lowestAlienY - minBreachBuffer);
+        const appliedShift = Math.min(neededShift, maxSafeShift);
         if (appliedShift <= 0) return;
 
         for (const alien of aliens) {
@@ -490,7 +562,11 @@ class Game {
     }
 
     emitWaveClearFx(waveLevel, bonus) {
-        const subtitle = bonus > 0 ? `CYCLES BONUS +$${bonus}` : '';
+        const energyBonus = this.lastWaveClearEnergyBonus || 0;
+        const parts = [];
+        if (bonus > 0) parts.push(`+$${bonus}`);
+        if (energyBonus > 0) parts.push(`+EN ${energyBonus}`);
+        const subtitle = parts.length ? `CYCLES BONUS ${parts.join(' | ')}` : '';
         this.emitStatusFx(`WAVE ${waveLevel} CLEARED!`, subtitle, 125);
     }
 
@@ -590,6 +666,12 @@ class Game {
         const clamped = Math.max(this.config.WAVE_CLEAR_BONUS_MIN, raw);
         // Mild level scaling to keep bonuses meaningful without exploding economy.
         return Math.round(clamped * (1 + ((Math.max(1, level) - 1) * (this.config.WAVE_CLEAR_BONUS_LEVEL_SCALE || 0))));
+    }
+
+    getWaveClearEnergyBonus(cycles = this.levelCycles, level = this.level) {
+        const raw = this.config.WAVE_CLEAR_ENERGY_BONUS_BASE - ((Math.max(1, cycles) - 1) * this.config.WAVE_CLEAR_ENERGY_BONUS_DECAY_PER_CYCLE);
+        const clamped = Math.max(this.config.WAVE_CLEAR_ENERGY_BONUS_MIN, raw);
+        return Math.max(0, Math.round(clamped * (1 + ((Math.max(1, level) - 1) * (this.config.WAVE_CLEAR_ENERGY_BONUS_LEVEL_SCALE || 0)))));
     }
 
     startCharging() {
@@ -1049,7 +1131,13 @@ class Game {
         // Check wave complete
         if (this.aliens.length === 0) {
             this.lastWaveClearBonus = this.getWaveClearSpeedBonus(this.levelCycles, this.level);
+            this.lastWaveClearEnergyBonus = this.getWaveClearEnergyBonus(this.levelCycles, this.level);
             this.money += this.lastWaveClearBonus;
+            this.missileEnergy = this.utils.clamp(
+                this.missileEnergy + this.lastWaveClearEnergyBonus,
+                0,
+                this.config.MISSILE_ENERGY_MAX
+            );
             this.emitWaveClearFx(this.level, this.lastWaveClearBonus);
             this.level++;
             if (this.incomingAliens.length > 0) {
@@ -1060,6 +1148,7 @@ class Game {
             this.queueIncomingWavePreview(this.level + 1);
         } else {
             this.lastWaveClearBonus = 0;
+            this.lastWaveClearEnergyBonus = 0;
             if (this.incomingAliens.length === 0) {
                 this.queueIncomingWavePreview(this.level + 1);
             }
@@ -1097,6 +1186,7 @@ class Game {
         this.levelCycles = 0;
         this.totalCycles = 0;
         this.lastWaveClearBonus = 0;
+        this.lastWaveClearEnergyBonus = 0;
         this.stats = {
             missilesTargeted: 0,
             missilesLaunched: 0,
@@ -1175,6 +1265,7 @@ class Game {
             levelCycles: this.levelCycles,
             totalCycles: this.totalCycles,
             lastWaveClearBonus: this.lastWaveClearBonus,
+            lastWaveClearEnergyBonus: this.lastWaveClearEnergyBonus,
             stats: { ...this.stats },
             missilesLocked: this.missilesLockedThisTurn,
             missilesPerTurn: this.getMissilesPerTurn(),
