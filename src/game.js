@@ -265,6 +265,29 @@ const LevelDefinitions = {
     }
 };
 
+const MetaUpgradeDefinitions = {
+    salvageYield: {
+        key: 'salvageYield',
+        name: 'Salvage Yield',
+        description: 'Increase salvage earned at end of run.',
+        tiers: [
+            { cost: 8, salvageMultiplier: 1.25, label: '+25% salvage' },
+            { cost: 18, salvageMultiplier: 1.5, label: '+50% salvage' },
+            { cost: 35, salvageMultiplier: 1.8, label: '+80% salvage' }
+        ]
+    },
+    startingReserve: {
+        key: 'startingReserve',
+        name: 'Starting Reserve',
+        description: 'Begin new runs with extra cash and energy.',
+        tiers: [
+            { cost: 10, startMoneyBonus: 10, startEnergyBonus: 6, label: '+$10 / +EN 6' },
+            { cost: 20, startMoneyBonus: 20, startEnergyBonus: 12, label: '+$20 / +EN 12' },
+            { cost: 38, startMoneyBonus: 35, startEnergyBonus: 18, label: '+$35 / +EN 18' }
+        ]
+    }
+};
+
 class Game {
     constructor(options = {}) {
         this.config = GameConfig;
@@ -328,6 +351,7 @@ class Game {
         // Initialize
         this.spawnWave();
         this.queueIncomingWavePreview(this.level + 1);
+        this.applyMetaStartBonuses();
         this.notify();
     }
 
@@ -344,6 +368,7 @@ class Game {
             totalRuns: 0,
             bestLevelReached: 0,
             metaCurrency: 0,
+            metaUpgrades: {},
             bestMoneyByLevel: {},
             lastRun: null
         };
@@ -361,6 +386,7 @@ class Game {
             return {
                 ...fallback,
                 ...parsed,
+                metaUpgrades: (parsed.metaUpgrades && typeof parsed.metaUpgrades === 'object') ? parsed.metaUpgrades : {},
                 bestMoneyByLevel: (parsed.bestMoneyByLevel && typeof parsed.bestMoneyByLevel === 'object') ? parsed.bestMoneyByLevel : {}
             };
         } catch {
@@ -416,10 +442,79 @@ class Game {
         return entries;
     }
 
+    getMetaUpgradeLevel(key) {
+        return Math.max(0, Math.floor(this.metaProgress?.metaUpgrades?.[key] || 0));
+    }
+
+    getMetaUpgradeState() {
+        return Object.values(MetaUpgradeDefinitions).map((definition) => {
+            const level = this.getMetaUpgradeLevel(definition.key);
+            const maxLevel = definition.tiers.length;
+            const nextTier = level < maxLevel ? definition.tiers[level] : null;
+            return {
+                ...definition,
+                level,
+                maxLevel,
+                nextTier
+            };
+        });
+    }
+
+    canPurchaseMetaUpgrade(key) {
+        const definition = MetaUpgradeDefinitions[key];
+        if (!definition) return false;
+        const level = this.getMetaUpgradeLevel(key);
+        const tier = definition.tiers[level];
+        if (!tier) return false;
+        return Math.floor(this.metaProgress?.metaCurrency || 0) >= Math.floor(tier.cost || 0);
+    }
+
+    purchaseMetaUpgrade(key) {
+        const definition = MetaUpgradeDefinitions[key];
+        if (!definition) return false;
+        const level = this.getMetaUpgradeLevel(key);
+        const tier = definition.tiers[level];
+        if (!tier) return false;
+        const cost = Math.floor(tier.cost || 0);
+        const current = Math.floor(this.metaProgress?.metaCurrency || 0);
+        if (current < cost) return false;
+        if (!this.metaProgress.metaUpgrades || typeof this.metaProgress.metaUpgrades !== 'object') {
+            this.metaProgress.metaUpgrades = {};
+        }
+        this.metaProgress.metaCurrency = current - cost;
+        this.metaProgress.metaUpgrades[key] = level + 1;
+        this.saveMetaProgress();
+        this.notify();
+        return true;
+    }
+
     getRunMetaCurrencyReward() {
         const levelPart = Math.max(0, Math.floor(this.level || 0) - 1);
         const killsPart = Math.floor((this.stats?.kills || 0) / 5);
-        return Math.max(1, levelPart + killsPart);
+        const base = Math.max(1, levelPart + killsPart);
+        const salvageTier = this.getMetaUpgradeLevel('salvageYield');
+        const salvageMultiplier = MetaUpgradeDefinitions.salvageYield.tiers[Math.max(0, salvageTier - 1)]?.salvageMultiplier || 1;
+        return Math.max(1, Math.floor(base * salvageMultiplier));
+    }
+
+    getMetaStartBonuses() {
+        const reserveTierLevel = this.getMetaUpgradeLevel('startingReserve');
+        const reserveTier = MetaUpgradeDefinitions.startingReserve.tiers[Math.max(0, reserveTierLevel - 1)];
+        return {
+            money: Math.floor(reserveTier?.startMoneyBonus || 0),
+            energy: Math.floor(reserveTier?.startEnergyBonus || 0)
+        };
+    }
+
+    applyMetaStartBonuses() {
+        const bonuses = this.getMetaStartBonuses();
+        if (bonuses.money > 0) {
+            this.money += bonuses.money;
+            this.recordBestMoneyForLevel(this.level, this.money);
+        }
+        if (bonuses.energy > 0) {
+            this.missileEnergy = this.utils.clamp(this.missileEnergy + bonuses.energy, 0, this.config.MISSILE_ENERGY_MAX);
+        }
     }
 
     createUpgradeState() {
@@ -1412,6 +1507,7 @@ class Game {
         this.incomingAliens = [];
         this.spawnWave();
         this.queueIncomingWavePreview(this.level + 1);
+        this.applyMetaStartBonuses();
         this.notify();
     }
 

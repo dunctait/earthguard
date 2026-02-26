@@ -418,6 +418,28 @@ html, body {
     box-shadow: 0 0 0 1px rgba(51, 230, 255, 0.18);
 }
 
+.meta-upgrade-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.meta-upgrade-list:empty::before {
+    content: 'NO META UPGRADES';
+    display: block;
+    color: var(--green-tertiary);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+}
+
+.meta-upgrade-row .upgrade-btn {
+    min-width: 132px;
+}
+
+.meta-upgrade-row .upgrade-effect {
+    color: rgba(51, 230, 255, 0.9);
+}
+
 .upgrade-list {
     display: flex;
     flex-direction: column;

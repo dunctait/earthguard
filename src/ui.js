@@ -40,6 +40,8 @@ class EarthGuardUI {
             'game-over-subtitle',
             'game-over-stats',
             'play-again-btn',
+            'meta-upgrade-menu',
+            'meta-upgrade-list',
             'game-over-jump',
             'jump-level-select',
             'jump-start-btn',
@@ -315,6 +317,30 @@ class EarthGuardUI {
                 }
                 jumpBtn.disabled = !game.isGameOver;
             }
+        }
+
+        const metaList = this.el['meta-upgrade-list'];
+        if (metaList) {
+            const metaUpgrades = typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : [];
+            metaList.innerHTML = metaUpgrades.map((upgrade) => {
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                const tier = upgrade.nextTier;
+                const canBuy = !isMaxed && typeof game.canPurchaseMetaUpgrade === 'function' && game.canPurchaseMetaUpgrade(upgrade.key);
+                const label = isMaxed
+                    ? 'MAXED'
+                    : `BUY [SALVAGE ${Math.floor(tier?.cost || 0)}]`;
+                const effect = isMaxed ? 'MAXED' : (tier?.label || 'NEXT');
+                return `
+                    <div class="terminal-panel upgrade-row meta-upgrade-row">
+                        <div class="upgrade-copy">
+                            <div class="upgrade-name">${upgrade.name} <span class="upgrade-level">L${upgrade.level}/${upgrade.maxLevel}</span></div>
+                            <div class="upgrade-meta">${upgrade.description}</div>
+                            <div class="upgrade-effect">${effect}</div>
+                        </div>
+                        <button class="terminal-btn upgrade-btn${isMaxed ? ' owned' : ''}" data-meta-upgrade-key="${upgrade.key}" ${(!canBuy || isMaxed) ? 'disabled' : ''}>${label}</button>
+                    </div>
+                `;
+            }).join('');
         }
     }
 

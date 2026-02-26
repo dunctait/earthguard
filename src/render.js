@@ -23,6 +23,7 @@ class Renderer {
             'upgrade-menu-close-btn',
             'game-over-overlay',
             'play-again-btn',
+            'meta-upgrade-list',
             'jump-level-select',
             'jump-start-btn',
             'rot-left-big',
@@ -269,6 +270,13 @@ class Renderer {
         }
         if (this.dom['jump-level-select']) {
             this.dom['jump-level-select'].addEventListener('change', () => this.game.notify());
+        }
+        if (this.dom['meta-upgrade-list']) {
+            this.dom['meta-upgrade-list'].addEventListener('click', (event) => {
+                const button = event.target.closest('[data-meta-upgrade-key]');
+                if (!button) return;
+                this.game.purchaseMetaUpgrade(button.dataset.metaUpgradeKey);
+            });
         }
     }
 
