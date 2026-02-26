@@ -571,12 +571,7 @@ class Game {
     shouldShowSplashOnBoot() {
         const meta = this.metaProgress || {};
         const totalRuns = Math.floor(meta.totalRuns || 0);
-        const hasBestMoney = Object.keys(meta.bestMoneyByLevel || {}).length > 0;
-        const hasMetaCurrency = Math.floor(meta.metaCurrency || 0) > 0;
-        const hasMetaUpgrades = Object.values(meta.metaUpgrades || {}).some((level) => Math.floor(level || 0) > 0);
-        const hasRunHistory = Array.isArray(meta.runHistory) && meta.runHistory.length > 0;
-        const hasLastRun = !!meta.lastRun;
-        return totalRuns > 0 || hasBestMoney || hasMetaCurrency || hasMetaUpgrades || hasRunHistory || hasLastRun;
+        return totalRuns > 0;
     }
 
     saveMetaProgress() {
@@ -740,6 +735,23 @@ class Game {
                 maxLevel,
                 nextTier
             };
+        });
+    }
+
+    getOrderedMetaUpgradeState() {
+        return this.getMetaUpgradeState().slice().sort((a, b) => {
+            const aMaxed = a.level >= a.maxLevel;
+            const bMaxed = b.level >= b.maxLevel;
+            if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
+
+            const aCanBuy = !aMaxed && this.canPurchaseMetaUpgrade(a.key);
+            const bCanBuy = !bMaxed && this.canPurchaseMetaUpgrade(b.key);
+            if (aCanBuy !== bCanBuy) return aCanBuy ? -1 : 1;
+
+            const aCost = Math.floor(a.nextTier?.cost || Number.MAX_SAFE_INTEGER);
+            const bCost = Math.floor(b.nextTier?.cost || Number.MAX_SAFE_INTEGER);
+            if (aCost !== bCost) return aCost - bCost;
+            return (a.name || '').localeCompare(b.name || '');
         });
     }
 

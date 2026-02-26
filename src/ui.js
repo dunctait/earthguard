@@ -507,10 +507,16 @@ class EarthGuardUI {
         const metaList = this.el['meta-upgrade-list'];
         if (this.el['meta-upgrade-salvage']) {
             const salvage = Math.floor(game.metaProgress?.metaCurrency || 0);
-            this.el['meta-upgrade-salvage'].textContent = `SALVAGE ${salvage}`;
+            const metaUpgradesForCount = typeof game.getOrderedMetaUpgradeState === 'function'
+                ? game.getOrderedMetaUpgradeState()
+                : (typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : []);
+            const affordableCount = metaUpgradesForCount.filter((u) => (u.level < u.maxLevel) && typeof game.canPurchaseMetaUpgrade === 'function' && game.canPurchaseMetaUpgrade(u.key)).length;
+            this.el['meta-upgrade-salvage'].textContent = `SALVAGE ${salvage} • ${affordableCount} AVAILABLE`;
         }
         if (!metaList) return;
-        const metaUpgrades = typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : [];
+        const metaUpgrades = typeof game.getOrderedMetaUpgradeState === 'function'
+            ? game.getOrderedMetaUpgradeState()
+            : (typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : []);
         metaList.innerHTML = metaUpgrades.map((upgrade) => {
             const isMaxed = upgrade.level >= upgrade.maxLevel;
             const tier = upgrade.nextTier;

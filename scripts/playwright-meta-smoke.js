@@ -8,7 +8,7 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 430, height: 932 } });
 
     await page.addInitScript(() => {
-        if (!localStorage.getItem('earthguard.meta.v1')) {
+        if (!sessionStorage.getItem('earthguard.meta.seeded') && !localStorage.getItem('earthguard.meta.v1')) {
             localStorage.setItem('earthguard.meta.v1', JSON.stringify({
                 schemaVersion: 1,
                 totalRuns: 4,
@@ -22,6 +22,7 @@ async function main() {
                 careerBest: { maxRunMoney: 120, maxKills: 18, maxCycles: 22, maxSalvageReward: 4 }
             }));
         }
+        sessionStorage.setItem('earthguard.meta.seeded', '1');
     });
 
     await page.goto(pathToFileURL(path.join(repoRoot, 'index.html')).href, { waitUntil: 'domcontentloaded' });
@@ -130,8 +131,34 @@ async function main() {
         throw new Error(`Career best persistence missing: ${JSON.stringify({ afterReload })}`);
     }
 
+    // Clear local data flow should require confirmation and then wipe progress.
+    await page.evaluate(() => window.game.openSplash && window.game.openSplash());
+    await page.evaluate(() => document.querySelector('#splash-clear-data-btn')?.click());
+    await page.evaluate(() => document.querySelector('#splash-clear-data-btn')?.click());
+    const afterClear = await page.evaluate(() => ({
+        splashOpen: !!window.game.isSplashOpen,
+        totalRuns: Math.floor(window.game.metaProgress?.totalRuns || 0),
+        salvage: Math.floor(window.game.metaProgress?.metaCurrency || 0),
+        bestLevel: Math.floor(window.game.metaProgress?.bestLevelReached || 0),
+        jumpCount: Array.from(window.game.getAvailableJumpStartLevels?.() || []).length
+    }));
+    if (!afterClear.splashOpen || afterClear.totalRuns !== 0 || afterClear.salvage !== 0 || afterClear.bestLevel !== 0 || afterClear.jumpCount !== 0) {
+        throw new Error(`Clear local data did not reset progress: ${JSON.stringify({ afterClear })}`);
+    }
+
+    // Fresh boot after clear should skip splash.
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => window.game && window.renderer);
+    const freshBoot = await page.evaluate(() => ({
+        splashOpen: !!window.game.isSplashOpen,
+        totalRuns: Math.floor(window.game.metaProgress?.totalRuns || 0)
+    }));
+    if (freshBoot.splashOpen !== false || freshBoot.totalRuns !== 0) {
+        throw new Error(`Fresh boot after clear should skip splash: ${JSON.stringify({ freshBoot })}`);
+    }
+
     await browser.close();
-    console.log(JSON.stringify({ ok: true, clearDataBefore, clearDataArmed, before, afterHighest, afterBuy, afterJump, afterReload }, null, 2));
+    console.log(JSON.stringify({ ok: true, clearDataBefore, clearDataArmed, before, afterHighest, afterBuy, afterJump, afterReload, afterClear, freshBoot }, null, 2));
 }
 
 main().catch((err) => {
