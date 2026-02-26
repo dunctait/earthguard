@@ -67,7 +67,10 @@
                 </div>
                 <div class="ui-modal-body">
                     <div id="game-over-subtitle" class="game-over-subtitle">EARTH BREACHED</div>
-                    <div id="game-over-stats" class="game-over-stats" aria-live="polite"></div>
+                    <div class="game-over-section">
+                        <div class="game-over-section-title">RUN REPORT</div>
+                        <div id="game-over-stats" class="game-over-stats" aria-live="polite"></div>
+                    </div>
                     <div id="meta-upgrade-menu" class="game-over-jump">
                         <div class="game-over-jump-label">META UPGRADES</div>
                         <div id="meta-upgrade-list" class="meta-upgrade-list"></div>
@@ -81,7 +84,9 @@
                         <div id="jump-start-preview" class="game-over-jump-preview" aria-live="polite"></div>
                         <div id="jump-start-hint" class="game-over-jump-hint">Start at a prior level with full EN, no upgrades, and your best recorded $ for that level.</div>
                     </div>
-                    <button id="play-again-btn" class="terminal-btn upgrade-btn" type="button" data-testid="play-again-btn">PLAY AGAIN</button>
+                    <div class="game-over-actions">
+                        <button id="play-again-btn" class="terminal-btn upgrade-btn" type="button" data-testid="play-again-btn">PLAY AGAIN</button>
+                    </div>
                 </div>
             </div>
         </div>
