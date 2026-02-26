@@ -17,6 +17,7 @@
     "smoke": "node scripts/playwright-smoke.js",
     "smoke:charge": "node scripts/playwright-charge-regression.js",
     "smoke:gameover": "node scripts/playwright-gameover-smoke.js",
+    "smoke:meta": "node scripts/playwright-meta-smoke.js",
     "smoke:layout": "node scripts/playwright-layout-check.js",
     "smoke:headed": "node scripts/playwright-smoke.js --headed --slowmo=120"
   },
