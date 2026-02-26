@@ -39,7 +39,11 @@ class EarthGuardUI {
             'game-over-title',
             'game-over-subtitle',
             'game-over-stats',
-            'play-again-btn'
+            'play-again-btn',
+            'game-over-jump',
+            'jump-level-select',
+            'jump-start-btn',
+            'jump-start-hint'
         ]) : {};
     }
 
@@ -281,6 +285,32 @@ class EarthGuardUI {
                 `<div class="game-over-stat-row"><span class="hud-label">$ RUN</span><span class="hud-value">${Math.floor(game.money || 0)}</span></div>`,
                 `<div class="game-over-upgrades"><span class="hud-label">UPGRADES</span><span class="game-over-upgrade-list">${boughtSummary}</span></div>`
             ].join('');
+        }
+
+        const jumpWrap = this.el['game-over-jump'];
+        const jumpSelect = this.el['jump-level-select'];
+        const jumpBtn = this.el['jump-start-btn'];
+        const jumpHint = this.el['jump-start-hint'];
+        if (jumpWrap && jumpSelect && jumpBtn) {
+            const options = typeof game.getAvailableJumpStartLevels === 'function'
+                ? game.getAvailableJumpStartLevels()
+                : [];
+            jumpWrap.classList.toggle('is-hidden', options.length === 0);
+            if (options.length > 0) {
+                const currentValue = jumpSelect.value;
+                jumpSelect.innerHTML = options.map((opt) => {
+                    const label = `L${Math.floor(opt.level)} | $${Math.floor(opt.money)}`;
+                    return `<option value="${Math.floor(opt.level)}">${label}</option>`;
+                }).join('');
+                if (currentValue && options.some((o) => String(o.level) === String(currentValue))) {
+                    jumpSelect.value = currentValue;
+                }
+                const selected = options.find((o) => String(o.level) === String(jumpSelect.value)) || options[0];
+                if (jumpHint && selected) {
+                    jumpHint.textContent = `Start at level ${Math.floor(selected.level)} with $${Math.floor(selected.money)}, full EN, and no upgrades.`;
+                }
+                jumpBtn.disabled = !game.isGameOver;
+            }
         }
     }
 

@@ -401,6 +401,14 @@ class Game {
         return true;
     }
 
+    getAvailableJumpStartLevels() {
+        const entries = Object.entries(this.metaProgress?.bestMoneyByLevel || {})
+            .map(([level, money]) => ({ level: Math.floor(Number(level)), money: Math.floor(Number(money) || 0) }))
+            .filter((entry) => Number.isFinite(entry.level) && entry.level >= 2 && entry.money >= 0)
+            .sort((a, b) => a.level - b.level);
+        return entries;
+    }
+
     createUpgradeState() {
         const state = {};
         for (const [key, definition] of Object.entries(UpgradeDefinitions)) {
@@ -1270,6 +1278,28 @@ class Game {
         if (this.isAnimating || this.isGameOver) return false;
         if (this.pendingMissiles.length > 0) return false;
         this.advance();
+        return true;
+    }
+
+    startJumpRun(level) {
+        const jump = this.getAvailableJumpStartLevels().find((entry) => entry.level === Math.floor(Number(level)));
+        if (!jump) return false;
+        this.reset();
+        this.level = Math.max(1, jump.level);
+        this.money = Math.max(0, Math.floor(jump.money || 0));
+        this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
+        this.isUpgradeMenuOpen = false;
+        this.aliens = [];
+        this.missiles = [];
+        this.pendingMissiles = [];
+        this.explosions = [];
+        this.blastResidue = [];
+        this.enemyDeathFxEvents = [];
+        this.waveClearFxEvents = [];
+        this.incomingAliens = [];
+        this.spawnWave();
+        this.queueIncomingWavePreview(this.level + 1);
+        this.notify();
         return true;
     }
 

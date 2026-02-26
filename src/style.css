@@ -365,6 +365,59 @@ html, body {
     word-break: break-word;
 }
 
+.game-over-jump {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 1px solid rgba(0, 255, 102, 0.1);
+    background: rgba(0, 14, 7, 0.28);
+    padding: 8px;
+}
+
+.game-over-jump.is-hidden {
+    display: none;
+}
+
+.game-over-jump-label {
+    color: var(--green-secondary);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.game-over-jump-controls {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    align-items: center;
+}
+
+.game-over-jump-hint {
+    color: rgba(0, 170, 68, 0.9);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+}
+
+.terminal-select {
+    height: 32px;
+    min-width: 0;
+    padding: 4px 8px;
+    background: rgba(0, 8, 3, 0.95);
+    border: 1px solid var(--green-tertiary);
+    color: var(--green-primary);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 6px rgba(0, 255, 102, 0.15);
+}
+
+.terminal-select:focus {
+    outline: none;
+    border-color: var(--cyan-friendly);
+    box-shadow: 0 0 0 1px rgba(51, 230, 255, 0.18);
+}
+
 .upgrade-list {
     display: flex;
     flex-direction: column;

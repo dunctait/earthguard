@@ -68,6 +68,14 @@
                 <div class="ui-modal-body">
                     <div id="game-over-subtitle" class="game-over-subtitle">EARTH BREACHED</div>
                     <div id="game-over-stats" class="game-over-stats" aria-live="polite"></div>
+                    <div id="game-over-jump" class="game-over-jump">
+                        <div class="game-over-jump-label">JUMP START</div>
+                        <div class="game-over-jump-controls">
+                            <select id="jump-level-select" class="terminal-select" data-testid="jump-level-select"></select>
+                            <button id="jump-start-btn" class="terminal-btn upgrade-btn" type="button" data-testid="jump-start-btn">JUMP</button>
+                        </div>
+                        <div id="jump-start-hint" class="game-over-jump-hint">Start at a prior level with full EN, no upgrades, and your best recorded $ for that level.</div>
+                    </div>
                     <button id="play-again-btn" class="terminal-btn upgrade-btn" type="button" data-testid="play-again-btn">PLAY AGAIN</button>
                 </div>
             </div>

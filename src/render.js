@@ -23,6 +23,8 @@ class Renderer {
             'upgrade-menu-close-btn',
             'game-over-overlay',
             'play-again-btn',
+            'jump-level-select',
+            'jump-start-btn',
             'rot-left-big',
             'rot-left-small',
             'rot-right-small',
@@ -258,6 +260,15 @@ class Renderer {
         }
         if (this.dom['play-again-btn']) {
             this.dom['play-again-btn'].addEventListener('click', () => this.game.reset());
+        }
+        if (this.dom['jump-start-btn']) {
+            this.dom['jump-start-btn'].addEventListener('click', () => {
+                const level = Number(this.dom['jump-level-select']?.value || 0);
+                this.game.startJumpRun(level);
+            });
+        }
+        if (this.dom['jump-level-select']) {
+            this.dom['jump-level-select'].addEventListener('change', () => this.game.notify());
         }
     }
 
