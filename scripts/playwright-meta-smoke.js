@@ -8,15 +8,17 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 430, height: 932 } });
 
     await page.addInitScript(() => {
-        localStorage.setItem('earthguard.meta.v1', JSON.stringify({
-            schemaVersion: 1,
-            totalRuns: 4,
-            bestLevelReached: 6,
-            metaCurrency: 24,
-            metaUpgrades: {},
-            bestMoneyByLevel: { '2': 18, '4': 77, '6': 132 },
-            lastRun: null
-        }));
+        if (!localStorage.getItem('earthguard.meta.v1')) {
+            localStorage.setItem('earthguard.meta.v1', JSON.stringify({
+                schemaVersion: 1,
+                totalRuns: 4,
+                bestLevelReached: 6,
+                metaCurrency: 24,
+                metaUpgrades: {},
+                bestMoneyByLevel: { '2': 18, '4': 77, '6': 132 },
+                lastRun: null
+            }));
+        }
     });
 
     await page.goto(pathToFileURL(path.join(repoRoot, 'index.html')).href, { waitUntil: 'domcontentloaded' });
@@ -57,6 +59,15 @@ async function main() {
         upgradesBought: Object.values(window.game.upgrades).filter((u) => u.level > 0).length
     }));
 
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => window.game && window.renderer);
+    const afterReload = await page.evaluate(() => ({
+        salvage: Math.floor(window.game.metaProgress?.metaCurrency || 0),
+        reserveLevel: window.game.getMetaUpgradeLevel('startingReserve'),
+        startMoney: Math.floor(window.game.money || 0),
+        jumpLevels: Array.from(window.game.getAvailableJumpStartLevels() || []).map((j) => j.level)
+    }));
+
     if (before.jumpLevels.length === 0) {
         throw new Error('Expected jump-start options to be available');
     }
@@ -66,9 +77,12 @@ async function main() {
     if (afterJump.level !== 4 || afterJump.isGameOver || afterJump.upgradesBought !== 0) {
         throw new Error(`Jump start failed: ${JSON.stringify({ afterJump })}`);
     }
+    if (afterReload.reserveLevel < 1 || afterReload.salvage !== afterBuy.salvage) {
+        throw new Error(`Meta persistence reload failed: ${JSON.stringify({ afterBuy, afterReload })}`);
+    }
 
     await browser.close();
-    console.log(JSON.stringify({ ok: true, before, afterBuy, afterJump }, null, 2));
+    console.log(JSON.stringify({ ok: true, before, afterBuy, afterJump, afterReload }, null, 2));
 }
 
 main().catch((err) => {
