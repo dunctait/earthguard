@@ -457,6 +457,7 @@ class Game {
             metaCurrency: 0,
             metaUpgrades: {},
             bestMoneyByLevel: {},
+            preferredJumpStartLevel: null,
             lastRun: null
         };
     }
@@ -527,6 +528,19 @@ class Game {
             .filter((entry) => Number.isFinite(entry.level) && entry.level >= 2 && entry.money >= 0)
             .sort((a, b) => a.level - b.level);
         return entries;
+    }
+
+    getPreferredJumpStartLevel() {
+        const value = Math.floor(Number(this.metaProgress?.preferredJumpStartLevel) || 0);
+        return value >= 2 ? value : null;
+    }
+
+    setPreferredJumpStartLevel(level) {
+        if (!this.metaProgress) this.metaProgress = this.getDefaultMetaProgress();
+        const numericLevel = Math.floor(Number(level) || 0);
+        this.metaProgress.preferredJumpStartLevel = numericLevel >= 2 ? numericLevel : null;
+        this.saveMetaProgress();
+        return this.metaProgress.preferredJumpStartLevel;
     }
 
     getJumpStartPreview(level) {

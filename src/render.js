@@ -289,7 +289,13 @@ class Renderer {
             });
         }
         if (this.dom['jump-level-select']) {
-            this.dom['jump-level-select'].addEventListener('change', () => this.game.notify());
+            this.dom['jump-level-select'].addEventListener('change', () => {
+                const level = Number(this.dom['jump-level-select']?.value || 0);
+                if (typeof this.game.setPreferredJumpStartLevel === 'function') {
+                    this.game.setPreferredJumpStartLevel(level);
+                }
+                this.game.notify();
+            });
         }
         if (this.dom['meta-upgrade-list']) {
             this.dom['meta-upgrade-list'].addEventListener('click', (event) => {

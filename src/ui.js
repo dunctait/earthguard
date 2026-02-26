@@ -150,7 +150,11 @@ class EarthGuardUI {
         this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
         const maxEnergy = (typeof game.getMaxEnergy === 'function') ? game.getMaxEnergy() : game.config.MISSILE_ENERGY_MAX;
         this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${this.formatHudNumber(game.missileEnergy)}/${this.formatHudNumber(maxEnergy)}</span>${this.getHudDeltaMarkup('energy')}`;
-        this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${this.formatHudNumber(game.money)}</span>${this.getHudDeltaMarkup('money')}`;
+        const postBossPhase = Math.max(0, game.viewZoomStage || game.bossesDefeatedThisRun || 0);
+        const phaseMarkup = postBossPhase > 0
+            ? `<span class="hud-line hud-phase-line"><span class="hud-label">SECTOR</span><span class="hud-value hud-value-hypo">x${postBossPhase + 1}</span></span>`
+            : '';
+        this.el.money.innerHTML = `<span class="hud-line"><span class="hud-label">$</span><span class="hud-value">${this.formatHudNumber(game.money)}</span></span>${phaseMarkup}${this.getHudDeltaMarkup('money')}`;
         if (this.el['missiles-status']) {
             this.el['missiles-status'].innerHTML = `MISSILES TARGETED: <span class="hud-inline-value">${game.missilesLockedThisTurn}/${game.getMissilesPerTurn()}</span>`;
         }
@@ -287,11 +291,19 @@ class EarthGuardUI {
             const metaProgress = game.metaProgress || {};
             const lastRunMetaReward = Math.floor(metaProgress.lastRun?.metaReward || 0);
             const totalMetaCurrency = Math.floor(metaProgress.metaCurrency || 0);
+            const shots = Math.max(0, Math.floor(stats.missilesLaunched || 0));
+            const kills = Math.max(0, Math.floor(stats.kills || 0));
+            const exactHits = Math.max(0, Math.floor(stats.exactHitKills || 0));
+            const hitRate = shots > 0 ? Math.floor((kills / shots) * 100) : 0;
+            const bossesDefeated = Math.max(0, Math.floor(game.bossesDefeatedThisRun || 0));
             statsEl.innerHTML = [
                 `<div class="game-over-stat-row"><span class="hud-label">LEVEL</span><span class="hud-value">${Math.floor(game.level || 1)}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">CYCLES</span><span class="hud-value">${Math.floor(game.totalCycles || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">KILLS</span><span class="hud-value">${Math.floor(stats.kills || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">SHOTS</span><span class="hud-value">${Math.floor(stats.missilesLaunched || 0)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">KILLS</span><span class="hud-value">${kills}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">SHOTS</span><span class="hud-value">${shots}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">HIT RATE</span><span class="hud-value">${hitRate}%</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">EXACT</span><span class="hud-value">${exactHits}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">BOSSES</span><span class="hud-value">${bossesDefeated}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">$ RUN</span><span class="hud-value">${Math.floor(game.money || 0)}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">SALVAGE</span><span class="hud-value">+${lastRunMetaReward} (${totalMetaCurrency})</span></div>`,
                 `<div class="game-over-upgrades"><span class="hud-label">UPGRADES</span><span class="game-over-upgrade-list">${boughtSummary}</span></div>`
@@ -316,6 +328,12 @@ class EarthGuardUI {
                 }).join('');
                 if (currentValue && options.some((o) => String(o.level) === String(currentValue))) {
                     jumpSelect.value = currentValue;
+                } else {
+                    const preferredLevel = typeof game.getPreferredJumpStartLevel === 'function'
+                        ? game.getPreferredJumpStartLevel()
+                        : null;
+                    const preferred = options.find((o) => o.level === preferredLevel);
+                    jumpSelect.value = String((preferred || options[options.length - 1] || options[0]).level);
                 }
                 const selected = options.find((o) => String(o.level) === String(jumpSelect.value)) || options[0];
                 if (jumpHint && selected) {
