@@ -60,6 +60,7 @@ class EarthGuardUI {
             'meta-upgrade-overlay',
             'meta-upgrade-modal',
             'meta-upgrade-title',
+            'meta-upgrade-salvage',
             'meta-upgrade-close-btn',
             'meta-upgrade-list',
             'game-over-jump',
@@ -474,6 +475,10 @@ class EarthGuardUI {
             });
         }
         const metaList = this.el['meta-upgrade-list'];
+        if (this.el['meta-upgrade-salvage']) {
+            const salvage = Math.floor(game.metaProgress?.metaCurrency || 0);
+            this.el['meta-upgrade-salvage'].textContent = `SALVAGE ${salvage}`;
+        }
         if (!metaList) return;
         const metaUpgrades = typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : [];
         metaList.innerHTML = metaUpgrades.map((upgrade) => {
