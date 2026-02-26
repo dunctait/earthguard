@@ -389,6 +389,18 @@ class Game {
         this.saveMetaProgress();
     }
 
+    recordBestMoneyForLevel(level = this.level, money = this.money) {
+        if (!this.metaProgress) this.metaProgress = this.getDefaultMetaProgress();
+        const numericLevel = Math.max(1, Math.floor(level || 0));
+        const levelKey = String(numericLevel);
+        const moneyValue = Math.max(0, Math.floor(money || 0));
+        const previous = Math.floor(this.metaProgress.bestMoneyByLevel?.[levelKey] || 0);
+        if (moneyValue <= previous) return false;
+        this.metaProgress.bestMoneyByLevel[levelKey] = moneyValue;
+        this.saveMetaProgress();
+        return true;
+    }
+
     createUpgradeState() {
         const state = {};
         for (const [key, definition] of Object.entries(UpgradeDefinitions)) {
@@ -1194,6 +1206,7 @@ class Game {
             this.lastWaveClearBonus = this.getWaveClearSpeedBonus(this.levelCycles, this.level);
             this.lastWaveClearEnergyBonus = this.getWaveClearEnergyBonus(this.levelCycles, this.level);
             this.money += this.lastWaveClearBonus;
+            this.recordBestMoneyForLevel(this.level, this.money);
             this.missileEnergy = this.utils.clamp(
                 this.missileEnergy + this.lastWaveClearEnergyBonus,
                 0,
@@ -1289,6 +1302,7 @@ class Game {
                     if (exactHit) this.stats.exactHitKills += 1;
                     const reward = this.getMoneyPerKillReward(exactHit);
                     this.money += reward;
+                    this.recordBestMoneyForLevel(this.level, this.money);
                     this.missileEnergy = this.utils.clamp(
                         this.missileEnergy + this.getEnergyPerKillReward(),
                         0,
