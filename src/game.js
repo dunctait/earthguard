@@ -48,6 +48,7 @@ const GameConfig = {
     MONEY_PER_KILL: 10,
     ENERGY_PER_KILL: 2,
     EXACT_HIT_MONEY_MULTIPLIER: 2,
+    EXACT_HIT_MONEY_LEVEL_SCALE: 0.03,
     EXACT_HIT_RADIUS_FACTOR: 0.35,
     WAVE_CLEAR_BONUS_BASE: 12,
     WAVE_CLEAR_BONUS_DECAY_PER_CYCLE: 2,
@@ -931,7 +932,9 @@ class Game {
 
     getMoneyPerKillReward(exactHit = false) {
         const baseReward = this.config.MONEY_PER_KILL * (this.upgradeEffects.moneyPerKillMultiplier || 1);
-        return exactHit ? baseReward * this.config.EXACT_HIT_MONEY_MULTIPLIER : baseReward;
+        if (!exactHit) return baseReward;
+        const exactLevelScale = 1 + ((Math.max(1, this.level) - 1) * (this.config.EXACT_HIT_MONEY_LEVEL_SCALE || 0));
+        return baseReward * this.config.EXACT_HIT_MONEY_MULTIPLIER * exactLevelScale;
     }
 
     getEnergyPerKillReward() {
