@@ -27,6 +27,7 @@ class EarthGuardUI {
             'power-lock-marker',
             'fire-btn',
             'advance-btn',
+            'idle-cycle-btn',
             'upgrade-menu-btn',
             'upgrade-modal-overlay',
             'upgrade-menu',
@@ -167,6 +168,7 @@ class EarthGuardUI {
     renderButtons(game) {
         const fireBtn = this.el['fire-btn'];
         const advanceBtn = this.el['advance-btn'];
+        const idleCycleBtn = this.el['idle-cycle-btn'];
         const missilesLeft = game.getMissilesPerTurn() - game.missilesLockedThisTurn;
         const idleCost = game.getMissileEnergyCostForPower(game.config.MISSILE_MIN_ENERGY_COST);
         const currentCost = game.getMissileEnergyCostForPower(game.power || game.config.MISSILE_MIN_ENERGY_COST);
@@ -188,6 +190,12 @@ class EarthGuardUI {
         advanceBtn.disabled = game.isAnimating || game.isGameOver;
         advanceBtn.classList.toggle('is-disabled', game.isAnimating || game.isGameOver);
         advanceBtn.textContent = game.isAnimating ? 'CYCLING...' : 'CYCLE';
+        if (idleCycleBtn) {
+            const canIdleCycle = !game.isAnimating && !game.isGameOver && (game.pendingMissiles?.length || 0) === 0;
+            idleCycleBtn.disabled = !canIdleCycle;
+            idleCycleBtn.classList.toggle('is-disabled', !canIdleCycle);
+            idleCycleBtn.textContent = game.isAnimating ? '...' : 'IDLE CYCLE';
+        }
     }
 
     renderUpgrades(game) {

@@ -28,7 +28,8 @@ class Renderer {
             'rot-right-small',
             'rot-right-big',
             'fire-btn',
-            'advance-btn'
+            'advance-btn',
+            'idle-cycle-btn'
         ]);
         this.canvas = this.dom['game-canvas'];
         this.ctx = this.canvas.getContext('2d');
@@ -232,6 +233,9 @@ class Renderer {
         this.utils.bindPressHandlers(fireBtn, { onStart: startCharge, onEnd: stopCharge });
 
         this.dom['advance-btn'].addEventListener('click', () => this.game.advance());
+        if (this.dom['idle-cycle-btn']) {
+            this.dom['idle-cycle-btn'].addEventListener('click', () => this.game.idleCycle());
+        }
         if (this.dom['upgrade-menu-btn']) {
             this.dom['upgrade-menu-btn'].addEventListener('click', () => this.game.toggleUpgradeMenu());
         }

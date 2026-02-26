@@ -1266,6 +1266,13 @@ class Game {
         this.notify();
     }
 
+    idleCycle() {
+        if (this.isAnimating || this.isGameOver) return false;
+        if (this.pendingMissiles.length > 0) return false;
+        this.advance();
+        return true;
+    }
+
     reset() {
         this.level = 1;
         this.baseHP = this.config.STARTING_HP;
