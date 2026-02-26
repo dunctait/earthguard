@@ -262,6 +262,14 @@ const LevelDefinitions = {
             { type: 'saucer', sizeMultiplier: 1.2 },
             { type: 'saucer', sizeMultiplier: 1.2 }
         ]
+    },
+    12: {
+        enemies: [
+            { type: 'boss', sizeMultiplier: 2.8, hp: 8, speedMultiplier: 0.45, yBand: 0 },
+            { type: 'saucer', sizeMultiplier: 0.8, yBand: 1 },
+            { type: 'scout', sizeMultiplier: 0.75, yBand: 2 },
+            { type: 'scout', sizeMultiplier: 0.75, yBand: 1 }
+        ]
     }
 };
 
@@ -611,7 +619,9 @@ class Game {
             return levelDef.enemies.map((enemy) => ({
                 type: enemy.type || 'saucer',
                 sizeMultiplier: enemy.sizeMultiplier || 1,
-                yBand: enemy.yBand || 0
+                yBand: enemy.yBand || 0,
+                hp: enemy.hp || undefined,
+                speedMultiplier: enemy.speedMultiplier || 1
             }));
         }
 
@@ -687,7 +697,9 @@ class Game {
             const enemyTemplate = spec.enemies[i] || { type: 'saucer', sizeMultiplier: 1 };
             const sizeMultiplier = enemyTemplate.sizeMultiplier || 1;
             const bandOffset = (enemyTemplate.yBand || 0) * bandStep;
-            const isScout = (enemyTemplate.type || 'saucer') === 'scout';
+            const enemyType = enemyTemplate.type || 'saucer';
+            const isScout = enemyType === 'scout';
+            const isBoss = enemyType === 'boss';
             const radius = this.config.ALIEN_RADIUS * sizeMultiplier * (isScout ? 0.62 : 1);
             let x = 10 + Math.random() * (this.config.WORLD_WIDTH - 20);
             let y = startY - bandOffset;
@@ -721,12 +733,12 @@ class Game {
             aliens.push({
                 x,
                 y,
-                speed: spec.speed,
-                hp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && (i % 5 === 1)) ? 2 : 1),
-                maxHp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && (i % 5 === 1)) ? 2 : 1),
+                speed: spec.speed * (enemyTemplate.speedMultiplier || 1),
+                hp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1),
+                maxHp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1),
                 damage: this.config.ALIEN_DAMAGE,
                 radius,
-                type: enemyTemplate.type || 'saucer',
+                type: enemyType,
                 sizeMultiplier,
                 waveLevel: spec.level,
                 incoming,

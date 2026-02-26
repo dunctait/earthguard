@@ -836,6 +836,8 @@ class Renderer {
                 const distanceAlpha = Math.max(0.3, this.getDepthBrightness(pos.y) * 0.45);
                 if (alien.type === 'scout') {
                     this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, true);
+                } else if (alien.type === 'boss') {
+                    this.drawBossAlien(pos.x, pos.y, size, distanceAlpha * 0.9, alien);
                 } else {
                     this.drawUFO(pos.x, pos.y, size, distanceAlpha, alien);
                 }
@@ -852,10 +854,14 @@ class Renderer {
             const distanceAlpha = Math.max(0.7, this.getDepthBrightness(pos.y));
             if (alien.type === 'scout') {
                 this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, false);
+            } else if (alien.type === 'boss') {
+                this.drawBossAlien(pos.x, pos.y, size, distanceAlpha, alien);
             } else {
                 this.drawUFO(pos.x, pos.y, size, distanceAlpha, alien);
             }
         }
+
+        this.drawBossHud();
 
         ctx.restore();
 
@@ -1229,6 +1235,80 @@ class Renderer {
         this.clearGlow();
 
         this.drawAlienHpIndicator(x, drawY, size, alpha, alien);
+    }
+
+    drawBossAlien(x, y, size, alpha = 1, alien = null) {
+        const ctx = this.ctx;
+        const t = this.frameCount * 0.02;
+        const bobY = Math.sin(t + x * 0.01) * 1.8;
+        const drawY = y + bobY;
+        const w = size * 4.2;
+        const h = size * 1.4;
+
+        ctx.save();
+        this.setGlow(`rgba(255, 90, 90, ${0.28 * alpha})`, 12);
+        ctx.strokeStyle = `rgba(255, 90, 90, ${alpha})`;
+        ctx.fillStyle = `rgba(30, 4, 6, ${0.28 * alpha})`;
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x - w, drawY);
+        ctx.lineTo(x - w * 0.62, drawY - h);
+        ctx.lineTo(x + w * 0.62, drawY - h);
+        ctx.lineTo(x + w, drawY);
+        ctx.lineTo(x + w * 0.72, drawY + h * 0.92);
+        ctx.lineTo(x - w * 0.72, drawY + h * 0.92);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(255, 90, 90, ${alpha * 0.55})`;
+        ctx.lineWidth = 1;
+        for (let i = -2; i <= 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(x + i * (w * 0.22), drawY - h * 0.55);
+            ctx.lineTo(x + i * (w * 0.18), drawY + h * 0.45);
+            ctx.stroke();
+        }
+
+        this.drawAlienHpIndicator(x, drawY, size * 1.2, alpha, alien);
+        ctx.restore();
+        this.clearGlow();
+    }
+
+    drawBossHud() {
+        const boss = (this.game.aliens || []).find((a) => a.type === 'boss' && a.hp > 0);
+        if (!boss) return;
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = "700 10px 'Share Tech Mono', monospace";
+        ctx.fillStyle = 'rgba(255, 140, 140, 0.9)';
+        ctx.fillText('BOSS', w / 2, 16);
+
+        const maxHp = Math.max(1, boss.maxHp || boss.hp || 1);
+        const hp = Math.max(0, boss.hp || 0);
+        const spacing = 10;
+        const totalWidth = (maxHp - 1) * spacing;
+        const startX = (w / 2) - (totalWidth / 2);
+        for (let i = 0; i < maxHp; i++) {
+            const x = startX + (i * spacing);
+            ctx.save();
+            ctx.translate(x, 30);
+            ctx.rotate(Math.PI / 4);
+            ctx.lineWidth = 1;
+            const filled = i < hp;
+            ctx.strokeStyle = filled ? 'rgba(255,120,130,0.95)' : 'rgba(90,40,45,0.65)';
+            ctx.fillStyle = filled ? 'rgba(255,70,80,0.35)' : 'rgba(0,0,0,0)';
+            ctx.beginPath();
+            ctx.rect(-3, -3, 6, 6);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+        ctx.restore();
     }
 
     drawAlienHpIndicator(x, y, size, alpha = 1, alien = null) {
