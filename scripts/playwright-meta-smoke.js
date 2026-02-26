@@ -29,17 +29,27 @@ async function main() {
     // Open game-over modal and interact with meta + jump controls.
     await page.evaluate(() => window.game.triggerGameOver('EARTH BREACHED'));
     await page.waitForFunction(() => window.game.isGameOver === true);
+    await page.waitForFunction(() => {
+        const btn = document.querySelector('#game-over-continue-btn');
+        return btn && !btn.disabled;
+    });
     await page.evaluate(() => document.querySelector('#game-over-continue-btn')?.click());
     await page.waitForFunction(() => window.game.isGameOverSummaryOpen === true);
 
     const before = await page.evaluate(() => ({
         salvage: Math.floor(window.game.metaProgress?.metaCurrency || 0),
         jumpLevels: Array.from(document.querySelector('#jump-level-select')?.options || []).map((o) => Number(o.value)),
+        jumpSelected: Number(document.querySelector('#jump-level-select')?.value || 0),
         metaRows: Array.from(document.querySelectorAll('[data-meta-upgrade-key]')).map((el) => ({
             key: el.dataset.metaUpgradeKey,
             disabled: el.disabled,
             text: (el.textContent || '').trim()
         }))
+    }));
+
+    await page.evaluate(() => document.querySelector('#jump-highest-btn')?.click());
+    const afterHighest = await page.evaluate(() => ({
+        jumpSelected: Number(document.querySelector('#jump-level-select')?.value || 0)
     }));
 
     await page.evaluate(() => {
@@ -77,6 +87,9 @@ async function main() {
     if (before.jumpLevels.length === 0) {
         throw new Error('Expected jump-start options to be available');
     }
+    if (afterHighest.jumpSelected !== 6) {
+        throw new Error(`Highest jump helper failed: ${JSON.stringify({ before, afterHighest })}`);
+    }
     if (afterBuy.reserveLevel < 1 || afterBuy.salvage >= before.salvage) {
         throw new Error(`Meta upgrade purchase failed: ${JSON.stringify({ before, afterBuy })}`);
     }
@@ -91,7 +104,7 @@ async function main() {
     }
 
     await browser.close();
-    console.log(JSON.stringify({ ok: true, before, afterBuy, afterJump, afterReload }, null, 2));
+    console.log(JSON.stringify({ ok: true, before, afterHighest, afterBuy, afterJump, afterReload }, null, 2));
 }
 
 main().catch((err) => {

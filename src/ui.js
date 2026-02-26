@@ -49,6 +49,7 @@ class EarthGuardUI {
             'meta-upgrade-list',
             'game-over-jump',
             'jump-level-select',
+            'jump-highest-btn',
             'jump-start-btn',
             'jump-start-hint',
             'jump-start-preview'
@@ -315,6 +316,7 @@ class EarthGuardUI {
 
         const jumpWrap = this.el['game-over-jump'];
         const jumpSelect = this.el['jump-level-select'];
+        const jumpHighestBtn = this.el['jump-highest-btn'];
         const jumpBtn = this.el['jump-start-btn'];
         const jumpHint = this.el['jump-start-hint'];
         const jumpPreviewEl = this.el['jump-start-preview'];
@@ -323,6 +325,9 @@ class EarthGuardUI {
                 ? game.getAvailableJumpStartLevels()
                 : [];
             jumpWrap.classList.toggle('is-hidden', options.length === 0);
+            if (jumpHighestBtn) {
+                jumpHighestBtn.disabled = options.length === 0 || !game.isGameOver;
+            }
             if (options.length > 0) {
                 const currentValue = jumpSelect.value;
                 jumpSelect.innerHTML = options.map((opt) => {
@@ -402,11 +407,20 @@ class EarthGuardUI {
         const bestCurrentLevelMoney = Math.floor(metaProgress.bestMoneyByLevel?.[String(currentLevel)] || 0);
 
         if (careerEl) {
+            const bestMoneyEntries = Object.entries(metaProgress.bestMoneyByLevel || {})
+                .map(([level, money]) => ({ level: Math.floor(Number(level)), money: Math.floor(Number(money) || 0) }))
+                .filter((e) => Number.isFinite(e.level) && e.level >= 1)
+                .sort((a, b) => b.level - a.level)
+                .slice(0, 5);
+            const bestMoneyMarkup = bestMoneyEntries.length
+                ? bestMoneyEntries.map((e) => `L${e.level}:$${e.money}`).join(' • ')
+                : 'NONE';
             careerEl.innerHTML = [
                 `<div class="game-over-stat-row"><span class="hud-label">RUNS</span><span class="hud-value">${totalRuns}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">BEST LV</span><span class="hud-value">${bestLevelReached}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">BEST $ @ L${currentLevel}</span><span class="hud-value">${bestCurrentLevelMoney}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">JUMP PREF</span><span class="hud-value">${preferredJump ? `L${preferredJump}` : 'NONE'}</span></div>`
+                `<div class="game-over-stat-row"><span class="hud-label">JUMP PREF</span><span class="hud-value">${preferredJump ? `L${preferredJump}` : 'NONE'}</span></div>`,
+                `<div class="game-over-upgrades"><span class="hud-label">BEST $ BY LV</span><span class="game-over-upgrade-list">${bestMoneyMarkup}</span></div>`
             ].join('');
         }
 

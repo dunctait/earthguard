@@ -545,6 +545,11 @@ class Game {
         return entries;
     }
 
+    getHighestJumpStartLevel() {
+        const options = this.getAvailableJumpStartLevels();
+        return options.length ? options[options.length - 1] : null;
+    }
+
     getPreferredJumpStartLevel() {
         const value = Math.floor(Number(this.metaProgress?.preferredJumpStartLevel) || 0);
         return value >= 2 ? value : null;
@@ -1688,6 +1693,12 @@ class Game {
         this.queueIncomingWavePreview(this.level + 1);
         this.notify();
         return true;
+    }
+
+    startHighestJumpRun() {
+        const highest = this.getHighestJumpStartLevel();
+        if (!highest) return false;
+        return this.startJumpRun(highest.level);
     }
 
     reset() {

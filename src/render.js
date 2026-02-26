@@ -29,6 +29,7 @@ class Renderer {
             'play-again-btn',
             'meta-upgrade-list',
             'jump-level-select',
+            'jump-highest-btn',
             'jump-start-btn',
             'rot-left-big',
             'rot-left-small',
@@ -286,6 +287,20 @@ class Renderer {
             this.dom['jump-start-btn'].addEventListener('click', () => {
                 const level = Number(this.dom['jump-level-select']?.value || 0);
                 this.game.startJumpRun(level);
+            });
+        }
+        if (this.dom['jump-highest-btn']) {
+            this.dom['jump-highest-btn'].addEventListener('click', () => {
+                if (!this.dom['jump-level-select']) {
+                    this.game.startHighestJumpRun?.();
+                    return;
+                }
+                const highest = this.game.getHighestJumpStartLevel?.();
+                if (highest?.level) {
+                    this.dom['jump-level-select'].value = String(highest.level);
+                    this.game.setPreferredJumpStartLevel?.(highest.level);
+                    this.game.notify();
+                }
             });
         }
         if (this.dom['jump-level-select']) {
