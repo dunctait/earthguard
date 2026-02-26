@@ -347,13 +347,7 @@ class EarthGuardUI {
 
         const availableUpgradeCount = game.getAvailableUpgradeCount();
 
-        this.renderModal({
-            overlayEl: overlay,
-            modalEl: menu,
-            titleEl: this.el['upgrade-menu-title'],
-            isOpen: game.isUpgradeMenuOpen && !game.isGameOver,
-            titleText: 'UPGRADES'
-        });
+        this.renderNamedModal('upgrade-modal-overlay', 'upgrade-menu', 'upgrade-menu-title', game.isUpgradeMenuOpen && !game.isGameOver, 'UPGRADES');
         menuBtn.className = game.isUpgradeMenuOpen ? 'terminal-btn upgrade-btn owned' : 'terminal-btn upgrade-btn';
         menuBtn.textContent = game.isUpgradeMenuOpen
             ? `CLOSE UPGRADES (${availableUpgradeCount})`
@@ -391,13 +385,7 @@ class EarthGuardUI {
         const overlay = this.el['game-over-overlay'];
         const modal = this.el['game-over-modal'];
         if (!overlay || !modal) return;
-        this.renderModal({
-            overlayEl: overlay,
-            modalEl: modal,
-            titleEl: this.el['game-over-title'],
-            isOpen: !!(game.isGameOver && game.isGameOverSummaryOpen),
-            titleText: 'GAME OVER'
-        });
+        this.renderNamedModal('game-over-overlay', 'game-over-modal', 'game-over-title', !!(game.isGameOver && game.isGameOverSummaryOpen), 'GAME OVER');
         if (this.el['game-over-subtitle']) {
             this.el['game-over-subtitle'].textContent = game.gameOverReason || 'EARTH BREACHED';
         }
@@ -453,13 +441,7 @@ class EarthGuardUI {
         const overlay = this.el['splash-overlay'];
         const modal = this.el['splash-modal'];
         if (!overlay || !modal) return;
-        this.renderModal({
-            overlayEl: overlay,
-            modalEl: modal,
-            titleEl: this.el['splash-title'],
-            isOpen: !!game.isSplashOpen,
-            titleText: 'EARTHGUARD'
-        });
+        this.renderNamedModal('splash-overlay', 'splash-modal', 'splash-title', !!game.isSplashOpen, 'EARTHGUARD');
 
         this.renderJumpStartControls(game, {
             selectEl: this.el['splash-jump-level-select'],
@@ -500,13 +482,7 @@ class EarthGuardUI {
         const overlay = this.el['meta-upgrade-overlay'];
         const modal = this.el['meta-upgrade-modal'];
         if (overlay && modal) {
-            this.renderModal({
-                overlayEl: overlay,
-                modalEl: modal,
-                titleEl: this.el['meta-upgrade-title'],
-                isOpen: !!game.isMetaUpgradeModalOpen,
-                titleText: 'META UPGRADES'
-            });
+            this.renderNamedModal('meta-upgrade-overlay', 'meta-upgrade-modal', 'meta-upgrade-title', !!game.isMetaUpgradeModalOpen, 'META UPGRADES');
         }
         const metaList = this.el['meta-upgrade-list'];
         if (this.el['meta-upgrade-salvage']) {
@@ -620,6 +596,16 @@ class EarthGuardUI {
         if (titleEl && typeof titleText === 'string') {
             titleEl.textContent = titleText;
         }
+    }
+
+    renderNamedModal(overlayKey, modalKey, titleKey, isOpen, titleText) {
+        this.renderModal({
+            overlayEl: overlayKey ? this.el[overlayKey] : null,
+            modalEl: this.el[modalKey],
+            titleEl: titleKey ? this.el[titleKey] : null,
+            isOpen,
+            titleText
+        });
     }
 }
 

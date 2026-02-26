@@ -1151,14 +1151,20 @@ class Game {
     }
 
     emitStatusFx(title, subtitle = '', maxAge = 85) {
-        this.waveClearFxEvents.push({
+        this.pushFxEvent('waveClearFxEvents', {
             id: this.nextFxEventId++,
             title,
             subtitle,
             maxAge
-        });
-        if (this.waveClearFxEvents.length > 20) {
-            this.waveClearFxEvents.shift();
+        }, 20);
+    }
+
+    pushFxEvent(queueName, event, maxSize = 100) {
+        const queue = this[queueName];
+        if (!Array.isArray(queue)) return;
+        queue.push(event);
+        while (queue.length > maxSize) {
+            queue.shift();
         }
     }
 
@@ -1643,13 +1649,13 @@ class Game {
     }
 
     queueEnemyDeathFx(alien, exactHit = false) {
-        this.enemyDeathFxEvents.push({
+        this.pushFxEvent('enemyDeathFxEvents', {
             id: this.nextFxEventId++,
             x: alien.x,
             y: alien.y,
             radius: alien.radius * (exactHit ? 1.6 : 1.2),
             exactHit
-        });
+        }, 100);
         this.createBlastResidue(
             { x: alien.x, y: alien.y, radius: alien.radius * (exactHit ? 1.5 : 1.2) },
             {
@@ -1662,9 +1668,6 @@ class Game {
                 alphaRange: exactHit ? 0.28 : 0.2
             }
         );
-        if (this.enemyDeathFxEvents.length > 100) {
-            this.enemyDeathFxEvents.shift();
-        }
     }
 
     createBlastResidue(explosion, options = {}) {
