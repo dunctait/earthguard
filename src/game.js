@@ -341,6 +341,7 @@ class Game {
             schemaVersion: 1,
             totalRuns: 0,
             bestLevelReached: 0,
+            metaCurrency: 0,
             bestMoneyByLevel: {},
             lastRun: null
         };
@@ -378,14 +379,17 @@ class Game {
 
     updateMetaProgressFromRun() {
         if (!this.metaProgress) this.metaProgress = this.getDefaultMetaProgress();
+        const runMetaReward = this.getRunMetaCurrencyReward();
         this.metaProgress.totalRuns = (this.metaProgress.totalRuns || 0) + 1;
         this.metaProgress.bestLevelReached = Math.max(this.metaProgress.bestLevelReached || 0, this.level || 0);
+        this.metaProgress.metaCurrency = Math.max(0, Math.floor(this.metaProgress.metaCurrency || 0)) + runMetaReward;
         this.metaProgress.lastRun = {
             level: Math.floor(this.level || 0),
             totalCycles: Math.floor(this.totalCycles || 0),
             money: Math.floor(this.money || 0),
             kills: Math.floor(this.stats?.kills || 0),
-            reason: this.gameOverReason || ''
+            reason: this.gameOverReason || '',
+            metaReward: runMetaReward
         };
         this.saveMetaProgress();
     }
@@ -408,6 +412,12 @@ class Game {
             .filter((entry) => Number.isFinite(entry.level) && entry.level >= 2 && entry.money >= 0)
             .sort((a, b) => a.level - b.level);
         return entries;
+    }
+
+    getRunMetaCurrencyReward() {
+        const levelPart = Math.max(0, Math.floor(this.level || 0) - 1);
+        const killsPart = Math.floor((this.stats?.kills || 0) / 5);
+        return Math.max(1, levelPart + killsPart);
     }
 
     createUpgradeState() {

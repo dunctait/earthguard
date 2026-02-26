@@ -277,12 +277,16 @@ class EarthGuardUI {
                     .map((u) => `${u.name} L${u.level}`)
                     .join(' • ')
                 : 'NONE';
+            const metaProgress = game.metaProgress || {};
+            const lastRunMetaReward = Math.floor(metaProgress.lastRun?.metaReward || 0);
+            const totalMetaCurrency = Math.floor(metaProgress.metaCurrency || 0);
             statsEl.innerHTML = [
                 `<div class="game-over-stat-row"><span class="hud-label">LEVEL</span><span class="hud-value">${Math.floor(game.level || 1)}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">CYCLES</span><span class="hud-value">${Math.floor(game.totalCycles || 0)}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">KILLS</span><span class="hud-value">${Math.floor(stats.kills || 0)}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">SHOTS</span><span class="hud-value">${Math.floor(stats.missilesLaunched || 0)}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">$ RUN</span><span class="hud-value">${Math.floor(game.money || 0)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">SALVAGE</span><span class="hud-value">+${lastRunMetaReward} (${totalMetaCurrency})</span></div>`,
                 `<div class="game-over-upgrades"><span class="hud-label">UPGRADES</span><span class="game-over-upgrade-list">${boughtSummary}</span></div>`
             ].join('');
         }
