@@ -442,6 +442,23 @@ class Game {
         return entries;
     }
 
+    getJumpStartPreview(level) {
+        const numericLevel = Math.floor(Number(level) || 0);
+        const jump = this.getAvailableJumpStartLevels().find((entry) => entry.level === numericLevel);
+        if (!jump) return null;
+        const waveSpec = this.getWaveSpec(numericLevel);
+        const startBonuses = this.getMetaStartBonuses();
+        return {
+            level: numericLevel,
+            money: Math.floor(jump.money || 0),
+            energy: this.config.MISSILE_ENERGY_MAX,
+            enemyCount: Math.floor(waveSpec.alienCount || 0),
+            enemySpeed: +(waveSpec.speed || 0).toFixed(1),
+            startBonusMoney: Math.floor(startBonuses.money || 0),
+            startBonusEnergy: Math.floor(startBonuses.energy || 0)
+        };
+    }
+
     getMetaUpgradeLevel(key) {
         return Math.max(0, Math.floor(this.metaProgress?.metaUpgrades?.[key] || 0));
     }

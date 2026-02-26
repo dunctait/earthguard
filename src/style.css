@@ -399,6 +399,16 @@ html, body {
     line-height: 1.25;
 }
 
+.game-over-jump-preview {
+    color: rgba(120, 255, 170, 0.9);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    line-height: 1.25;
+    border: 1px dashed rgba(0, 170, 68, 0.18);
+    background: rgba(0, 10, 5, 0.2);
+    padding: 5px 6px;
+}
+
 .terminal-select {
     height: 32px;
     min-width: 0;

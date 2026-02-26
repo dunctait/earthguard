@@ -45,7 +45,8 @@ class EarthGuardUI {
             'game-over-jump',
             'jump-level-select',
             'jump-start-btn',
-            'jump-start-hint'
+            'jump-start-hint',
+            'jump-start-preview'
         ]) : {};
     }
 
@@ -297,6 +298,7 @@ class EarthGuardUI {
         const jumpSelect = this.el['jump-level-select'];
         const jumpBtn = this.el['jump-start-btn'];
         const jumpHint = this.el['jump-start-hint'];
+        const jumpPreviewEl = this.el['jump-start-preview'];
         if (jumpWrap && jumpSelect && jumpBtn) {
             const options = typeof game.getAvailableJumpStartLevels === 'function'
                 ? game.getAvailableJumpStartLevels()
@@ -314,6 +316,22 @@ class EarthGuardUI {
                 const selected = options.find((o) => String(o.level) === String(jumpSelect.value)) || options[0];
                 if (jumpHint && selected) {
                     jumpHint.textContent = `Start at level ${Math.floor(selected.level)} with $${Math.floor(selected.money)}, full EN, and no upgrades.`;
+                }
+                if (jumpPreviewEl && selected && typeof game.getJumpStartPreview === 'function') {
+                    const preview = game.getJumpStartPreview(selected.level);
+                    if (preview) {
+                        const bonusParts = [];
+                        if (preview.startBonusMoney > 0) bonusParts.push(`+$${preview.startBonusMoney}`);
+                        if (preview.startBonusEnergy > 0) bonusParts.push(`+EN ${preview.startBonusEnergy}`);
+                        jumpPreviewEl.innerHTML = [
+                            `<span class="hud-label">WAVE</span> <span class="hud-inline-value">L${preview.level}</span>`,
+                            `<span class="hud-label">THREATS</span> <span class="hud-inline-value">${preview.enemyCount}</span>`,
+                            `<span class="hud-label">SPD</span> <span class="hud-inline-value">${Math.floor(preview.enemySpeed)}</span>`,
+                            `<span class="hud-label">START</span> <span class="hud-inline-value">$${preview.money}${bonusParts.length ? ` ${bonusParts.join(' ')}` : ''}</span>`
+                        ].join(' &nbsp; ');
+                    } else {
+                        jumpPreviewEl.textContent = '';
+                    }
                 }
                 jumpBtn.disabled = !game.isGameOver;
             }
