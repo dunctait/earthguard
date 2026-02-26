@@ -313,6 +313,48 @@ html, body {
     gap: 8px;
 }
 
+.game-over-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border: 1px solid rgba(0, 255, 102, 0.1);
+    background: rgba(0, 18, 8, 0.35);
+    padding: 8px;
+    min-width: 0;
+}
+
+.game-over-stat-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.game-over-stat-row .hud-label {
+    color: var(--green-secondary);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+}
+
+.game-over-stat-row .hud-value {
+    font-size: 12px;
+}
+
+.game-over-upgrades {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 2px;
+}
+
+.game-over-upgrade-list {
+    color: var(--green-secondary);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
 .upgrade-list {
     display: flex;
     flex-direction: column;

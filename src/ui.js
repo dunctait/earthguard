@@ -35,6 +35,7 @@ class EarthGuardUI {
             'game-over-modal',
             'game-over-title',
             'game-over-subtitle',
+            'game-over-stats',
             'play-again-btn'
         ]) : {};
     }
@@ -218,6 +219,26 @@ class EarthGuardUI {
         });
         if (this.el['game-over-subtitle']) {
             this.el['game-over-subtitle'].textContent = game.gameOverReason || 'EARTH BREACHED';
+        }
+        const statsEl = this.el['game-over-stats'];
+        if (statsEl) {
+            const stats = game.stats || {};
+            const boughtUpgrades = Object.values(game.upgrades || {}).filter((u) => (u?.level || 0) > 0);
+            const boughtSummary = boughtUpgrades.length
+                ? boughtUpgrades
+                    .slice()
+                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                    .map((u) => `${u.name} L${u.level}`)
+                    .join(' • ')
+                : 'NONE';
+            statsEl.innerHTML = [
+                `<div class="game-over-stat-row"><span class="hud-label">LEVEL</span><span class="hud-value">${Math.floor(game.level || 1)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">CYCLES</span><span class="hud-value">${Math.floor(game.totalCycles || 0)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">KILLS</span><span class="hud-value">${Math.floor(stats.kills || 0)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">SHOTS</span><span class="hud-value">${Math.floor(stats.missilesLaunched || 0)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">$ RUN</span><span class="hud-value">${Math.floor(game.money || 0)}</span></div>`,
+                `<div class="game-over-upgrades"><span class="hud-label">UPGRADES</span><span class="game-over-upgrade-list">${boughtSummary}</span></div>`
+            ].join('');
         }
     }
 
