@@ -148,7 +148,8 @@ class EarthGuardUI {
         const liveBonus = game.getWaveClearSpeedBonus(displayedCycle, game.level);
         this.el.level.innerHTML = `<span class="hud-line"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-line"><span class="hud-label">CYCLE</span><span class="hud-value">${displayedCycle}</span></span><span class="hud-line"><span class="hud-label">BONUS</span><span class="hud-value hud-value-hypo">+$${liveBonus}</span></span>${this.getWaveBonusMarkup()}`;
         this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
-        this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${this.formatHudNumber(game.missileEnergy)}/${this.formatHudNumber(game.config.MISSILE_ENERGY_MAX)}</span>${this.getHudDeltaMarkup('energy')}`;
+        const maxEnergy = (typeof game.getMaxEnergy === 'function') ? game.getMaxEnergy() : game.config.MISSILE_ENERGY_MAX;
+        this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${this.formatHudNumber(game.missileEnergy)}/${this.formatHudNumber(maxEnergy)}</span>${this.getHudDeltaMarkup('energy')}`;
         this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${this.formatHudNumber(game.money)}</span>${this.getHudDeltaMarkup('money')}`;
         if (this.el['missiles-status']) {
             this.el['missiles-status'].innerHTML = `MISSILES TARGETED: <span class="hud-inline-value">${game.missilesLockedThisTurn}/${game.getMissilesPerTurn()}</span>`;

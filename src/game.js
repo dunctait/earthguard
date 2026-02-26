@@ -71,8 +71,18 @@ const GameConfig = {
 
     // View / presentation
     DEFAULT_VIEW_ZOOM: 1,
-    POST_BOSS_ZOOM_OUT: 0.88
+    POST_BOSS_ZOOM_OUT: 0.88,
+    POST_BOSS_ZOOM_STEP: 0.08,
+    POST_BOSS_ZOOM_MIN: 0.72
 };
+
+function buildProgressionTiers(levels, factory) {
+    return Array.from({ length: levels }, (_, i) => factory(i));
+}
+
+function round2(value) {
+    return Math.round(value * 100) / 100;
+}
 
 const UpgradeDefinitions = {
     targetAreas: {
@@ -106,11 +116,15 @@ const UpgradeDefinitions = {
         name: 'Blast Radius',
         description: 'Increase explosion radius for all missiles.',
         stackingMode: 'replace',
-        tiers: [
-            { moneyCost: 14, energyCost: 2, radiusMultiplier: 1.60, label: '+60%' },
-            { moneyCost: 34, energyCost: 4, radiusMultiplier: 2.05, label: '+105%' },
-            { moneyCost: 70, energyCost: 6, radiusMultiplier: 2.35, label: '+135%' }
-        ],
+        tiers: buildProgressionTiers(10, (i) => {
+            const radiusMultiplier = round2(1.25 + ((i + 1) * 0.14));
+            return {
+                moneyCost: Math.floor(14 * Math.pow(1.48, i)),
+                energyCost: Math.max(1, Math.floor(2 + (i * 0.9))),
+                radiusMultiplier,
+                label: `+${Math.round((radiusMultiplier - 1) * 100)}%`
+            };
+        }),
         uiLabelForTier: (tier) => tier.label || `x${tier.radiusMultiplier ?? 1}`,
         apply: ({ effects, tier }) => {
             effects.blastRadiusMultiplier = tier.radiusMultiplier || 1;
@@ -121,11 +135,15 @@ const UpgradeDefinitions = {
         name: 'Missile Racks',
         description: 'Adds one missile slot per cycle per level.',
         stackingMode: 'replace',
-        tiers: [
-            { moneyCost: 22, energyCost: 4, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
-            { moneyCost: 48, energyCost: 6, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
-            { moneyCost: 95, energyCost: 6, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
-        ],
+        tiers: buildProgressionTiers(10, (i) => {
+            const missilesPerTurnBonus = Math.min(8, Math.max(1, Math.round(1 + (i * 0.7))));
+            return {
+                moneyCost: Math.floor(22 * Math.pow(1.52, i)),
+                energyCost: Math.max(2, Math.floor(4 + (i * 0.9))),
+                missilesPerTurnBonus,
+                label: `+${missilesPerTurnBonus} missile/cycle`
+            };
+        }),
         uiLabelForTier: (tier) => tier.label || `+${tier.missilesPerTurnBonus || 0} missile/cycle`,
         apply: ({ effects, tier }) => {
             effects.missilesPerTurnBonus = tier.missilesPerTurnBonus || 0;
@@ -136,11 +154,15 @@ const UpgradeDefinitions = {
         name: 'Bounty Link',
         description: 'Multiply cash paid per enemy kill.',
         stackingMode: 'replace',
-        tiers: [
-            { moneyCost: 20, energyCost: 2, moneyPerKillMultiplier: 1.20, label: '1.20x $ / kill' },
-            { moneyCost: 45, energyCost: 4, moneyPerKillMultiplier: 1.40, label: '1.40x $ / kill' },
-            { moneyCost: 80, energyCost: 6, moneyPerKillMultiplier: 1.60, label: '1.60x $ / kill' }
-        ],
+        tiers: buildProgressionTiers(10, (i) => {
+            const moneyPerKillMultiplier = round2(1 + ((i + 1) * 0.1));
+            return {
+                moneyCost: Math.floor(20 * Math.pow(1.42, i)),
+                energyCost: Math.max(1, Math.floor(2 + (i * 0.6))),
+                moneyPerKillMultiplier,
+                label: `${moneyPerKillMultiplier.toFixed(2)}x $ / kill`
+            };
+        }),
         uiLabelForTier: (tier) => tier.label || `${tier.moneyPerKillMultiplier || 1}x $ / kill`,
         apply: ({ effects, tier }) => {
             effects.moneyPerKillMultiplier = tier.moneyPerKillMultiplier || 1;
@@ -151,11 +173,15 @@ const UpgradeDefinitions = {
         name: 'Energy Harvest',
         description: 'Multiply energy restored per enemy kill.',
         stackingMode: 'replace',
-        tiers: [
-            { moneyCost: 24, energyCost: 2, energyPerKillMultiplier: 1.20, label: '1.20x EN / kill' },
-            { moneyCost: 50, energyCost: 4, energyPerKillMultiplier: 1.40, label: '1.40x EN / kill' },
-            { moneyCost: 90, energyCost: 6, energyPerKillMultiplier: 1.60, label: '1.60x EN / kill' }
-        ],
+        tiers: buildProgressionTiers(10, (i) => {
+            const energyPerKillMultiplier = round2(1 + ((i + 1) * 0.1));
+            return {
+                moneyCost: Math.floor(24 * Math.pow(1.42, i)),
+                energyCost: Math.max(1, Math.floor(2 + (i * 0.6))),
+                energyPerKillMultiplier,
+                label: `${energyPerKillMultiplier.toFixed(2)}x EN / kill`
+            };
+        }),
         uiLabelForTier: (tier) => tier.label || `${tier.energyPerKillMultiplier || 1}x EN / kill`,
         apply: ({ effects, tier }) => {
             effects.energyPerKillMultiplier = tier.energyPerKillMultiplier || 1;
@@ -166,11 +192,15 @@ const UpgradeDefinitions = {
         name: 'Energy Efficiency',
         description: 'Reduce missile energy cost by 10% per level.',
         stackingMode: 'replace',
-        tiers: [
-            { moneyCost: 24, energyCost: 3, costReductionPct: 20, label: '-20% cost' },
-            { moneyCost: 48, energyCost: 5, costReductionPct: 40, label: '-40% cost' },
-            { moneyCost: 85, energyCost: 6, costReductionPct: 60, label: '-60% cost' }
-        ],
+        tiers: buildProgressionTiers(10, (i) => {
+            const costReductionPct = Math.min(70, (i + 1) * 7);
+            return {
+                moneyCost: Math.floor(24 * Math.pow(1.44, i)),
+                energyCost: Math.max(2, Math.floor(3 + (i * 0.7))),
+                costReductionPct,
+                label: `-${costReductionPct}% cost`
+            };
+        }),
         uiLabelForTier: (tier) => tier.label || `-${tier.costReductionPct || 0}% cost`,
         apply: ({ effects, tier }) => {
             effects.energyCostReductionPct = (tier.costReductionPct || 0) / 100;
@@ -181,11 +211,15 @@ const UpgradeDefinitions = {
         name: 'Reactor Regen',
         description: 'Restore more energy after each cycle.',
         stackingMode: 'replace',
-        tiers: [
-            { moneyCost: 22, energyCost: 3, regenBonus: 3, label: '+3 EN / cycle' },
-            { moneyCost: 45, energyCost: 5, regenBonus: 6, label: '+6 EN / cycle' },
-            { moneyCost: 80, energyCost: 6, regenBonus: 9, label: '+9 EN / cycle' }
-        ],
+        tiers: buildProgressionTiers(10, (i) => {
+            const regenBonus = (i + 1) * 2;
+            return {
+                moneyCost: Math.floor(22 * Math.pow(1.43, i)),
+                energyCost: Math.max(2, Math.floor(3 + (i * 0.7))),
+                regenBonus,
+                label: `+${regenBonus} EN / cycle`
+            };
+        }),
         uiLabelForTier: (tier) => tier.label || `+${tier.regenBonus || 0} EN / cycle`,
         apply: ({ effects, tier }) => {
             effects.energyRegenBonus = tier.regenBonus || 0;
@@ -196,11 +230,15 @@ const UpgradeDefinitions = {
         name: 'Trajectory Processor',
         description: 'Extends aiming guide visibility by reducing fade falloff.',
         stackingMode: 'replace',
-        tiers: [
-            { moneyCost: 18, energyCost: 1, fadeStrengthMultiplier: 0.85, label: 'Longer guide I' },
-            { moneyCost: 40, energyCost: 3, fadeStrengthMultiplier: 0.70, label: 'Longer guide II' },
-            { moneyCost: 75, energyCost: 6, fadeStrengthMultiplier: 0.55, label: 'Longer guide III' }
-        ],
+        tiers: buildProgressionTiers(10, (i) => {
+            const fadeStrengthMultiplier = round2(Math.max(0.25, 0.95 - ((i + 1) * 0.06)));
+            return {
+                moneyCost: Math.floor(18 * Math.pow(1.4, i)),
+                energyCost: Math.max(0, Math.floor(1 + (i * 0.6))),
+                fadeStrengthMultiplier,
+                label: `Longer guide ${i + 1}`
+            };
+        }),
         uiLabelForTier: (tier) => tier.label || 'Longer guide',
         apply: ({ effects, tier }) => {
             effects.trajectoryFadeStrengthMultiplier = tier.fadeStrengthMultiplier || 1;
@@ -217,6 +255,25 @@ const UpgradeDefinitions = {
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
             effects.powerMemoryEnabled = true;
+        }
+    },
+    capacitorBank: {
+        key: 'capacitorBank',
+        name: 'Capacitor Bank',
+        description: 'Increase maximum energy storage.',
+        stackingMode: 'replace',
+        tiers: buildProgressionTiers(10, (i) => {
+            const maxEnergyBonus = (i + 1) * 10;
+            return {
+                moneyCost: Math.floor(16 * Math.pow(1.42, i)),
+                energyCost: Math.max(1, Math.floor(2 + (i * 0.7))),
+                maxEnergyBonus,
+                label: `+EN CAP ${maxEnergyBonus}`
+            };
+        }),
+        uiLabelForTier: (tier) => tier.label || `+EN CAP ${tier.maxEnergyBonus || 0}`,
+        apply: ({ effects, tier }) => {
+            effects.maxEnergyBonus = tier.maxEnergyBonus || 0;
         }
     },
     energyResupply: {
@@ -236,12 +293,12 @@ const UpgradeDefinitions = {
             };
         },
         uiLabelForTier: (tier) => tier.label || `+${tier.energyGain || 0} EN`,
-        canPurchase: ({ game }) => game.missileEnergy < game.config.MISSILE_ENERGY_MAX,
+        canPurchase: ({ game }) => game.missileEnergy < game.getMaxEnergy(),
         onPurchase: ({ game, tier }) => {
             game.missileEnergy = game.utils.clamp(
                 game.missileEnergy + (tier.energyGain || 0),
                 0,
-                game.config.MISSILE_ENERGY_MAX
+                game.getMaxEnergy()
             );
         }
     }
@@ -267,12 +324,26 @@ const LevelDefinitions = {
             { type: 'saucer', sizeMultiplier: 1.2 }
         ]
     },
+    10: {
+        enemies: [
+            { type: 'boss', sizeMultiplier: 2.3, hp: 7, speedMultiplier: 0.42, yBand: 0 },
+            { type: 'saucer', sizeMultiplier: 0.72, yBand: 1 },
+            { type: 'saucer', sizeMultiplier: 0.72, yBand: 1 },
+            { type: 'scout', sizeMultiplier: 0.65, yBand: 2 },
+            { type: 'scout', sizeMultiplier: 0.65, yBand: 2 },
+            { type: 'scout', sizeMultiplier: 0.65, yBand: 1 },
+            { type: 'saucer', sizeMultiplier: 0.7, yBand: 2 }
+        ]
+    },
     12: {
         enemies: [
             { type: 'boss', sizeMultiplier: 2.8, hp: 8, speedMultiplier: 0.45, yBand: 0 },
-            { type: 'saucer', sizeMultiplier: 0.8, yBand: 1 },
-            { type: 'scout', sizeMultiplier: 0.75, yBand: 2 },
-            { type: 'scout', sizeMultiplier: 0.75, yBand: 1 }
+            { type: 'saucer', sizeMultiplier: 0.78, yBand: 1 },
+            { type: 'saucer', sizeMultiplier: 0.76, yBand: 2 },
+            { type: 'scout', sizeMultiplier: 0.72, yBand: 2 },
+            { type: 'scout', sizeMultiplier: 0.72, yBand: 1 },
+            { type: 'scout', sizeMultiplier: 0.72, yBand: 2 },
+            { type: 'saucer', sizeMultiplier: 0.74, yBand: 1 }
         ]
     }
 };
@@ -319,7 +390,7 @@ class Game {
         this.power = 0;
         this.isCharging = false;
         this.missilesLockedThisTurn = 0;
-        this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
+        this.missileEnergy = this.getMaxEnergy();
         this.missilesLaunchedThisCycle = 0;
         this.lastLockedPower = 0;
 
@@ -333,6 +404,7 @@ class Game {
         this.lastWaveClearBonus = 0;
         this.lastWaveClearEnergyBonus = 0;
         this.viewZoomTarget = this.config.DEFAULT_VIEW_ZOOM || 1;
+        this.viewZoomStage = 0;
         this.bossesDefeatedThisRun = 0;
         this.stats = {
             missilesTargeted: 0,
@@ -466,7 +538,7 @@ class Game {
         return {
             level: numericLevel,
             money: Math.floor(jump.money || 0),
-            energy: this.config.MISSILE_ENERGY_MAX,
+            energy: this.getMaxEnergy(),
             enemyCount: Math.floor(waveSpec.alienCount || 0),
             enemySpeed: +(waveSpec.speed || 0).toFixed(1),
             startBonusMoney: Math.floor(startBonuses.money || 0),
@@ -545,7 +617,7 @@ class Game {
             this.recordBestMoneyForLevel(this.level, this.money);
         }
         if (bonuses.energy > 0) {
-            this.missileEnergy = this.utils.clamp(this.missileEnergy + bonuses.energy, 0, this.config.MISSILE_ENERGY_MAX);
+            this.missileEnergy = this.utils.clamp(this.missileEnergy + bonuses.energy, 0, this.getMaxEnergy());
         }
     }
 
@@ -574,9 +646,14 @@ class Game {
             energyPerKillMultiplier: 1,
             energyCostReductionPct: 0,
             energyRegenBonus: 0,
+            maxEnergyBonus: 0,
             trajectoryFadeStrengthMultiplier: 1,
             powerMemoryEnabled: false
         };
+    }
+
+    getMaxEnergy() {
+        return Math.max(1, Math.floor((this.config.MISSILE_ENERGY_MAX || 0) + (this.upgradeEffects?.maxEnergyBonus || 0)));
     }
 
     rebuildUpgradeEffects() {
@@ -646,6 +723,11 @@ class Game {
         if (level >= 8) {
             sizeMultiplier = Math.max(0.55, 0.9 - ((level - 8) * 0.05));
         }
+        const postBossStage = this.viewZoomStage || 0;
+        if (postBossStage > 0 && level > 12) {
+            alienCount = Math.min(18, alienCount + postBossStage);
+            sizeMultiplier = Math.max(0.45, sizeMultiplier - (postBossStage * 0.04));
+        }
 
         const useBandedRows = level >= 4;
         if (level >= 8) {
@@ -674,7 +756,10 @@ class Game {
         const lateStart = this.config.ALIEN_SPEED_LATEGAME_BONUS_START_LEVEL || 8;
         const midBonus = Math.max(0, level - midStart + 1) * (this.config.ALIEN_SPEED_MIDGAME_BONUS_PER_LEVEL || 0);
         const lateBonus = Math.max(0, level - lateStart + 1) * (this.config.ALIEN_SPEED_LATEGAME_BONUS_PER_LEVEL || 0);
-        return base + midBonus + lateBonus;
+        const postBossSpeedBonus = ((this.viewZoomStage || 0) > 0 && level > 12)
+            ? ((this.viewZoomStage || 0) * 0.5)
+            : 0;
+        return base + midBonus + lateBonus + postBossSpeedBonus;
     }
 
     createAliensFromWaveSpec(spec, incoming = false) {
@@ -753,7 +838,8 @@ class Game {
                 waveLevel: spec.level,
                 incoming,
                 zigzagDir: isScout ? (Math.random() > 0.5 ? 1 : -1) : 0,
-                zigzagSpeedX: isScout ? (1.4 + (Math.random() * 0.8)) : 0,
+                zigzagSpeedX: isScout ? (4.2 + (Math.random() * 2.2)) : 0,
+                zigzagRunRemaining: isScout ? (2.6 + (Math.random() * 4.2)) : 0,
                 bossPhase: isBoss ? (Math.random() * Math.PI * 2) : 0,
                 bossDriftAmplitude: isBoss ? (6 + (Math.random() * 2)) : 0,
                 bossDriftSpeed: isBoss ? (0.045 + (Math.random() * 0.02)) : 0
@@ -1015,7 +1101,7 @@ class Game {
             this.missilesLockedThisTurn++;
             this.stats.missilesTargeted += 1;
             this.lastLockedPower = this.power;
-            this.missileEnergy = this.utils.clamp(this.missileEnergy - energyCost, 0, this.config.MISSILE_ENERGY_MAX);
+            this.missileEnergy = this.utils.clamp(this.missileEnergy - energyCost, 0, this.getMaxEnergy());
             this.power = 0;
             // Auto-cycle when all missiles are locked (upgrade-gated).
             if (this.hasAutoCycle() && this.missilesLockedThisTurn >= this.getMissilesPerTurn()) {
@@ -1211,7 +1297,7 @@ class Game {
         this.missileEnergy = this.utils.clamp(
             this.missileEnergy - nextTier.energyCost,
             0,
-            this.config.MISSILE_ENERGY_MAX
+            this.getMaxEnergy()
         );
         upgrade.level += 1;
         if (typeof upgrade.onPurchase === 'function') {
@@ -1276,15 +1362,7 @@ class Game {
         for (const alien of this.aliens) {
             alien.y -= alien.speed / totalFrames;
             if (alien.type === 'scout') {
-                alien.x += ((alien.zigzagDir || 1) * (alien.zigzagSpeedX || 2.6)) / totalFrames;
-                const edgePad = 4 + (alien.radius || 0);
-                if (alien.x <= edgePad) {
-                    alien.x = edgePad;
-                    alien.zigzagDir = 1;
-                } else if (alien.x >= (this.config.WORLD_WIDTH - edgePad)) {
-                    alien.x = this.config.WORLD_WIDTH - edgePad;
-                    alien.zigzagDir = -1;
-                }
+                this.advanceScoutZigZag(alien, totalFrames, 1);
             } else if (alien.type === 'boss') {
                 alien.bossPhase = (alien.bossPhase || 0) + (alien.bossDriftSpeed || 0.05);
                 const centerX = this.config.WORLD_WIDTH / 2;
@@ -1298,15 +1376,7 @@ class Game {
         for (const alien of this.incomingAliens) {
             alien.y -= (alien.speed * 0.55) / totalFrames;
             if (alien.type === 'scout') {
-                alien.x += ((alien.zigzagDir || 1) * (alien.zigzagSpeedX || 2.6) * 0.65) / totalFrames;
-                const edgePad = 4 + (alien.radius || 0);
-                if (alien.x <= edgePad) {
-                    alien.x = edgePad;
-                    alien.zigzagDir = 1;
-                } else if (alien.x >= (this.config.WORLD_WIDTH - edgePad)) {
-                    alien.x = this.config.WORLD_WIDTH - edgePad;
-                    alien.zigzagDir = -1;
-                }
+                this.advanceScoutZigZag(alien, totalFrames, 0.65);
             } else if (alien.type === 'boss') {
                 alien.bossPhase = (alien.bossPhase || 0) + ((alien.bossDriftSpeed || 0.05) * 0.55);
                 const centerX = this.config.WORLD_WIDTH / 2;
@@ -1320,6 +1390,27 @@ class Game {
 
         for (const explosion of this.explosions) {
             explosion.age++;
+        }
+    }
+
+    advanceScoutZigZag(alien, totalFrames, speedScale = 1) {
+        const step = (((alien.zigzagDir || 1) * (alien.zigzagSpeedX || 4.4)) * speedScale) / totalFrames;
+        alien.x += step;
+        alien.zigzagRunRemaining = (alien.zigzagRunRemaining ?? (3 + Math.random() * 3.5)) - Math.abs(step);
+        if (alien.zigzagRunRemaining <= 0) {
+            alien.zigzagDir = (alien.zigzagDir || 1) * -1;
+            alien.zigzagRunRemaining = 2.6 + (Math.random() * 4.4);
+        }
+
+        const edgePad = 4 + (alien.radius || 0);
+        if (alien.x <= edgePad) {
+            alien.x = edgePad;
+            alien.zigzagDir = 1;
+            alien.zigzagRunRemaining = 2 + (Math.random() * 3);
+        } else if (alien.x >= (this.config.WORLD_WIDTH - edgePad)) {
+            alien.x = this.config.WORLD_WIDTH - edgePad;
+            alien.zigzagDir = -1;
+            alien.zigzagRunRemaining = 2 + (Math.random() * 3);
         }
     }
 
@@ -1502,7 +1593,7 @@ class Game {
             this.missileEnergy = this.utils.clamp(
                 this.missileEnergy + this.lastWaveClearEnergyBonus,
                 0,
-                this.config.MISSILE_ENERGY_MAX
+                this.getMaxEnergy()
             );
             this.emitWaveClearFx(this.level, this.lastWaveClearBonus);
             this.level++;
@@ -1526,7 +1617,7 @@ class Game {
         this.missileEnergy = this.utils.clamp(
             this.missileEnergy + (this.getEnergyRegenPerTurn() * regenMultiplier),
             0,
-            this.config.MISSILE_ENERGY_MAX
+            this.getMaxEnergy()
         );
         this.missilesLaunchedThisCycle = 0;
 
@@ -1546,7 +1637,7 @@ class Game {
         this.reset();
         this.level = Math.max(1, jump.level);
         this.money = Math.max(0, Math.floor(jump.money || 0));
-        this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
+        this.missileEnergy = this.getMaxEnergy();
         this.isUpgradeMenuOpen = false;
         this.aliens = [];
         this.missiles = [];
@@ -1568,7 +1659,7 @@ class Game {
         this.launcherAngle = this.config.START_ANGLE;
         this.power = 0;
         this.missilesLockedThisTurn = 0;
-        this.missileEnergy = this.config.MISSILE_ENERGY_MAX;
+        this.missileEnergy = this.getMaxEnergy();
         this.missilesLaunchedThisCycle = 0;
         this.lastLockedPower = 0;
         this.money = 0;
@@ -1577,6 +1668,7 @@ class Game {
         this.lastWaveClearBonus = 0;
         this.lastWaveClearEnergyBonus = 0;
         this.viewZoomTarget = this.config.DEFAULT_VIEW_ZOOM || 1;
+        this.viewZoomStage = 0;
         this.bossesDefeatedThisRun = 0;
         this.stats = {
             missilesTargeted: 0,
@@ -1625,7 +1717,7 @@ class Game {
                     this.missileEnergy = this.utils.clamp(
                         this.missileEnergy + this.getEnergyPerKillReward(),
                         0,
-                        this.config.MISSILE_ENERGY_MAX
+                        this.getMaxEnergy()
                     );
                     if (alien.type === 'boss') {
                         this.handleBossDefeat(alien, exactHit);
@@ -1643,12 +1735,16 @@ class Game {
 
     handleBossDefeat(alien, exactHit = false) {
         this.bossesDefeatedThisRun = (this.bossesDefeatedThisRun || 0) + 1;
-        const zoomOutTarget = this.config.POST_BOSS_ZOOM_OUT || 0.88;
+        this.viewZoomStage = (this.viewZoomStage || 0) + 1;
+        const stageBaseTarget = this.config.POST_BOSS_ZOOM_OUT || 0.88;
+        const stageStep = this.config.POST_BOSS_ZOOM_STEP || 0.08;
+        const stageMin = this.config.POST_BOSS_ZOOM_MIN || 0.72;
+        const zoomOutTarget = Math.max(stageMin, stageBaseTarget - ((this.viewZoomStage - 1) * stageStep));
         this.viewZoomTarget = Math.min(this.viewZoomTarget || 1, zoomOutTarget);
         this.emitStatusFx(
             'BOSS DESTROYED',
-            exactHit ? 'EXACT HIT' : 'SECTOR EXPANDING',
-            150
+            exactHit ? 'EXACT HIT | SECTOR EXPANDING' : 'SECTOR EXPANDING',
+            165
         );
     }
 
@@ -1680,6 +1776,7 @@ class Game {
             missilesPerTurn: this.getMissilesPerTurn(),
             missilesInFlight: this.missiles.length,
             viewZoomTarget: this.viewZoomTarget,
+            viewZoomStage: this.viewZoomStage || 0,
             bossesDefeatedThisRun: this.bossesDefeatedThisRun || 0,
             blastResidue: this.blastResidue.length,
             isAnimating: this.isAnimating,
