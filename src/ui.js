@@ -25,11 +25,11 @@ class EarthGuardUI {
             'splash-modal',
             'splash-title',
             'splash-new-game-btn',
+            'splash-open-meta-upgrades-btn',
             'splash-jump-level-select',
             'splash-jump-highest-btn',
             'splash-jump-start-btn',
             'splash-jump-preview',
-            'splash-meta-upgrade-list',
             'splash-stats',
             'splash-clear-data-btn',
             'angle-display',
@@ -55,8 +55,12 @@ class EarthGuardUI {
             'game-over-stats',
             'career-stats',
             'recent-runs',
+            'open-meta-upgrades-btn',
             'play-again-btn',
-            'meta-upgrade-menu',
+            'meta-upgrade-overlay',
+            'meta-upgrade-modal',
+            'meta-upgrade-title',
+            'meta-upgrade-close-btn',
             'meta-upgrade-list',
             'game-over-jump',
             'jump-level-select',
@@ -386,29 +390,7 @@ class EarthGuardUI {
             }
         }
 
-        const metaList = this.el['meta-upgrade-list'];
-        if (metaList) {
-            const metaUpgrades = typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : [];
-            metaList.innerHTML = metaUpgrades.map((upgrade) => {
-                const isMaxed = upgrade.level >= upgrade.maxLevel;
-                const tier = upgrade.nextTier;
-                const canBuy = !isMaxed && typeof game.canPurchaseMetaUpgrade === 'function' && game.canPurchaseMetaUpgrade(upgrade.key);
-                const label = isMaxed
-                    ? 'MAXED'
-                    : this.formatMetaUpgradeCostText(tier?.cost || 0, canBuy);
-                const effect = isMaxed ? 'MAXED' : (tier?.label || 'NEXT');
-                return `
-                    <div class="terminal-panel upgrade-row meta-upgrade-row">
-                        <div class="upgrade-copy">
-                            <div class="upgrade-name">${upgrade.name} <span class="upgrade-level">L${upgrade.level}/${upgrade.maxLevel}</span></div>
-                            <div class="upgrade-meta">${upgrade.description}</div>
-                            <div class="upgrade-effect">${effect}</div>
-                        </div>
-                        <button class="terminal-btn upgrade-btn${isMaxed ? ' owned' : ''}" data-meta-upgrade-key="${upgrade.key}" ${(!canBuy || isMaxed) ? 'disabled' : ''}>${label}</button>
-                    </div>
-                `;
-            }).join('');
-        }
+        this.renderMetaUpgradeModal(game);
     }
 
     renderSplash(game) {
@@ -466,26 +448,6 @@ class EarthGuardUI {
             }
         }
 
-        const splashMetaList = this.el['splash-meta-upgrade-list'];
-        if (splashMetaList) {
-            const metaUpgrades = typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : [];
-            splashMetaList.innerHTML = metaUpgrades.map((upgrade) => {
-                const isMaxed = upgrade.level >= upgrade.maxLevel;
-                const tier = upgrade.nextTier;
-                const canBuy = !isMaxed && typeof game.canPurchaseMetaUpgrade === 'function' && game.canPurchaseMetaUpgrade(upgrade.key);
-                const label = isMaxed ? 'MAXED' : this.formatMetaUpgradeCostText(tier?.cost || 0, canBuy);
-                return `
-                    <div class="terminal-panel upgrade-row meta-upgrade-row">
-                        <div class="upgrade-copy">
-                            <div class="upgrade-name">${upgrade.name} <span class="upgrade-level">L${upgrade.level}/${upgrade.maxLevel}</span></div>
-                            <div class="upgrade-meta">${upgrade.description}</div>
-                            <div class="upgrade-effect">${isMaxed ? 'MAXED' : (tier?.label || 'NEXT')}</div>
-                        </div>
-                        <button class="terminal-btn upgrade-btn${isMaxed ? ' owned' : ''}" data-splash-meta-upgrade-key="${upgrade.key}" ${(!canBuy || isMaxed) ? 'disabled' : ''}>${label}</button>
-                    </div>`;
-            }).join('');
-        }
-
         const splashStats = this.el['splash-stats'];
         if (splashStats) {
             const m = game.metaProgress || {};
@@ -497,6 +459,40 @@ class EarthGuardUI {
                 `<div class="game-over-stat-row"><span class="hud-label">BEST KILLS</span><span class="hud-value">${Math.floor(best.maxKills || 0)}</span></div>`
             ].join('');
         }
+    }
+
+    renderMetaUpgradeModal(game) {
+        const overlay = this.el['meta-upgrade-overlay'];
+        const modal = this.el['meta-upgrade-modal'];
+        if (overlay && modal) {
+            this.renderModal({
+                overlayEl: overlay,
+                modalEl: modal,
+                titleEl: this.el['meta-upgrade-title'],
+                isOpen: !!game.isMetaUpgradeModalOpen,
+                titleText: 'META UPGRADES'
+            });
+        }
+        const metaList = this.el['meta-upgrade-list'];
+        if (!metaList) return;
+        const metaUpgrades = typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : [];
+        metaList.innerHTML = metaUpgrades.map((upgrade) => {
+            const isMaxed = upgrade.level >= upgrade.maxLevel;
+            const tier = upgrade.nextTier;
+            const canBuy = !isMaxed && typeof game.canPurchaseMetaUpgrade === 'function' && game.canPurchaseMetaUpgrade(upgrade.key);
+            const label = isMaxed ? 'MAXED' : this.formatMetaUpgradeCostText(tier?.cost || 0, canBuy);
+            const effect = isMaxed ? 'MAXED' : (tier?.label || 'NEXT');
+            return `
+                <div class="terminal-panel upgrade-row meta-upgrade-row">
+                    <div class="upgrade-copy">
+                        <div class="upgrade-name">${upgrade.name} <span class="upgrade-level">L${upgrade.level}/${upgrade.maxLevel}</span></div>
+                        <div class="upgrade-meta">${upgrade.description}</div>
+                        <div class="upgrade-effect">${effect}</div>
+                    </div>
+                    <button class="terminal-btn upgrade-btn${isMaxed ? ' owned' : ''}" data-meta-upgrade-key="${upgrade.key}" ${(!canBuy || isMaxed) ? 'disabled' : ''}>${label}</button>
+                </div>
+            `;
+        }).join('');
     }
 
     renderCareerSummary(game) {

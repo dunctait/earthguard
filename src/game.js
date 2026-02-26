@@ -413,6 +413,7 @@ class Game {
             exactHitKills: 0
         };
         this.isUpgradeMenuOpen = false;
+        this.isMetaUpgradeModalOpen = false;
         this.isSplashOpen = true;
         this.isGameOver = false;
         this.isGameOverSummaryOpen = false;
@@ -584,6 +585,18 @@ class Game {
         return true;
     }
 
+    openMetaUpgradeModal() {
+        this.isMetaUpgradeModalOpen = true;
+        this.notify();
+        return true;
+    }
+
+    closeMetaUpgradeModal() {
+        this.isMetaUpgradeModalOpen = false;
+        this.notify();
+        return true;
+    }
+
     clearAllLocalData() {
         try {
             const storage = this.root?.localStorage;
@@ -593,6 +606,7 @@ class Game {
         this.saveMetaProgress();
         this.reset();
         this.isSplashOpen = true;
+        this.isMetaUpgradeModalOpen = false;
         this.notify();
         return true;
     }
@@ -1702,7 +1716,7 @@ class Game {
             }
         }
 
-        // Check game over
+        // End of cycle state updates
         this.isAnimating = false;
         const regenMultiplier = this.missilesLaunchedThisCycle === 0 ? 2 : 1;
         this.missileEnergy = this.utils.clamp(
@@ -1711,6 +1725,17 @@ class Game {
             this.getMaxEnergy()
         );
         this.missilesLaunchedThisCycle = 0;
+
+        if (!this.isGameOver && this.hasInevitableEarthBreach()) {
+            this.emitStatusFx('AUTO-CYCLED', 'BREACH INEVITABLE', 60);
+            if (this.instantAutoCycle) {
+                this.advanceImmediate();
+                return;
+            }
+            setTimeout(() => this.advance(), 80);
+            this.notify();
+            return;
+        }
 
         this.notify();
     }
@@ -1775,6 +1800,7 @@ class Game {
             exactHitKills: 0
         };
         this.isUpgradeMenuOpen = false;
+        this.isMetaUpgradeModalOpen = false;
         this.isSplashOpen = false;
         this.isGameOver = false;
         this.isGameOverSummaryOpen = false;
@@ -1867,6 +1893,7 @@ class Game {
             missileEnergy: this.missileEnergy,
             money: this.money,
             isSplashOpen: this.isSplashOpen,
+            isMetaUpgradeModalOpen: this.isMetaUpgradeModalOpen,
             isGameOver: this.isGameOver,
             isGameOverSummaryOpen: this.isGameOverSummaryOpen,
             gameOverReason: this.gameOverReason,

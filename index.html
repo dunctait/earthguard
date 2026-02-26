@@ -40,9 +40,8 @@
                         </div>
                         <div id="splash-jump-preview" class="game-over-jump-preview" aria-live="polite"></div>
                     </div>
-                    <div class="game-over-section">
-                        <div class="game-over-section-title">META UPGRADES</div>
-                        <div id="splash-meta-upgrade-list" class="meta-upgrade-list"></div>
+                    <div class="game-over-actions">
+                        <button id="splash-open-meta-upgrades-btn" class="terminal-btn upgrade-btn" type="button">META UPGRADES</button>
                     </div>
                     <div class="game-over-section">
                         <div class="game-over-section-title">GAME STATS</div>
@@ -112,10 +111,6 @@
                         <div id="career-stats" class="game-over-stats" aria-live="polite"></div>
                         <div id="recent-runs" class="recent-runs"></div>
                     </div>
-                    <div id="meta-upgrade-menu" class="game-over-jump">
-                        <div class="game-over-jump-label">META UPGRADES</div>
-                        <div id="meta-upgrade-list" class="meta-upgrade-list"></div>
-                    </div>
                     <div id="game-over-jump" class="game-over-jump">
                         <div class="game-over-jump-label">JUMP START</div>
                         <div class="game-over-jump-controls">
@@ -127,8 +122,20 @@
                         <div id="jump-start-hint" class="game-over-jump-hint">Start at a prior level with full EN, no upgrades, and your best recorded $ for that level.</div>
                     </div>
                     <div class="game-over-actions">
+                        <button id="open-meta-upgrades-btn" class="terminal-btn upgrade-btn" type="button">META UPGRADES</button>
                         <button id="play-again-btn" class="terminal-btn upgrade-btn" type="button" data-testid="play-again-btn">PLAY AGAIN</button>
                     </div>
+                </div>
+            </div>
+        </div>
+        <div id="meta-upgrade-overlay" class="modal-overlay is-hidden" aria-hidden="true">
+            <div id="meta-upgrade-modal" class="terminal-panel ui-modal game-over-modal">
+                <div class="ui-modal-header">
+                    <div id="meta-upgrade-title" class="ui-modal-title">META UPGRADES</div>
+                    <button id="meta-upgrade-close-btn" class="terminal-btn ui-modal-close" type="button" aria-label="Close meta upgrades">X</button>
+                </div>
+                <div class="ui-modal-body">
+                    <div id="meta-upgrade-list" class="meta-upgrade-list"></div>
                 </div>
             </div>
         </div>

@@ -379,6 +379,8 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    max-height: min(72vh, 620px);
+    overflow-y: auto;
 }
 
 .game-over-section {

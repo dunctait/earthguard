@@ -19,10 +19,10 @@ class Renderer {
             'ui-bottom-overlay',
             'splash-overlay',
             'splash-new-game-btn',
+            'splash-open-meta-upgrades-btn',
             'splash-jump-level-select',
             'splash-jump-highest-btn',
             'splash-jump-start-btn',
-            'splash-meta-upgrade-list',
             'splash-clear-data-btn',
             'upgrade-menu-btn',
             'upgrade-modal-overlay',
@@ -33,6 +33,9 @@ class Renderer {
             'game-over-battle-subtitle',
             'game-over-continue-btn',
             'game-over-overlay',
+            'open-meta-upgrades-btn',
+            'meta-upgrade-overlay',
+            'meta-upgrade-close-btn',
             'play-again-btn',
             'meta-upgrade-list',
             'jump-level-select',
@@ -326,13 +329,6 @@ class Renderer {
                 this.game.purchaseMetaUpgrade(button.dataset.metaUpgradeKey);
             });
         }
-        if (this.dom['splash-meta-upgrade-list']) {
-            this.dom['splash-meta-upgrade-list'].addEventListener('click', (event) => {
-                const button = event.target.closest('[data-splash-meta-upgrade-key]');
-                if (!button) return;
-                this.game.purchaseMetaUpgrade(button.dataset.splashMetaUpgradeKey);
-            });
-        }
         if (this.dom['splash-new-game-btn']) {
             this.dom['splash-new-game-btn'].addEventListener('click', () => {
                 this.game.reset();
@@ -364,6 +360,22 @@ class Renderer {
         if (this.dom['splash-clear-data-btn']) {
             this.dom['splash-clear-data-btn'].addEventListener('click', () => {
                 this.game.clearAllLocalData?.();
+            });
+        }
+        if (this.dom['splash-open-meta-upgrades-btn']) {
+            this.dom['splash-open-meta-upgrades-btn'].addEventListener('click', () => this.game.openMetaUpgradeModal?.());
+        }
+        if (this.dom['open-meta-upgrades-btn']) {
+            this.dom['open-meta-upgrades-btn'].addEventListener('click', () => this.game.openMetaUpgradeModal?.());
+        }
+        if (this.dom['meta-upgrade-close-btn']) {
+            this.dom['meta-upgrade-close-btn'].addEventListener('click', () => this.game.closeMetaUpgradeModal?.());
+        }
+        if (this.dom['meta-upgrade-overlay']) {
+            this.dom['meta-upgrade-overlay'].addEventListener('click', (event) => {
+                if (event.target === this.dom['meta-upgrade-overlay']) {
+                    this.game.closeMetaUpgradeModal?.();
+                }
             });
         }
     }
