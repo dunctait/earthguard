@@ -312,6 +312,9 @@ class Renderer {
         if (this.game?.ui && typeof this.game.ui.renderPower === 'function') {
             this.game.ui.renderPower(this.game);
         }
+        if (this.game?.isGameOver && !this.game?.isGameOverSummaryOpen && this.game?.ui && typeof this.game.ui.renderGameOverBattlefieldPrompt === 'function') {
+            this.game.ui.renderGameOverBattlefieldPrompt(this.game);
+        }
         this.render();
         requestAnimationFrame(() => this.animate());
     }
@@ -1486,6 +1489,25 @@ class Renderer {
         ctx.fillStyle = 'rgba(255, 170, 120, 0.78)';
         ctx.shadowBlur = 6;
         ctx.fillText(subtitle, w / 2, h * 0.47);
+
+        const breachAliens = this.game.gameOverBreachAliens || [];
+        for (const alien of breachAliens) {
+            const p = this.worldToScreen(alien.x, alien.y);
+            const r = Math.max(8, this.worldToScreenSize(alien.radius || 2) * 1.4);
+            ctx.strokeStyle = 'rgba(255, 110, 110, 0.85)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.strokeStyle = 'rgba(255, 140, 120, 0.55)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y - r - 10);
+            ctx.lineTo(p.x, p.y - r - 2);
+            ctx.stroke();
+        }
         ctx.restore();
     }
 

@@ -433,9 +433,16 @@ class EarthGuardUI {
             this.el['game-over-battle-title'].textContent = game.gameOverReason || 'DEFENSE BREACHED!';
         }
         if (this.el['game-over-battle-subtitle']) {
+            const remainingMs = Math.max(0, Math.floor((game.gameOverContinueUnlockAtMs || 0) - Date.now()));
+            const waitText = remainingMs > 0 ? ` Review breach (${Math.ceil(remainingMs / 100) / 10}s)...` : ' Continue for run report and upgrades.';
             this.el['game-over-battle-subtitle'].textContent = (game.gameOverReason === 'EARTH BREACHED')
-                ? 'Enemy contact reached the earth line. Continue for run report and upgrades.'
-                : 'Projected breach was unavoidable. Continue for run report and upgrades.';
+                ? `Enemy contact reached the earth line.${waitText}`
+                : `Projected breach was unavoidable.${waitText}`;
+        }
+        if (this.el['game-over-continue-btn']) {
+            const locked = Date.now() < Math.max(0, game.gameOverContinueUnlockAtMs || 0);
+            this.el['game-over-continue-btn'].disabled = locked;
+            this.el['game-over-continue-btn'].textContent = locked ? 'ANALYZING...' : 'CONTINUE';
         }
     }
 

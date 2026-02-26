@@ -416,6 +416,9 @@ class Game {
         this.isGameOver = false;
         this.isGameOverSummaryOpen = false;
         this.gameOverReason = '';
+        this.gameOverAtMs = 0;
+        this.gameOverContinueUnlockAtMs = 0;
+        this.gameOverBreachAliens = [];
         this.metaProgress = this.loadMetaProgress();
         this.upgrades = this.createUpgradeState();
         this.upgradeEffects = this.getDefaultUpgradeEffects();
@@ -1561,6 +1564,10 @@ class Game {
     }
 
     triggerGameOver(reason = 'EARTH BREACHED') {
+        const nowMs = Date.now();
+        const breachAliens = (this.aliens || [])
+            .filter((a) => this.alienTouchesEarthLine(a))
+            .map((a) => ({ x: a.x, y: a.y, radius: a.radius, type: a.type || 'saucer' }));
         this.isAnimating = false;
         this.isCharging = false;
         this.power = 0;
@@ -1568,12 +1575,16 @@ class Game {
         this.isGameOver = true;
         this.isGameOverSummaryOpen = false;
         this.gameOverReason = reason;
+        this.gameOverAtMs = nowMs;
+        this.gameOverContinueUnlockAtMs = nowMs + 700;
+        this.gameOverBreachAliens = breachAliens;
         this.updateMetaProgressFromRun();
         this.notify();
     }
 
     openGameOverSummary() {
         if (!this.isGameOver) return false;
+        if (Date.now() < (this.gameOverContinueUnlockAtMs || 0)) return false;
         this.isGameOverSummaryOpen = true;
         this.notify();
         return true;
@@ -1706,6 +1717,9 @@ class Game {
         this.isGameOver = false;
         this.isGameOverSummaryOpen = false;
         this.gameOverReason = '';
+        this.gameOverAtMs = 0;
+        this.gameOverContinueUnlockAtMs = 0;
+        this.gameOverBreachAliens = [];
         for (const upgrade of Object.values(this.upgrades)) {
             upgrade.level = 0;
         }
@@ -1793,6 +1807,9 @@ class Game {
             isGameOver: this.isGameOver,
             isGameOverSummaryOpen: this.isGameOverSummaryOpen,
             gameOverReason: this.gameOverReason,
+            gameOverAtMs: this.gameOverAtMs || 0,
+            gameOverContinueUnlockAtMs: this.gameOverContinueUnlockAtMs || 0,
+            gameOverBreachAliens: (this.gameOverBreachAliens || []).map((a) => ({ ...a })),
             levelCycles: this.levelCycles,
             totalCycles: this.totalCycles,
             lastWaveClearBonus: this.lastWaveClearBonus,

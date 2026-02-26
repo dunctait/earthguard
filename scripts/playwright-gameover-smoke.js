@@ -35,6 +35,10 @@ async function main() {
         playAgainVisible: !document.querySelector('#play-again-btn')?.disabled
     }));
 
+    await page.waitForFunction(() => {
+        const btn = document.querySelector('#game-over-continue-btn');
+        return btn && !btn.disabled;
+    });
     await page.evaluate(() => document.querySelector('#game-over-continue-btn')?.click());
     await page.waitForFunction(() => window.game.isGameOverSummaryOpen === true);
 
