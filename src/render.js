@@ -807,7 +807,9 @@ class Renderer {
 
         // Incoming next-wave previews (dimmed, non-interactive), revealed after a few cycles.
         if ((this.game.levelCycles || 0) >= (this.game.config.INCOMING_PREVIEW_REVEAL_CYCLE || 2)) {
-            for (const alien of (this.game.incomingAliens || [])) {
+            const incomingAliens = [...(this.game.incomingAliens || [])]
+                .sort((a, b) => ((b.y + (b.entryVisualOffsetY || 0)) - (a.y + (a.entryVisualOffsetY || 0))));
+            for (const alien of incomingAliens) {
                 const displayY = alien.y + (alien.entryVisualOffsetY || 0);
                 const pos = this.worldToScreen(alien.x, displayY);
                 // Keep previews in upper staging area to avoid overlap clutter.
@@ -819,7 +821,9 @@ class Renderer {
         }
 
         // Active aliens
-        for (const alien of this.game.aliens) {
+        const activeAliens = [...this.game.aliens]
+            .sort((a, b) => ((b.y + (b.entryVisualOffsetY || 0)) - (a.y + (a.entryVisualOffsetY || 0))));
+        for (const alien of activeAliens) {
             const displayY = alien.y + (alien.entryVisualOffsetY || 0);
             const pos = this.worldToScreen(alien.x, displayY);
             const size = this.worldToScreenSize(alien.radius) * 0.75;
