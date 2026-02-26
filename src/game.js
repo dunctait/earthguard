@@ -43,6 +43,8 @@ const GameConfig = {
     ALIEN_WAVE_VERTICAL_SPACING: 8,
     ALIEN_ACTIVE_SPAWN_TOP_Y: 95,
     ALIEN_INCOMING_WAVE_GAP: 4,
+    ALIEN_SWARM_CLUSTER_SPREAD_X: 14,
+    ALIEN_SWARM_MIN_SEPARATION_FACTOR: 1.9,
     WAVE_ENTRY_FAST_FORWARD_CYCLES: 2,
     WAVE_ENTRY_MIN_ACTIVE_Y: 88,
     MONEY_PER_KILL: 10,
@@ -549,7 +551,7 @@ class Game {
         const activeTopY = spec.activeTopY ?? this.config.ALIEN_ACTIVE_SPAWN_TOP_Y ?? (this.config.WORLD_HEIGHT - 5);
         const isSwarm = spec.level >= 8;
         const bandStep = isSwarm ? Math.max(2.2, spacing * 0.38) : spacing;
-        const bandJitter = isSwarm ? Math.max(0.6, bandStep * 0.25) : 0;
+        const bandJitter = isSwarm ? Math.max(0.4, bandStep * 0.18) : 0;
 
         const maxBandIndex = spec.enemies.reduce((max, e) => Math.max(max, e.yBand || 0), 0);
         const formationHeight = (maxBandIndex * bandStep) + (bandJitter * 2);
@@ -560,7 +562,7 @@ class Game {
         const incomingStartY = incomingLowestY + formationHeight;
         const startY = incoming ? incomingStartY : activeTopY;
 
-        const clusterCount = isSwarm ? Math.min(3, Math.max(2, Math.round(spec.alienCount / 4))) : 0;
+        const clusterCount = isSwarm ? Math.min(4, Math.max(2, Math.round(spec.alienCount / 3.5))) : 0;
         const clusterCenters = isSwarm
             ? Array.from({ length: clusterCount }, (_, i) => {
                 const lane = (i + 1) / (clusterCount + 1);
@@ -571,29 +573,86 @@ class Game {
         for (let i = 0; i < spec.alienCount; i++) {
             const enemyTemplate = spec.enemies[i] || { type: 'saucer', sizeMultiplier: 1 };
             const sizeMultiplier = enemyTemplate.sizeMultiplier || 1;
-            let x;
+            const bandOffset = (enemyTemplate.yBand || 0) * bandStep;
+            const radius = this.config.ALIEN_RADIUS * sizeMultiplier;
+            let x = 10 + Math.random() * (this.config.WORLD_WIDTH - 20);
+            let y = startY - bandOffset;
             if (isSwarm && clusterCenters) {
                 const center = clusterCenters[i % clusterCenters.length];
-                x = this.utils.clamp(center + ((Math.random() - 0.5) * 10), 6, this.config.WORLD_WIDTH - 6);
+                const spreadX = this.config.ALIEN_SWARM_CLUSTER_SPREAD_X || 14;
+                const minSepFactor = this.config.ALIEN_SWARM_MIN_SEPARATION_FACTOR || 1.9;
+                let placed = false;
+                for (let attempt = 0; attempt < 16; attempt++) {
+                    const candidateX = this.utils.clamp(center + ((Math.random() - 0.5) * spreadX * 2), 6, this.config.WORLD_WIDTH - 6);
+                    const candidateY = (startY - bandOffset) - ((Math.random() - 0.5) * bandJitter * 2);
+                    const overlaps = aliens.some((other) => {
+                        const minDist = ((other.radius || this.config.ALIEN_RADIUS) + radius) * minSepFactor;
+                        return this.utils.distance(candidateX - other.x, candidateY - other.y) < minDist;
+                    });
+                    if (!overlaps) {
+                        x = candidateX;
+                        y = candidateY;
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    x = this.utils.clamp(center + ((Math.random() - 0.5) * (spreadX + 8) * 2), 6, this.config.WORLD_WIDTH - 6);
+                    y = (startY - bandOffset) - ((Math.random() - 0.5) * bandJitter * 3);
+                }
             } else {
-                x = 10 + Math.random() * (this.config.WORLD_WIDTH - 20);
+                const jitterY = isSwarm ? ((Math.random() - 0.5) * bandJitter * 2) : 0;
+                y = startY - bandOffset - jitterY;
             }
-            const bandOffset = (enemyTemplate.yBand || 0) * bandStep;
-            const jitterY = isSwarm ? ((Math.random() - 0.5) * bandJitter * 2) : 0;
             aliens.push({
                 x,
-                y: startY - bandOffset - jitterY,
+                y,
                 speed: spec.speed,
                 hp: 1,
                 damage: this.config.ALIEN_DAMAGE,
-                radius: this.config.ALIEN_RADIUS * sizeMultiplier,
+                radius,
                 type: enemyTemplate.type || 'saucer',
                 sizeMultiplier,
                 waveLevel: spec.level,
                 incoming
             });
         }
+        if (isSwarm && aliens.length > 1) {
+            this.relaxSwarmFormation(aliens);
+        }
         return aliens;
+    }
+
+    relaxSwarmFormation(aliens) {
+        const minSepFactor = this.config.ALIEN_SWARM_MIN_SEPARATION_FACTOR || 1.9;
+        const worldMinX = 6;
+        const worldMaxX = this.config.WORLD_WIDTH - 6;
+        for (let iter = 0; iter < 28; iter++) {
+            let moved = false;
+            for (let i = 0; i < aliens.length; i++) {
+                for (let j = i + 1; j < aliens.length; j++) {
+                    const a = aliens[i];
+                    const b = aliens[j];
+                    const dx = b.x - a.x;
+                    const dy = b.y - a.y;
+                    const dist = Math.max(0.001, Math.hypot(dx, dy));
+                    const minDist = ((a.radius || this.config.ALIEN_RADIUS) + (b.radius || this.config.ALIEN_RADIUS)) * minSepFactor;
+                    if (dist >= minDist) continue;
+                    const overlap = minDist - dist;
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    // Prefer horizontal separation so late waves remain banded.
+                    const pushX = (nx === 0 ? (Math.random() > 0.5 ? 1 : -1) : nx) * overlap * 0.42;
+                    const pushY = (ny === 0 ? 0 : ny) * overlap * 0.10;
+                    a.x = this.utils.clamp(a.x - pushX, worldMinX, worldMaxX);
+                    b.x = this.utils.clamp(b.x + pushX, worldMinX, worldMaxX);
+                    a.y -= pushY;
+                    b.y += pushY;
+                    moved = true;
+                }
+            }
+            if (!moved) break;
+        }
     }
 
     startWave(level = this.level) {
