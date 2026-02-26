@@ -348,26 +348,90 @@ const LevelDefinitions = {
     }
 };
 
+function buildMetaTiers(levels, factory) {
+    return Array.from({ length: levels }, (_, i) => factory(i));
+}
+
 const MetaUpgradeDefinitions = {
     salvageYield: {
         key: 'salvageYield',
         name: 'Salvage Yield',
         description: 'Increase salvage earned at end of run.',
-        tiers: [
-            { cost: 8, salvageMultiplier: 1.25, label: '+25% salvage' },
-            { cost: 18, salvageMultiplier: 1.5, label: '+50% salvage' },
-            { cost: 35, salvageMultiplier: 1.8, label: '+80% salvage' }
-        ]
+        tiers: buildMetaTiers(10, (i) => {
+            const salvageMultiplier = round2(1 + ((i + 1) * 0.12));
+            return {
+                cost: Math.floor(8 * Math.pow(1.42, i)),
+                salvageMultiplier,
+                label: `+${Math.round((salvageMultiplier - 1) * 100)}% salvage`
+            };
+        })
     },
     startingReserve: {
         key: 'startingReserve',
         name: 'Starting Reserve',
         description: 'Begin new runs with extra cash and energy.',
-        tiers: [
-            { cost: 10, startMoneyBonus: 10, startEnergyBonus: 6, label: '+$10 / +EN 6' },
-            { cost: 20, startMoneyBonus: 20, startEnergyBonus: 12, label: '+$20 / +EN 12' },
-            { cost: 38, startMoneyBonus: 35, startEnergyBonus: 18, label: '+$35 / +EN 18' }
-        ]
+        tiers: buildMetaTiers(10, (i) => {
+            const startMoneyBonus = Math.floor(8 + ((i + 1) * 7));
+            const startEnergyBonus = Math.floor(4 + ((i + 1) * 4));
+            return {
+                cost: Math.floor(10 * Math.pow(1.45, i)),
+                startMoneyBonus,
+                startEnergyBonus,
+                label: `+$${startMoneyBonus} / +EN ${startEnergyBonus}`
+            };
+        })
+    },
+    salvageBank: {
+        key: 'salvageBank',
+        name: 'Salvage Bank',
+        description: 'Gain flat salvage at end of every run.',
+        tiers: buildMetaTiers(10, (i) => {
+            const flatSalvageBonus = i + 1;
+            return {
+                cost: Math.floor(12 * Math.pow(1.48, i)),
+                flatSalvageBonus,
+                label: `+${flatSalvageBonus} salvage / run`
+            };
+        })
+    },
+    jumpBroker: {
+        key: 'jumpBroker',
+        name: 'Jump Broker',
+        description: 'Increase cash retained when using jump start.',
+        tiers: buildMetaTiers(10, (i) => {
+            const jumpMoneyMultiplier = round2(1 + ((i + 1) * 0.08));
+            return {
+                cost: Math.floor(14 * Math.pow(1.5, i)),
+                jumpMoneyMultiplier,
+                label: `${jumpMoneyMultiplier.toFixed(2)}x jump $`
+            };
+        })
+    },
+    reactorBootstrap: {
+        key: 'reactorBootstrap',
+        name: 'Reactor Bootstrap',
+        description: 'Start runs with additional energy reserve.',
+        tiers: buildMetaTiers(10, (i) => {
+            const startEnergyBonus = (i + 1) * 5;
+            return {
+                cost: Math.floor(9 * Math.pow(1.4, i)),
+                startEnergyBonus,
+                label: `+EN ${startEnergyBonus} start`
+            };
+        })
+    },
+    commandCredit: {
+        key: 'commandCredit',
+        name: 'Command Credit',
+        description: 'Start runs with additional cash reserve.',
+        tiers: buildMetaTiers(10, (i) => {
+            const startMoneyBonus = (i + 1) * 10;
+            return {
+                cost: Math.floor(9 * Math.pow(1.42, i)),
+                startMoneyBonus,
+                label: `+$${startMoneyBonus} start`
+            };
+        })
     }
 };
 
@@ -632,13 +696,21 @@ class Game {
         const startBonuses = this.getMetaStartBonuses();
         return {
             level: numericLevel,
-            money: Math.floor(jump.money || 0),
+            money: Math.floor(this.getJumpStartMoney(numericLevel, jump.money || 0)),
             energy: this.getMaxEnergy(),
             enemyCount: Math.floor(waveSpec.alienCount || 0),
             enemySpeed: +(waveSpec.speed || 0).toFixed(1),
             startBonusMoney: Math.floor(startBonuses.money || 0),
             startBonusEnergy: Math.floor(startBonuses.energy || 0)
         };
+    }
+
+    getJumpStartMoney(level, recordedMoney) {
+        const baseMoney = Math.max(0, Math.floor(recordedMoney || 0));
+        const jumpBrokerTierLevel = this.getMetaUpgradeLevel('jumpBroker');
+        const jumpBrokerTier = MetaUpgradeDefinitions.jumpBroker.tiers[Math.max(0, jumpBrokerTierLevel - 1)];
+        const jumpMoneyMultiplier = jumpBrokerTier?.jumpMoneyMultiplier || 1;
+        return Math.floor(baseMoney * jumpMoneyMultiplier);
     }
 
     getMetaUpgradeLevel(key) {
@@ -693,15 +765,21 @@ class Game {
         const base = Math.max(1, levelPart + killsPart);
         const salvageTier = this.getMetaUpgradeLevel('salvageYield');
         const salvageMultiplier = MetaUpgradeDefinitions.salvageYield.tiers[Math.max(0, salvageTier - 1)]?.salvageMultiplier || 1;
-        return Math.max(1, Math.floor(base * salvageMultiplier));
+        const flatSalvageTier = this.getMetaUpgradeLevel('salvageBank');
+        const flatSalvageBonus = Math.floor(MetaUpgradeDefinitions.salvageBank.tiers[Math.max(0, flatSalvageTier - 1)]?.flatSalvageBonus || 0);
+        return Math.max(1, Math.floor(base * salvageMultiplier) + flatSalvageBonus);
     }
 
     getMetaStartBonuses() {
         const reserveTierLevel = this.getMetaUpgradeLevel('startingReserve');
         const reserveTier = MetaUpgradeDefinitions.startingReserve.tiers[Math.max(0, reserveTierLevel - 1)];
+        const reactorBootstrapTierLevel = this.getMetaUpgradeLevel('reactorBootstrap');
+        const reactorBootstrapTier = MetaUpgradeDefinitions.reactorBootstrap.tiers[Math.max(0, reactorBootstrapTierLevel - 1)];
+        const commandCreditTierLevel = this.getMetaUpgradeLevel('commandCredit');
+        const commandCreditTier = MetaUpgradeDefinitions.commandCredit.tiers[Math.max(0, commandCreditTierLevel - 1)];
         return {
-            money: Math.floor(reserveTier?.startMoneyBonus || 0),
-            energy: Math.floor(reserveTier?.startEnergyBonus || 0)
+            money: Math.floor(reserveTier?.startMoneyBonus || 0) + Math.floor(commandCreditTier?.startMoneyBonus || 0),
+            energy: Math.floor(reserveTier?.startEnergyBonus || 0) + Math.floor(reactorBootstrapTier?.startEnergyBonus || 0)
         };
     }
 
@@ -1753,7 +1831,7 @@ class Game {
         this.reset();
         this.isSplashOpen = false;
         this.level = Math.max(1, jump.level);
-        this.money = Math.max(0, Math.floor(jump.money || 0));
+        this.money = this.getJumpStartMoney(this.level, jump.money || 0);
         this.missileEnergy = this.getMaxEnergy();
         this.isUpgradeMenuOpen = false;
         this.aliens = [];
