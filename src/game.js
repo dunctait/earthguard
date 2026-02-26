@@ -266,6 +266,7 @@ class Game {
     constructor(options = {}) {
         this.config = GameConfig;
         const root = options.root || (typeof window !== 'undefined' ? window : globalThis);
+        this.root = root;
         this.instantAutoCycle = !!options.instantAutoCycle;
         this.utils = options.utils || root.EarthGuardUtils || {
             clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
@@ -302,6 +303,7 @@ class Game {
         this.isUpgradeMenuOpen = false;
         this.isGameOver = false;
         this.gameOverReason = '';
+        this.metaProgress = this.loadMetaProgress();
         this.upgrades = this.createUpgradeState();
         this.upgradeEffects = this.getDefaultUpgradeEffects();
         this.rebuildUpgradeEffects();
@@ -328,6 +330,64 @@ class Game {
 
     get WORLD_HEIGHT() { return this.config.WORLD_HEIGHT; }
     get WORLD_WIDTH() { return this.config.WORLD_WIDTH; }
+
+    getMetaStorageKey() {
+        return 'earthguard.meta.v1';
+    }
+
+    getDefaultMetaProgress() {
+        return {
+            schemaVersion: 1,
+            totalRuns: 0,
+            bestLevelReached: 0,
+            bestMoneyByLevel: {},
+            lastRun: null
+        };
+    }
+
+    loadMetaProgress() {
+        const fallback = this.getDefaultMetaProgress();
+        try {
+            const storage = this.root?.localStorage;
+            if (!storage) return fallback;
+            const raw = storage.getItem(this.getMetaStorageKey());
+            if (!raw) return fallback;
+            const parsed = JSON.parse(raw);
+            if (!parsed || parsed.schemaVersion !== 1) return fallback;
+            return {
+                ...fallback,
+                ...parsed,
+                bestMoneyByLevel: (parsed.bestMoneyByLevel && typeof parsed.bestMoneyByLevel === 'object') ? parsed.bestMoneyByLevel : {}
+            };
+        } catch {
+            return fallback;
+        }
+    }
+
+    saveMetaProgress() {
+        try {
+            const storage = this.root?.localStorage;
+            if (!storage) return false;
+            storage.setItem(this.getMetaStorageKey(), JSON.stringify(this.metaProgress));
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    updateMetaProgressFromRun() {
+        if (!this.metaProgress) this.metaProgress = this.getDefaultMetaProgress();
+        this.metaProgress.totalRuns = (this.metaProgress.totalRuns || 0) + 1;
+        this.metaProgress.bestLevelReached = Math.max(this.metaProgress.bestLevelReached || 0, this.level || 0);
+        this.metaProgress.lastRun = {
+            level: Math.floor(this.level || 0),
+            totalCycles: Math.floor(this.totalCycles || 0),
+            money: Math.floor(this.money || 0),
+            kills: Math.floor(this.stats?.kills || 0),
+            reason: this.gameOverReason || ''
+        };
+        this.saveMetaProgress();
+    }
 
     createUpgradeState() {
         const state = {};
@@ -1094,6 +1154,7 @@ class Game {
         this.isUpgradeMenuOpen = false;
         this.isGameOver = true;
         this.gameOverReason = reason;
+        this.updateMetaProgressFromRun();
         this.notify();
     }
 
@@ -1274,7 +1335,8 @@ class Game {
             isAnimating: this.isAnimating,
             aliens: this.aliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),
             incomingAliens: this.incomingAliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),
-            config: this.config
+            config: this.config,
+            metaProgress: this.metaProgress
         };
     }
 
