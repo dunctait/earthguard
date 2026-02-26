@@ -35,6 +35,8 @@ async function main() {
 
     await page.goto(pathToFileURL(indexPath).href, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.game && window.renderer);
+    await page.click('#splash-new-game-btn');
+    await page.waitForFunction(() => window.game && window.game.isSplashOpen === false);
     await page.waitForTimeout(250);
 
     const initialAngle = await page.locator('#angle-display').textContent();

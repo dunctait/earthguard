@@ -413,6 +413,7 @@ class Game {
             exactHitKills: 0
         };
         this.isUpgradeMenuOpen = false;
+        this.isSplashOpen = true;
         this.isGameOver = false;
         this.isGameOverSummaryOpen = false;
         this.gameOverReason = '';
@@ -462,7 +463,13 @@ class Game {
             bestMoneyByLevel: {},
             preferredJumpStartLevel: null,
             lastRun: null,
-            runHistory: []
+            runHistory: [],
+            careerBest: {
+                maxRunMoney: 0,
+                maxKills: 0,
+                maxCycles: 0,
+                maxSalvageReward: 0
+            }
         };
     }
 
@@ -480,7 +487,15 @@ class Game {
                 ...parsed,
                 metaUpgrades: (parsed.metaUpgrades && typeof parsed.metaUpgrades === 'object') ? parsed.metaUpgrades : {},
                 bestMoneyByLevel: (parsed.bestMoneyByLevel && typeof parsed.bestMoneyByLevel === 'object') ? parsed.bestMoneyByLevel : {},
-                runHistory: Array.isArray(parsed.runHistory) ? parsed.runHistory.slice(0, 5) : []
+                runHistory: Array.isArray(parsed.runHistory) ? parsed.runHistory.slice(0, 5) : [],
+                careerBest: (parsed.careerBest && typeof parsed.careerBest === 'object')
+                    ? {
+                        maxRunMoney: Math.floor(parsed.careerBest.maxRunMoney || 0),
+                        maxKills: Math.floor(parsed.careerBest.maxKills || 0),
+                        maxCycles: Math.floor(parsed.careerBest.maxCycles || 0),
+                        maxSalvageReward: Math.floor(parsed.careerBest.maxSalvageReward || 0)
+                    }
+                    : fallback.careerBest
             };
         } catch {
             return fallback;
@@ -520,6 +535,13 @@ class Game {
             salvage: Math.floor(runMetaReward || 0),
             reason: this.gameOverReason || ''
         };
+        const careerBest = (this.metaProgress.careerBest && typeof this.metaProgress.careerBest === 'object')
+            ? this.metaProgress.careerBest
+            : (this.metaProgress.careerBest = { maxRunMoney: 0, maxKills: 0, maxCycles: 0, maxSalvageReward: 0 });
+        careerBest.maxRunMoney = Math.max(Math.floor(careerBest.maxRunMoney || 0), historyEntry.money);
+        careerBest.maxKills = Math.max(Math.floor(careerBest.maxKills || 0), historyEntry.kills);
+        careerBest.maxCycles = Math.max(Math.floor(careerBest.maxCycles || 0), historyEntry.cycles);
+        careerBest.maxSalvageReward = Math.max(Math.floor(careerBest.maxSalvageReward || 0), historyEntry.salvage);
         const history = Array.isArray(this.metaProgress.runHistory) ? this.metaProgress.runHistory : [];
         this.metaProgress.runHistory = [historyEntry, ...history].slice(0, 5);
         this.saveMetaProgress();
@@ -548,6 +570,31 @@ class Game {
     getHighestJumpStartLevel() {
         const options = this.getAvailableJumpStartLevels();
         return options.length ? options[options.length - 1] : null;
+    }
+
+    openSplash() {
+        this.isSplashOpen = true;
+        this.notify();
+        return true;
+    }
+
+    closeSplash() {
+        this.isSplashOpen = false;
+        this.notify();
+        return true;
+    }
+
+    clearAllLocalData() {
+        try {
+            const storage = this.root?.localStorage;
+            storage?.removeItem(this.getMetaStorageKey());
+        } catch {}
+        this.metaProgress = this.getDefaultMetaProgress();
+        this.saveMetaProgress();
+        this.reset();
+        this.isSplashOpen = true;
+        this.notify();
+        return true;
     }
 
     getPreferredJumpStartLevel() {
@@ -1001,19 +1048,20 @@ class Game {
 
     // Angle: 0 = up, negative = left, positive = right
     rotateLeft(degrees) {
-        if (this.isGameOver) return;
+        if (this.isGameOver || this.isSplashOpen) return;
         this.launcherAngle = this.utils.clamp(this.launcherAngle - degrees, this.config.MIN_ANGLE, this.config.MAX_ANGLE);
         this.notify();
     }
 
     rotateRight(degrees) {
-        if (this.isGameOver) return;
+        if (this.isGameOver || this.isSplashOpen) return;
         this.launcherAngle = this.utils.clamp(this.launcherAngle + degrees, this.config.MIN_ANGLE, this.config.MAX_ANGLE);
         this.notify();
     }
 
     canCharge() {
         return !this.isAnimating &&
+               !this.isSplashOpen &&
                !this.isGameOver &&
                !this.isCharging &&
                this.missilesLockedThisTurn < this.getMissilesPerTurn() &&
@@ -1324,6 +1372,7 @@ class Game {
     }
 
     purchaseUpgrade(key) {
+        if (this.isSplashOpen) return false;
         if (!this.canPurchaseUpgrade(key)) return false;
         const upgrade = this.upgrades[key];
         const nextTier = this.getNextUpgradeTier(key);
@@ -1343,7 +1392,7 @@ class Game {
     }
 
     advance() {
-        if (this.isAnimating || this.isGameOver) return;
+        if (this.isAnimating || this.isGameOver || this.isSplashOpen) return;
 
         // Move pending missiles to active
         this.missilesLaunchedThisCycle = this.pendingMissiles.length;
@@ -1667,7 +1716,7 @@ class Game {
     }
 
     idleCycle() {
-        if (this.isAnimating || this.isGameOver) return false;
+        if (this.isAnimating || this.isGameOver || this.isSplashOpen) return false;
         if (this.pendingMissiles.length > 0) return false;
         this.advance();
         return true;
@@ -1677,6 +1726,7 @@ class Game {
         const jump = this.getAvailableJumpStartLevels().find((entry) => entry.level === Math.floor(Number(level)));
         if (!jump) return false;
         this.reset();
+        this.isSplashOpen = false;
         this.level = Math.max(1, jump.level);
         this.money = Math.max(0, Math.floor(jump.money || 0));
         this.missileEnergy = this.getMaxEnergy();
@@ -1725,6 +1775,7 @@ class Game {
             exactHitKills: 0
         };
         this.isUpgradeMenuOpen = false;
+        this.isSplashOpen = false;
         this.isGameOver = false;
         this.isGameOverSummaryOpen = false;
         this.gameOverReason = '';
@@ -1815,6 +1866,7 @@ class Game {
             power: this.power,
             missileEnergy: this.missileEnergy,
             money: this.money,
+            isSplashOpen: this.isSplashOpen,
             isGameOver: this.isGameOver,
             isGameOverSummaryOpen: this.isGameOverSummaryOpen,
             gameOverReason: this.gameOverReason,

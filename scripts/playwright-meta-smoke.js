@@ -18,13 +18,15 @@ async function main() {
                 bestMoneyByLevel: { '2': 18, '4': 77, '6': 132 },
                 preferredJumpStartLevel: 2,
                 lastRun: null,
-                runHistory: []
+                runHistory: [],
+                careerBest: { maxRunMoney: 120, maxKills: 18, maxCycles: 22, maxSalvageReward: 4 }
             }));
         }
     });
 
     await page.goto(pathToFileURL(path.join(repoRoot, 'index.html')).href, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.game && window.renderer);
+    await page.evaluate(() => window.game.closeSplash && window.game.closeSplash());
 
     // Open game-over modal and interact with meta + jump controls.
     await page.evaluate(() => window.game.triggerGameOver('EARTH BREACHED'));
@@ -49,7 +51,9 @@ async function main() {
 
     await page.evaluate(() => document.querySelector('#jump-highest-btn')?.click());
     const afterHighest = await page.evaluate(() => ({
-        jumpSelected: Number(document.querySelector('#jump-level-select')?.value || 0)
+        jumpSelected: Number(document.querySelector('#jump-level-select')?.value || 0),
+        highestDisabled: !!document.querySelector('#jump-highest-btn')?.disabled,
+        jumpText: (document.querySelector('#jump-start-btn')?.textContent || '').trim()
     }));
 
     await page.evaluate(() => {
@@ -81,7 +85,8 @@ async function main() {
         reserveLevel: window.game.getMetaUpgradeLevel('startingReserve'),
         startMoney: Math.floor(window.game.money || 0),
         jumpLevels: Array.from(window.game.getAvailableJumpStartLevels() || []).map((j) => j.level),
-        preferredJumpStartLevel: Math.floor(window.game.metaProgress?.preferredJumpStartLevel || 0)
+        preferredJumpStartLevel: Math.floor(window.game.metaProgress?.preferredJumpStartLevel || 0),
+        careerBestKills: Math.floor(window.game.metaProgress?.careerBest?.maxKills || 0)
     }));
 
     if (before.jumpLevels.length === 0) {
@@ -89,6 +94,9 @@ async function main() {
     }
     if (afterHighest.jumpSelected !== 6) {
         throw new Error(`Highest jump helper failed: ${JSON.stringify({ before, afterHighest })}`);
+    }
+    if (!afterHighest.highestDisabled || afterHighest.jumpText !== 'JUMP L6') {
+        throw new Error(`Jump control labels/state incorrect: ${JSON.stringify({ afterHighest })}`);
     }
     if (afterBuy.reserveLevel < 1 || afterBuy.salvage >= before.salvage) {
         throw new Error(`Meta upgrade purchase failed: ${JSON.stringify({ before, afterBuy })}`);
@@ -101,6 +109,9 @@ async function main() {
     }
     if (afterReload.preferredJumpStartLevel !== 4) {
         throw new Error(`Preferred jump persistence failed: ${JSON.stringify({ afterReload })}`);
+    }
+    if (afterReload.careerBestKills !== 18) {
+        throw new Error(`Career best persistence missing: ${JSON.stringify({ afterReload })}`);
     }
 
     await browser.close();

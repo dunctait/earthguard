@@ -21,6 +21,17 @@ class EarthGuardUI {
             'energy',
             'money',
             'missiles-status',
+            'splash-overlay',
+            'splash-modal',
+            'splash-title',
+            'splash-new-game-btn',
+            'splash-jump-level-select',
+            'splash-jump-highest-btn',
+            'splash-jump-start-btn',
+            'splash-jump-preview',
+            'splash-meta-upgrade-list',
+            'splash-stats',
+            'splash-clear-data-btn',
             'angle-display',
             'power-bar-container',
             'power-bar',
@@ -65,6 +76,7 @@ class EarthGuardUI {
         this.renderPower(game);
         this.renderButtons(game);
         this.renderUpgrades(game);
+        this.renderSplash(game);
         this.renderGameOverBattlefieldPrompt(game);
         this.renderGameOver(game);
     }
@@ -344,6 +356,12 @@ class EarthGuardUI {
                     jumpSelect.value = String((preferred || options[options.length - 1] || options[0]).level);
                 }
                 const selected = options.find((o) => String(o.level) === String(jumpSelect.value)) || options[0];
+                const highest = options[options.length - 1];
+                if (jumpHighestBtn) {
+                    const alreadyHighest = !!selected && !!highest && selected.level === highest.level;
+                    jumpHighestBtn.disabled = !game.isGameOver || alreadyHighest;
+                    jumpHighestBtn.textContent = alreadyHighest ? 'HIGHEST ✓' : 'HIGHEST';
+                }
                 if (jumpHint && selected) {
                     jumpHint.textContent = `Start at level ${Math.floor(selected.level)} with $${Math.floor(selected.money)}, full EN, and no upgrades.`;
                 }
@@ -364,6 +382,7 @@ class EarthGuardUI {
                     }
                 }
                 jumpBtn.disabled = !game.isGameOver;
+                jumpBtn.textContent = selected ? `JUMP L${Math.floor(selected.level)}` : 'JUMP';
             }
         }
 
@@ -392,6 +411,94 @@ class EarthGuardUI {
         }
     }
 
+    renderSplash(game) {
+        const overlay = this.el['splash-overlay'];
+        const modal = this.el['splash-modal'];
+        if (!overlay || !modal) return;
+        this.renderModal({
+            overlayEl: overlay,
+            modalEl: modal,
+            titleEl: this.el['splash-title'],
+            isOpen: !!game.isSplashOpen,
+            titleText: 'EARTHGUARD'
+        });
+
+        const jumpSelect = this.el['splash-jump-level-select'];
+        const jumpStartBtn = this.el['splash-jump-start-btn'];
+        const jumpHighestBtn = this.el['splash-jump-highest-btn'];
+        const jumpPreviewEl = this.el['splash-jump-preview'];
+        const jumpOptions = typeof game.getAvailableJumpStartLevels === 'function' ? game.getAvailableJumpStartLevels() : [];
+        if (jumpSelect) {
+            if (jumpOptions.length) {
+                jumpSelect.disabled = false;
+                const currentValue = jumpSelect.value;
+                jumpSelect.innerHTML = jumpOptions.map((opt) => `<option value="${Math.floor(opt.level)}">L${Math.floor(opt.level)} | $${Math.floor(opt.money)}</option>`).join('');
+                if (currentValue && jumpOptions.some((o) => String(o.level) === String(currentValue))) {
+                    jumpSelect.value = currentValue;
+                } else {
+                    const preferred = typeof game.getPreferredJumpStartLevel === 'function' ? game.getPreferredJumpStartLevel() : null;
+                    const selected = jumpOptions.find((o) => o.level === preferred) || jumpOptions[jumpOptions.length - 1];
+                    jumpSelect.value = selected ? String(selected.level) : '';
+                }
+                const selected = jumpOptions.find((o) => String(o.level) === String(jumpSelect.value)) || jumpOptions[jumpOptions.length - 1];
+                const highest = jumpOptions[jumpOptions.length - 1];
+                if (jumpStartBtn) {
+                    jumpStartBtn.disabled = !selected;
+                    jumpStartBtn.textContent = selected ? `JUMP L${selected.level}` : 'JUMP';
+                }
+                if (jumpHighestBtn) {
+                    const alreadyHighest = !!selected && !!highest && selected.level === highest.level;
+                    jumpHighestBtn.disabled = jumpOptions.length === 0 || alreadyHighest;
+                    jumpHighestBtn.textContent = alreadyHighest ? 'HIGHEST ✓' : 'HIGHEST';
+                }
+                if (jumpPreviewEl && selected && typeof game.getJumpStartPreview === 'function') {
+                    const preview = game.getJumpStartPreview(selected.level);
+                    jumpPreviewEl.innerHTML = preview
+                        ? `L${preview.level} • THREATS ${preview.enemyCount} • SPD ${Math.floor(preview.enemySpeed)} • START $${preview.money}`
+                        : '';
+                }
+            } else {
+                jumpSelect.innerHTML = '<option value="">NO JUMPS YET</option>';
+                jumpSelect.disabled = true;
+                if (jumpStartBtn) jumpStartBtn.disabled = true;
+                if (jumpHighestBtn) jumpHighestBtn.disabled = true;
+                if (jumpPreviewEl) jumpPreviewEl.textContent = 'Reach higher levels to unlock jump starts.';
+            }
+        }
+
+        const splashMetaList = this.el['splash-meta-upgrade-list'];
+        if (splashMetaList) {
+            const metaUpgrades = typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : [];
+            splashMetaList.innerHTML = metaUpgrades.map((upgrade) => {
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                const tier = upgrade.nextTier;
+                const canBuy = !isMaxed && typeof game.canPurchaseMetaUpgrade === 'function' && game.canPurchaseMetaUpgrade(upgrade.key);
+                const label = isMaxed ? 'MAXED' : this.formatMetaUpgradeCostText(tier?.cost || 0, canBuy);
+                return `
+                    <div class="terminal-panel upgrade-row meta-upgrade-row">
+                        <div class="upgrade-copy">
+                            <div class="upgrade-name">${upgrade.name} <span class="upgrade-level">L${upgrade.level}/${upgrade.maxLevel}</span></div>
+                            <div class="upgrade-meta">${upgrade.description}</div>
+                            <div class="upgrade-effect">${isMaxed ? 'MAXED' : (tier?.label || 'NEXT')}</div>
+                        </div>
+                        <button class="terminal-btn upgrade-btn${isMaxed ? ' owned' : ''}" data-splash-meta-upgrade-key="${upgrade.key}" ${(!canBuy || isMaxed) ? 'disabled' : ''}>${label}</button>
+                    </div>`;
+            }).join('');
+        }
+
+        const splashStats = this.el['splash-stats'];
+        if (splashStats) {
+            const m = game.metaProgress || {};
+            const best = m.careerBest || {};
+            splashStats.innerHTML = [
+                `<div class="game-over-stat-row"><span class="hud-label">RUNS</span><span class="hud-value">${Math.floor(m.totalRuns || 0)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">BEST LV</span><span class="hud-value">${Math.floor(m.bestLevelReached || 0)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">SALVAGE</span><span class="hud-value">${Math.floor(m.metaCurrency || 0)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">BEST KILLS</span><span class="hud-value">${Math.floor(best.maxKills || 0)}</span></div>`
+            ].join('');
+        }
+    }
+
     renderCareerSummary(game) {
         const careerEl = this.el['career-stats'];
         const recentRunsEl = this.el['recent-runs'];
@@ -400,6 +507,7 @@ class EarthGuardUI {
         const metaProgress = game.metaProgress || {};
         const totalRuns = Math.floor(metaProgress.totalRuns || 0);
         const bestLevelReached = Math.floor(metaProgress.bestLevelReached || 0);
+        const careerBest = (metaProgress.careerBest && typeof metaProgress.careerBest === 'object') ? metaProgress.careerBest : {};
         const preferredJump = (typeof game.getPreferredJumpStartLevel === 'function')
             ? game.getPreferredJumpStartLevel()
             : null;
@@ -418,6 +526,8 @@ class EarthGuardUI {
             careerEl.innerHTML = [
                 `<div class="game-over-stat-row"><span class="hud-label">RUNS</span><span class="hud-value">${totalRuns}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">BEST LV</span><span class="hud-value">${bestLevelReached}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">BEST KILLS</span><span class="hud-value">${Math.floor(careerBest.maxKills || 0)}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">BEST SALVAGE</span><span class="hud-value">${Math.floor(careerBest.maxSalvageReward || 0)}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">BEST $ @ L${currentLevel}</span><span class="hud-value">${bestCurrentLevelMoney}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">JUMP PREF</span><span class="hud-value">${preferredJump ? `L${preferredJump}` : 'NONE'}</span></div>`,
                 `<div class="game-over-upgrades"><span class="hud-label">BEST $ BY LV</span><span class="game-over-upgrade-list">${bestMoneyMarkup}</span></div>`

@@ -15,6 +15,7 @@ async function main() {
 
     await page.goto(pathToFileURL(path.join(repoRoot, 'index.html')).href, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.game && window.renderer);
+    await page.evaluate(() => window.game.closeSplash && window.game.closeSplash());
 
     // Force an earth breach next cycle.
     await page.evaluate(() => {

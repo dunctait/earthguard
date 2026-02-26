@@ -22,6 +22,38 @@
         <div id="ui-bottom-overlay">
             <div id="missiles-status">MISSILES TARGETED: 0/2</div>
         </div>
+        <div id="splash-overlay" class="modal-overlay">
+            <div id="splash-modal" class="terminal-panel ui-modal game-over-modal">
+                <div class="ui-modal-header">
+                    <div id="splash-title" class="ui-modal-title">EARTHGUARD</div>
+                </div>
+                <div class="ui-modal-body">
+                    <div class="game-over-actions">
+                        <button id="splash-new-game-btn" class="terminal-btn upgrade-btn" type="button">NEW GAME</button>
+                    </div>
+                    <div class="game-over-section">
+                        <div class="game-over-section-title">JUMP START</div>
+                        <div class="game-over-jump-controls">
+                            <select id="splash-jump-level-select" class="terminal-select"></select>
+                            <button id="splash-jump-highest-btn" class="terminal-btn upgrade-btn" type="button">HIGHEST</button>
+                            <button id="splash-jump-start-btn" class="terminal-btn upgrade-btn" type="button">JUMP</button>
+                        </div>
+                        <div id="splash-jump-preview" class="game-over-jump-preview" aria-live="polite"></div>
+                    </div>
+                    <div class="game-over-section">
+                        <div class="game-over-section-title">META UPGRADES</div>
+                        <div id="splash-meta-upgrade-list" class="meta-upgrade-list"></div>
+                    </div>
+                    <div class="game-over-section">
+                        <div class="game-over-section-title">GAME STATS</div>
+                        <div id="splash-stats" class="game-over-stats"></div>
+                    </div>
+                    <div class="game-over-actions">
+                        <button id="splash-clear-data-btn" class="terminal-btn upgrade-btn" type="button">CLEAR LOCAL DATA</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div id="controls" class="terminal-panel">
             <div id="upgrade-controls">
                 <button id="upgrade-menu-btn" class="terminal-btn upgrade-btn" data-testid="upgrade-menu-btn">UPGRADES</button>

@@ -17,6 +17,13 @@ class Renderer {
             'game-canvas',
             'controls',
             'ui-bottom-overlay',
+            'splash-overlay',
+            'splash-new-game-btn',
+            'splash-jump-level-select',
+            'splash-jump-highest-btn',
+            'splash-jump-start-btn',
+            'splash-meta-upgrade-list',
+            'splash-clear-data-btn',
             'upgrade-menu-btn',
             'upgrade-modal-overlay',
             'upgrade-menu',
@@ -317,6 +324,46 @@ class Renderer {
                 const button = event.target.closest('[data-meta-upgrade-key]');
                 if (!button) return;
                 this.game.purchaseMetaUpgrade(button.dataset.metaUpgradeKey);
+            });
+        }
+        if (this.dom['splash-meta-upgrade-list']) {
+            this.dom['splash-meta-upgrade-list'].addEventListener('click', (event) => {
+                const button = event.target.closest('[data-splash-meta-upgrade-key]');
+                if (!button) return;
+                this.game.purchaseMetaUpgrade(button.dataset.splashMetaUpgradeKey);
+            });
+        }
+        if (this.dom['splash-new-game-btn']) {
+            this.dom['splash-new-game-btn'].addEventListener('click', () => {
+                this.game.reset();
+                this.game.closeSplash?.();
+            });
+        }
+        if (this.dom['splash-jump-start-btn']) {
+            this.dom['splash-jump-start-btn'].addEventListener('click', () => {
+                const level = Number(this.dom['splash-jump-level-select']?.value || 0);
+                this.game.startJumpRun(level);
+            });
+        }
+        if (this.dom['splash-jump-highest-btn']) {
+            this.dom['splash-jump-highest-btn'].addEventListener('click', () => {
+                const highest = this.game.getHighestJumpStartLevel?.();
+                if (!highest?.level || !this.dom['splash-jump-level-select']) return;
+                this.dom['splash-jump-level-select'].value = String(highest.level);
+                this.game.setPreferredJumpStartLevel?.(highest.level);
+                this.game.notify();
+            });
+        }
+        if (this.dom['splash-jump-level-select']) {
+            this.dom['splash-jump-level-select'].addEventListener('change', () => {
+                const level = Number(this.dom['splash-jump-level-select']?.value || 0);
+                this.game.setPreferredJumpStartLevel?.(level);
+                this.game.notify();
+            });
+        }
+        if (this.dom['splash-clear-data-btn']) {
+            this.dom['splash-clear-data-btn'].addEventListener('click', () => {
+                this.game.clearAllLocalData?.();
             });
         }
     }
