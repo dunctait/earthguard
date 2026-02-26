@@ -101,30 +101,6 @@ html, body {
     font-weight: 700;
 }
 
-.hp-hearts {
-    display: inline-flex;
-    gap: 2px;
-    align-items: center;
-    margin: 0 2px 0 1px;
-}
-
-.hp-heart {
-    width: 6px;
-    height: 6px;
-    border: 1px solid var(--green-tertiary);
-    transform: rotate(45deg);
-    display: inline-block;
-    box-sizing: border-box;
-    background: transparent;
-    opacity: 0.85;
-}
-
-.hp-heart.is-filled {
-    border-color: var(--green-secondary);
-    background: rgba(0, 255, 102, 0.45);
-    box-shadow: 0 0 6px rgba(0, 255, 102, 0.18);
-}
-
 #status {
     display: flex;
     justify-content: space-between;
@@ -284,23 +260,21 @@ html, body {
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 8px 10px;
+    padding: 6px 10px;
     background: rgba(0, 0, 0, 0.28);
     border: 1px solid rgba(255, 80, 80, 0.12);
     backdrop-filter: blur(1px);
+    margin-top: auto;
+    margin-bottom: 18px;
 }
 
 .game-over-battle-title {
-    color: rgba(255, 110, 110, 0.9);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    text-align: center;
+    display: none;
 }
 
 .game-over-battle-subtitle {
-    color: rgba(255, 190, 140, 0.85);
-    font-size: 9px;
+    color: rgba(255, 190, 140, 0.78);
+    font-size: 8px;
     letter-spacing: 0.05em;
     text-align: center;
     max-width: 240px;
@@ -945,26 +919,4 @@ html, body {
 #status,
 #angle-display {
     animation: textFlicker 7s steps(1, end) infinite;
-}
-
-/* Landscape warning */
-@media (orientation: landscape) {
-    #game-container::before {
-        content: '[ ROTATE TO PORTRAIT ]';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--bg-black);
-        color: var(--green-secondary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        font-weight: 700;
-        text-shadow: 0 0 10px var(--green-glow-medium);
-        z-index: 1000;
-        letter-spacing: 3px;
-    }
 }

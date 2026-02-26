@@ -142,23 +142,12 @@ class EarthGuardUI {
         return `BUY [<span class="upgrade-cost-token${missing ? ' missing' : ''}">SALVAGE ${Math.floor(cost || 0)}</span>]`;
     }
 
-    renderHpHearts(hp, maxHp = 100) {
-        const heartCount = 5;
-        const safeMax = Math.max(1, Math.floor(maxHp || 100));
-        const clampedHp = Math.max(0, Math.floor(hp || 0));
-        const filledHearts = Math.ceil((clampedHp / safeMax) * heartCount);
-        const hearts = Array.from({ length: heartCount }, (_, i) =>
-            `<span class="hp-heart${i < filledHearts ? ' is-filled' : ''}"></span>`
-        ).join('');
-        return `<span class="hp-hearts" aria-hidden="true">${hearts}</span>`;
-    }
-
     renderHud(game) {
         // HUD shows the upcoming decision cycle (the cycle the player is about to spend).
         const displayedCycle = Math.max(1, (game.levelCycles || 0) + 1);
         const liveBonus = game.getWaveClearSpeedBonus(displayedCycle, game.level);
         this.el.level.innerHTML = `<span class="hud-line"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-line"><span class="hud-label">CYCLE</span><span class="hud-value">${displayedCycle}</span></span><span class="hud-line"><span class="hud-label">BONUS</span><span class="hud-value hud-value-hypo">+$${liveBonus}</span></span>${this.getWaveBonusMarkup()}`;
-        this.el.hp.innerHTML = `<span class="hud-label">HP</span>${this.renderHpHearts(game.baseHP, game.config.STARTING_HP)}<span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
+        this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
         this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${this.formatHudNumber(game.missileEnergy)}/${this.formatHudNumber(game.config.MISSILE_ENERGY_MAX)}</span>${this.getHudDeltaMarkup('energy')}`;
         this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${this.formatHudNumber(game.money)}</span>${this.getHudDeltaMarkup('money')}`;
         if (this.el['missiles-status']) {

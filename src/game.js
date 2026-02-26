@@ -641,6 +641,7 @@ class Game {
             sizeMultiplier = Math.max(0.55, 0.9 - ((level - 8) * 0.05));
         }
 
+        const useBandedRows = level >= 4;
         if (level >= 8) {
             // Flatter formations with small banded Y offsets make later waves feel more "swarm / bullet hell".
             const bandCount = Math.min(3, Math.max(2, Math.ceil(alienCount / 4)));
@@ -655,6 +656,9 @@ class Game {
             type: 'saucer',
             sizeMultiplier,
             yBand: 0
+        })).map((enemy, i) => ({
+            ...enemy,
+            yBand: useBandedRows ? (i % Math.min(3, Math.max(2, Math.ceil(alienCount / 4)))) : 0
         }));
     }
 
@@ -1519,12 +1523,6 @@ class Game {
             this.config.MISSILE_ENERGY_MAX
         );
         this.missilesLaunchedThisCycle = 0;
-
-        if (this.hasInevitableEarthBreach()) {
-            this.baseHP = 0;
-            this.triggerGameOver('DEFENSE BREACHED!');
-            return;
-        }
 
         this.notify();
     }
