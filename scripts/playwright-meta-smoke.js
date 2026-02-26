@@ -27,6 +27,8 @@ async function main() {
     // Open game-over modal and interact with meta + jump controls.
     await page.evaluate(() => window.game.triggerGameOver('EARTH BREACHED'));
     await page.waitForFunction(() => window.game.isGameOver === true);
+    await page.evaluate(() => document.querySelector('#game-over-continue-btn')?.click());
+    await page.waitForFunction(() => window.game.isGameOverSummaryOpen === true);
 
     const before = await page.evaluate(() => ({
         salvage: Math.floor(window.game.metaProgress?.metaCurrency || 0),

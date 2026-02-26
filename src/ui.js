@@ -32,6 +32,10 @@ class EarthGuardUI {
             'upgrade-menu',
             'upgrade-menu-title',
             'upgrade-menu-close-btn',
+            'game-over-battle-overlay',
+            'game-over-battle-title',
+            'game-over-battle-subtitle',
+            'game-over-continue-btn',
             'upgrade-list',
             'game-over-overlay',
             'game-over-modal',
@@ -58,6 +62,7 @@ class EarthGuardUI {
         this.renderPower(game);
         this.renderButtons(game);
         this.renderUpgrades(game);
+        this.renderGameOverBattlefieldPrompt(game);
         this.renderGameOver(game);
     }
 
@@ -261,7 +266,7 @@ class EarthGuardUI {
             overlayEl: overlay,
             modalEl: modal,
             titleEl: this.el['game-over-title'],
-            isOpen: !!game.isGameOver,
+            isOpen: !!(game.isGameOver && game.isGameOverSummaryOpen),
             titleText: 'GAME OVER'
         });
         if (this.el['game-over-subtitle']) {
@@ -357,6 +362,22 @@ class EarthGuardUI {
                     </div>
                 `;
             }).join('');
+        }
+    }
+
+    renderGameOverBattlefieldPrompt(game) {
+        const overlay = this.el['game-over-battle-overlay'];
+        if (!overlay) return;
+        const isOpen = !!(game.isGameOver && !game.isGameOverSummaryOpen);
+        overlay.classList.toggle('is-hidden', !isOpen);
+        overlay.setAttribute('aria-hidden', String(!isOpen));
+        if (this.el['game-over-battle-title']) {
+            this.el['game-over-battle-title'].textContent = game.gameOverReason || 'DEFENSE BREACHED!';
+        }
+        if (this.el['game-over-battle-subtitle']) {
+            this.el['game-over-battle-subtitle'].textContent = (game.gameOverReason === 'EARTH BREACHED')
+                ? 'Enemy contact reached the earth line. Continue for run report and upgrades.'
+                : 'Projected breach was unavoidable. Continue for run report and upgrades.';
         }
     }
 

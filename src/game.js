@@ -103,9 +103,9 @@ const UpgradeDefinitions = {
         description: 'Increase explosion radius for all missiles.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 18, energyCost: 2, radiusMultiplier: 1.35, label: '+35%' },
-            { moneyCost: 40, energyCost: 5, radiusMultiplier: 1.70, label: '+70%' },
-            { moneyCost: 75, energyCost: 6, radiusMultiplier: 2.10, label: '+110%' }
+            { moneyCost: 14, energyCost: 2, radiusMultiplier: 1.60, label: '+60%' },
+            { moneyCost: 34, energyCost: 4, radiusMultiplier: 2.05, label: '+105%' },
+            { moneyCost: 70, energyCost: 6, radiusMultiplier: 2.35, label: '+135%' }
         ],
         uiLabelForTier: (tier) => tier.label || `x${tier.radiusMultiplier ?? 1}`,
         apply: ({ effects, tier }) => {
@@ -118,8 +118,8 @@ const UpgradeDefinitions = {
         description: 'Adds one missile slot per cycle per level.',
         stackingMode: 'replace',
         tiers: [
-            { moneyCost: 26, energyCost: 4, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
-            { moneyCost: 55, energyCost: 6, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
+            { moneyCost: 22, energyCost: 4, missilesPerTurnBonus: 1, label: '+1 missile/cycle' },
+            { moneyCost: 48, energyCost: 6, missilesPerTurnBonus: 2, label: '+2 missiles/cycle' },
             { moneyCost: 95, energyCost: 6, missilesPerTurnBonus: 3, label: '+3 missiles/cycle' }
         ],
         uiLabelForTier: (tier) => tier.label || `+${tier.missilesPerTurnBonus || 0} missile/cycle`,
@@ -328,6 +328,7 @@ class Game {
         };
         this.isUpgradeMenuOpen = false;
         this.isGameOver = false;
+        this.isGameOverSummaryOpen = false;
         this.gameOverReason = '';
         this.metaProgress = this.loadMetaProgress();
         this.upgrades = this.createUpgradeState();
@@ -630,7 +631,7 @@ class Game {
             sizeMultiplier = Math.max(0.55, 0.9 - ((level - 8) * 0.05));
         }
 
-        if (level >= 4) {
+        if (level >= 8) {
             // Flatter formations with small banded Y offsets make later waves feel more "swarm / bullet hell".
             const bandCount = Math.min(3, Math.max(2, Math.ceil(alienCount / 4)));
             return Array.from({ length: alienCount }, (_, i) => ({
@@ -661,7 +662,7 @@ class Game {
         const minSpacing = this.config.ALIEN_WAVE_VERTICAL_SPACING || 8;
         const spacing = Math.max(minSpacing, (this.config.ALIEN_RADIUS * (spec.maxSizeMultiplier || 1) * 2.6));
         const activeTopY = spec.activeTopY ?? this.config.ALIEN_ACTIVE_SPAWN_TOP_Y ?? (this.config.WORLD_HEIGHT - 5);
-        const isSwarm = spec.level >= 4;
+        const isSwarm = spec.level >= 8;
         const bandStep = isSwarm ? Math.max(2.2, spacing * 0.38) : spacing;
         const bandJitter = isSwarm ? Math.max(0.4, bandStep * 0.18) : 0;
 
@@ -735,8 +736,8 @@ class Game {
         }
         if (aliens.length > 1) {
             this.relaxAlienFormation(aliens, {
-                minSepFactor: isSwarm ? (this.config.ALIEN_SWARM_MIN_SEPARATION_FACTOR || 1.9) : 1.55,
-                horizontalBias: isSwarm ? 0.42 : 0.36,
+                minSepFactor: isSwarm ? (this.config.ALIEN_SWARM_MIN_SEPARATION_FACTOR || 1.9) : 1.38,
+                horizontalBias: isSwarm ? 0.42 : 0.32,
                 verticalBias: isSwarm ? 0.10 : 0.14
             });
         }
@@ -1407,9 +1408,17 @@ class Game {
         this.power = 0;
         this.isUpgradeMenuOpen = false;
         this.isGameOver = true;
+        this.isGameOverSummaryOpen = false;
         this.gameOverReason = reason;
         this.updateMetaProgressFromRun();
         this.notify();
+    }
+
+    openGameOverSummary() {
+        if (!this.isGameOver) return false;
+        this.isGameOverSummaryOpen = true;
+        this.notify();
+        return true;
     }
 
     finishTurn() {
@@ -1540,6 +1549,7 @@ class Game {
         };
         this.isUpgradeMenuOpen = false;
         this.isGameOver = false;
+        this.isGameOverSummaryOpen = false;
         this.gameOverReason = '';
         for (const upgrade of Object.values(this.upgrades)) {
             upgrade.level = 0;
@@ -1608,6 +1618,7 @@ class Game {
             missileEnergy: this.missileEnergy,
             money: this.money,
             isGameOver: this.isGameOver,
+            isGameOverSummaryOpen: this.isGameOverSummaryOpen,
             gameOverReason: this.gameOverReason,
             levelCycles: this.levelCycles,
             totalCycles: this.totalCycles,

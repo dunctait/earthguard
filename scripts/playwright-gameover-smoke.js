@@ -28,10 +28,15 @@ async function main() {
 
     const beforeReset = await page.evaluate(() => ({
         isGameOver: window.game.isGameOver,
+        summaryOpen: !!window.game.isGameOverSummaryOpen,
         reason: window.game.gameOverReason,
-        overlayVisible: !document.querySelector('#game-over-overlay')?.classList.contains('is-hidden'),
+        battleOverlayVisible: !document.querySelector('#game-over-battle-overlay')?.classList.contains('is-hidden'),
+        summaryOverlayHidden: document.querySelector('#game-over-overlay')?.classList.contains('is-hidden'),
         playAgainVisible: !document.querySelector('#play-again-btn')?.disabled
     }));
+
+    await page.evaluate(() => document.querySelector('#game-over-continue-btn')?.click());
+    await page.waitForFunction(() => window.game.isGameOverSummaryOpen === true);
 
     await page.evaluate(() => document.querySelector('#play-again-btn')?.click());
     await page.waitForFunction(() => window.game.isGameOver === false);
@@ -44,7 +49,7 @@ async function main() {
         overlayHidden: document.querySelector('#game-over-overlay')?.classList.contains('is-hidden') ?? false
     }));
 
-    if (!beforeReset.overlayVisible || !afterReset.overlayHidden || afterReset.level !== 1 || afterReset.hp !== 100) {
+    if (!beforeReset.battleOverlayVisible || beforeReset.summaryOpen || !beforeReset.summaryOverlayHidden || !afterReset.overlayHidden || afterReset.level !== 1 || afterReset.hp !== 100) {
         throw new Error(`Game over / reset flow failed: ${JSON.stringify({ beforeReset, afterReset })}`);
     }
 

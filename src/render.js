@@ -21,6 +21,10 @@ class Renderer {
             'upgrade-modal-overlay',
             'upgrade-menu',
             'upgrade-menu-close-btn',
+            'game-over-battle-overlay',
+            'game-over-battle-title',
+            'game-over-battle-subtitle',
+            'game-over-continue-btn',
             'game-over-overlay',
             'play-again-btn',
             'meta-upgrade-list',
@@ -162,6 +166,7 @@ class Renderer {
 
         this.generateTerrain();
         this.positionBottomHudOverlay();
+        this.positionGameOverBattleOverlay();
         this.render();
     }
 
@@ -177,6 +182,20 @@ class Renderer {
         overlay.style.width = `${canvasRect.width}px`;
         overlay.style.right = 'auto';
         overlay.style.top = `${top}px`;
+        overlay.style.bottom = 'auto';
+    }
+
+    positionGameOverBattleOverlay() {
+        const overlay = this.dom['game-over-battle-overlay'];
+        const container = this.canvas?.parentElement;
+        if (!overlay || !container || !this.canvas) return;
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        overlay.style.left = `${canvasRect.left - containerRect.left}px`;
+        overlay.style.top = `${canvasRect.top - containerRect.top}px`;
+        overlay.style.width = `${canvasRect.width}px`;
+        overlay.style.height = `${canvasRect.height}px`;
+        overlay.style.right = 'auto';
         overlay.style.bottom = 'auto';
     }
 
@@ -257,6 +276,9 @@ class Renderer {
         }
         if (this.dom['play-again-btn']) {
             this.dom['play-again-btn'].addEventListener('click', () => this.game.reset());
+        }
+        if (this.dom['game-over-continue-btn']) {
+            this.dom['game-over-continue-btn'].addEventListener('click', () => this.game.openGameOverSummary());
         }
         if (this.dom['jump-start-btn']) {
             this.dom['jump-start-btn'].addEventListener('click', () => {
@@ -853,6 +875,7 @@ class Renderer {
 
         // Corner brackets instead of full border
         this.drawCornerBrackets();
+        this.drawGameOverBattlefieldMessage();
         this.drawWaveClearBanners();
     }
 
@@ -1247,6 +1270,30 @@ class Renderer {
             ctx.fillText(banner.subtitle, 0, isTargetMsg ? 14 : 18);
         }
 
+        ctx.restore();
+    }
+
+    drawGameOverBattlefieldMessage() {
+        if (!this.game?.isGameOver || this.game?.isGameOverSummaryOpen) return;
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const title = this.game.gameOverReason || 'DEFENSE BREACHED!';
+        const subtitle = (title === 'EARTH BREACHED')
+            ? 'ENEMY CONTACT REACHED EARTH LINE'
+            : 'PROJECTED IMPACT UNAVOIDABLE';
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = "700 16px Orbitron, 'Share Tech Mono', monospace";
+        ctx.fillStyle = 'rgba(255, 110, 110, 0.9)';
+        ctx.shadowColor = 'rgba(255, 80, 80, 0.25)';
+        ctx.shadowBlur = 10;
+        ctx.fillText(title, w / 2, h * 0.44);
+        ctx.font = "700 10px 'Share Tech Mono', monospace";
+        ctx.fillStyle = 'rgba(255, 170, 120, 0.78)';
+        ctx.shadowBlur = 6;
+        ctx.fillText(subtitle, w / 2, h * 0.47);
         ctx.restore();
     }
 

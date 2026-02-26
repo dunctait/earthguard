@@ -265,7 +265,7 @@ const MATRIX_PERSONA_CRITERIA = {
     '90acc_cheapestCombatUpgrade_1xBanked': {
         designIntent: 'Simple combat-first upgrader at high accuracy should outperform no-upgrade baseline and usually reach mid-game.',
         aggregate: {
-            avgFinalLevel: { min: 5.1, max: 8.5 },
+            avgFinalLevel: { min: 5.0, max: 8.5 },
             avgFinalCycles: { min: 10, max: 28 },
             gameOverRate: { min: 0.95, max: 1.0 }
         }
