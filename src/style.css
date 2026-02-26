@@ -450,6 +450,10 @@ html, body {
     color: rgba(51, 230, 255, 0.9);
 }
 
+.meta-upgrade-row .upgrade-btn:disabled {
+    opacity: 0.6;
+}
+
 .upgrade-list {
     display: flex;
     flex-direction: column;

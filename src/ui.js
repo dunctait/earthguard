@@ -133,6 +133,11 @@ class EarthGuardUI {
         return `BUY [${parts.join(' | ')}]`;
     }
 
+    formatMetaUpgradeCostText(cost, canAfford) {
+        const missing = !canAfford;
+        return `BUY [<span class="upgrade-cost-token${missing ? ' missing' : ''}">SALVAGE ${Math.floor(cost || 0)}</span>]`;
+    }
+
     renderHud(game) {
         // HUD shows the upcoming decision cycle (the cycle the player is about to spend).
         const displayedCycle = Math.max(1, (game.levelCycles || 0) + 1);
@@ -346,7 +351,7 @@ class EarthGuardUI {
                 const canBuy = !isMaxed && typeof game.canPurchaseMetaUpgrade === 'function' && game.canPurchaseMetaUpgrade(upgrade.key);
                 const label = isMaxed
                     ? 'MAXED'
-                    : `BUY [SALVAGE ${Math.floor(tier?.cost || 0)}]`;
+                    : this.formatMetaUpgradeCostText(tier?.cost || 0, canBuy);
                 const effect = isMaxed ? 'MAXED' : (tier?.label || 'NEXT');
                 return `
                     <div class="terminal-panel upgrade-row meta-upgrade-row">
