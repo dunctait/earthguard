@@ -102,6 +102,94 @@ class EarthGuardUI {
         return armed;
     }
 
+    getJumpStartOptions(game) {
+        return (typeof game.getAvailableJumpStartLevels === 'function')
+            ? game.getAvailableJumpStartLevels()
+            : [];
+    }
+
+    renderJumpStartControls(game, {
+        wrapEl = null,
+        selectEl = null,
+        highestBtnEl = null,
+        startBtnEl = null,
+        hintEl = null,
+        previewEl = null,
+        hideWhenEmpty = false,
+        allowAction = true,
+        compactPreview = false,
+        emptyPreviewText = 'Reach higher levels to unlock jump starts.'
+    } = {}) {
+        if (!selectEl) return;
+        const options = this.getJumpStartOptions(game);
+        if (wrapEl && hideWhenEmpty) {
+            wrapEl.classList.toggle('is-hidden', options.length === 0);
+        }
+        if (!options.length) {
+            selectEl.innerHTML = '<option value="">NO JUMPS YET</option>';
+            selectEl.disabled = true;
+            if (highestBtnEl) highestBtnEl.disabled = true;
+            if (startBtnEl) {
+                startBtnEl.disabled = true;
+                startBtnEl.textContent = 'JUMP';
+            }
+            if (previewEl) previewEl.textContent = emptyPreviewText;
+            return;
+        }
+
+        selectEl.disabled = false;
+        const currentValue = selectEl.value;
+        selectEl.innerHTML = options.map((opt) => {
+            const label = `L${Math.floor(opt.level)} | $${Math.floor(opt.money)}`;
+            return `<option value="${Math.floor(opt.level)}">${label}</option>`;
+        }).join('');
+
+        if (currentValue && options.some((o) => String(o.level) === String(currentValue))) {
+            selectEl.value = currentValue;
+        } else {
+            const preferredLevel = typeof game.getPreferredJumpStartLevel === 'function'
+                ? game.getPreferredJumpStartLevel()
+                : null;
+            const preferred = options.find((o) => o.level === preferredLevel);
+            selectEl.value = String((preferred || options[options.length - 1] || options[0]).level);
+        }
+
+        const selected = options.find((o) => String(o.level) === String(selectEl.value)) || options[0];
+        const highest = options[options.length - 1];
+        if (highestBtnEl) {
+            const alreadyHighest = !!selected && !!highest && selected.level === highest.level;
+            highestBtnEl.disabled = !allowAction || alreadyHighest;
+            highestBtnEl.textContent = alreadyHighest ? 'HIGHEST ✓' : 'HIGHEST';
+        }
+        if (startBtnEl) {
+            startBtnEl.disabled = !allowAction || !selected;
+            startBtnEl.textContent = selected ? `JUMP L${Math.floor(selected.level)}` : 'JUMP';
+        }
+        if (hintEl && selected) {
+            hintEl.textContent = `Start at level ${Math.floor(selected.level)} with $${Math.floor(selected.money)}, full EN, and no upgrades.`;
+        }
+        if (previewEl && selected && typeof game.getJumpStartPreview === 'function') {
+            const preview = game.getJumpStartPreview(selected.level);
+            if (!preview) {
+                previewEl.textContent = '';
+                return;
+            }
+            if (compactPreview) {
+                previewEl.innerHTML = `L${preview.level} • THREATS ${preview.enemyCount} • SPD ${Math.floor(preview.enemySpeed)} • START $${preview.money}`;
+                return;
+            }
+            const bonusParts = [];
+            if (preview.startBonusMoney > 0) bonusParts.push(`+$${preview.startBonusMoney}`);
+            if (preview.startBonusEnergy > 0) bonusParts.push(`+EN ${preview.startBonusEnergy}`);
+            previewEl.innerHTML = [
+                `<span class="hud-label">WAVE</span> <span class="hud-inline-value">L${preview.level}</span>`,
+                `<span class="hud-label">THREATS</span> <span class="hud-inline-value">${preview.enemyCount}</span>`,
+                `<span class="hud-label">SPD</span> <span class="hud-inline-value">${Math.floor(preview.enemySpeed)}</span>`,
+                `<span class="hud-label">START</span> <span class="hud-inline-value">$${preview.money}${bonusParts.length ? ` ${bonusParts.join(' ')}` : ''}</span>`
+            ].join(' &nbsp; ');
+        }
+    }
+
     trackHudDeltas(game) {
         this.trackHudDelta('energy', game.missileEnergy, 'EN');
         this.trackHudDelta('money', game.money, '$');
@@ -347,65 +435,16 @@ class EarthGuardUI {
         }
         this.renderCareerSummary(game);
 
-        const jumpWrap = this.el['game-over-jump'];
-        const jumpSelect = this.el['jump-level-select'];
-        const jumpHighestBtn = this.el['jump-highest-btn'];
-        const jumpBtn = this.el['jump-start-btn'];
-        const jumpHint = this.el['jump-start-hint'];
-        const jumpPreviewEl = this.el['jump-start-preview'];
-        if (jumpWrap && jumpSelect && jumpBtn) {
-            const options = typeof game.getAvailableJumpStartLevels === 'function'
-                ? game.getAvailableJumpStartLevels()
-                : [];
-            jumpWrap.classList.toggle('is-hidden', options.length === 0);
-            if (jumpHighestBtn) {
-                jumpHighestBtn.disabled = options.length === 0 || !game.isGameOver;
-            }
-            if (options.length > 0) {
-                const currentValue = jumpSelect.value;
-                jumpSelect.innerHTML = options.map((opt) => {
-                    const label = `L${Math.floor(opt.level)} | $${Math.floor(opt.money)}`;
-                    return `<option value="${Math.floor(opt.level)}">${label}</option>`;
-                }).join('');
-                if (currentValue && options.some((o) => String(o.level) === String(currentValue))) {
-                    jumpSelect.value = currentValue;
-                } else {
-                    const preferredLevel = typeof game.getPreferredJumpStartLevel === 'function'
-                        ? game.getPreferredJumpStartLevel()
-                        : null;
-                    const preferred = options.find((o) => o.level === preferredLevel);
-                    jumpSelect.value = String((preferred || options[options.length - 1] || options[0]).level);
-                }
-                const selected = options.find((o) => String(o.level) === String(jumpSelect.value)) || options[0];
-                const highest = options[options.length - 1];
-                if (jumpHighestBtn) {
-                    const alreadyHighest = !!selected && !!highest && selected.level === highest.level;
-                    jumpHighestBtn.disabled = !game.isGameOver || alreadyHighest;
-                    jumpHighestBtn.textContent = alreadyHighest ? 'HIGHEST ✓' : 'HIGHEST';
-                }
-                if (jumpHint && selected) {
-                    jumpHint.textContent = `Start at level ${Math.floor(selected.level)} with $${Math.floor(selected.money)}, full EN, and no upgrades.`;
-                }
-                if (jumpPreviewEl && selected && typeof game.getJumpStartPreview === 'function') {
-                    const preview = game.getJumpStartPreview(selected.level);
-                    if (preview) {
-                        const bonusParts = [];
-                        if (preview.startBonusMoney > 0) bonusParts.push(`+$${preview.startBonusMoney}`);
-                        if (preview.startBonusEnergy > 0) bonusParts.push(`+EN ${preview.startBonusEnergy}`);
-                        jumpPreviewEl.innerHTML = [
-                            `<span class="hud-label">WAVE</span> <span class="hud-inline-value">L${preview.level}</span>`,
-                            `<span class="hud-label">THREATS</span> <span class="hud-inline-value">${preview.enemyCount}</span>`,
-                            `<span class="hud-label">SPD</span> <span class="hud-inline-value">${Math.floor(preview.enemySpeed)}</span>`,
-                            `<span class="hud-label">START</span> <span class="hud-inline-value">$${preview.money}${bonusParts.length ? ` ${bonusParts.join(' ')}` : ''}</span>`
-                        ].join(' &nbsp; ');
-                    } else {
-                        jumpPreviewEl.textContent = '';
-                    }
-                }
-                jumpBtn.disabled = !game.isGameOver;
-                jumpBtn.textContent = selected ? `JUMP L${Math.floor(selected.level)}` : 'JUMP';
-            }
-        }
+        this.renderJumpStartControls(game, {
+            wrapEl: this.el['game-over-jump'],
+            selectEl: this.el['jump-level-select'],
+            highestBtnEl: this.el['jump-highest-btn'],
+            startBtnEl: this.el['jump-start-btn'],
+            hintEl: this.el['jump-start-hint'],
+            previewEl: this.el['jump-start-preview'],
+            hideWhenEmpty: true,
+            allowAction: !!game.isGameOver
+        });
 
         this.renderMetaUpgradeModal(game);
     }
@@ -422,48 +461,13 @@ class EarthGuardUI {
             titleText: 'EARTHGUARD'
         });
 
-        const jumpSelect = this.el['splash-jump-level-select'];
-        const jumpStartBtn = this.el['splash-jump-start-btn'];
-        const jumpHighestBtn = this.el['splash-jump-highest-btn'];
-        const jumpPreviewEl = this.el['splash-jump-preview'];
-        const jumpOptions = typeof game.getAvailableJumpStartLevels === 'function' ? game.getAvailableJumpStartLevels() : [];
-        if (jumpSelect) {
-            if (jumpOptions.length) {
-                jumpSelect.disabled = false;
-                const currentValue = jumpSelect.value;
-                jumpSelect.innerHTML = jumpOptions.map((opt) => `<option value="${Math.floor(opt.level)}">L${Math.floor(opt.level)} | $${Math.floor(opt.money)}</option>`).join('');
-                if (currentValue && jumpOptions.some((o) => String(o.level) === String(currentValue))) {
-                    jumpSelect.value = currentValue;
-                } else {
-                    const preferred = typeof game.getPreferredJumpStartLevel === 'function' ? game.getPreferredJumpStartLevel() : null;
-                    const selected = jumpOptions.find((o) => o.level === preferred) || jumpOptions[jumpOptions.length - 1];
-                    jumpSelect.value = selected ? String(selected.level) : '';
-                }
-                const selected = jumpOptions.find((o) => String(o.level) === String(jumpSelect.value)) || jumpOptions[jumpOptions.length - 1];
-                const highest = jumpOptions[jumpOptions.length - 1];
-                if (jumpStartBtn) {
-                    jumpStartBtn.disabled = !selected;
-                    jumpStartBtn.textContent = selected ? `JUMP L${selected.level}` : 'JUMP';
-                }
-                if (jumpHighestBtn) {
-                    const alreadyHighest = !!selected && !!highest && selected.level === highest.level;
-                    jumpHighestBtn.disabled = jumpOptions.length === 0 || alreadyHighest;
-                    jumpHighestBtn.textContent = alreadyHighest ? 'HIGHEST ✓' : 'HIGHEST';
-                }
-                if (jumpPreviewEl && selected && typeof game.getJumpStartPreview === 'function') {
-                    const preview = game.getJumpStartPreview(selected.level);
-                    jumpPreviewEl.innerHTML = preview
-                        ? `L${preview.level} • THREATS ${preview.enemyCount} • SPD ${Math.floor(preview.enemySpeed)} • START $${preview.money}`
-                        : '';
-                }
-            } else {
-                jumpSelect.innerHTML = '<option value="">NO JUMPS YET</option>';
-                jumpSelect.disabled = true;
-                if (jumpStartBtn) jumpStartBtn.disabled = true;
-                if (jumpHighestBtn) jumpHighestBtn.disabled = true;
-                if (jumpPreviewEl) jumpPreviewEl.textContent = 'Reach higher levels to unlock jump starts.';
-            }
-        }
+        this.renderJumpStartControls(game, {
+            selectEl: this.el['splash-jump-level-select'],
+            highestBtnEl: this.el['splash-jump-highest-btn'],
+            startBtnEl: this.el['splash-jump-start-btn'],
+            previewEl: this.el['splash-jump-preview'],
+            compactPreview: true
+        });
 
         const splashStats = this.el['splash-stats'];
         if (splashStats) {

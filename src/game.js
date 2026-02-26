@@ -1509,17 +1509,7 @@ class Game {
 
     advance() {
         if (this.isAnimating || this.isGameOver || this.isSplashOpen) return;
-
-        // Move pending missiles to active
-        this.missilesLaunchedThisCycle = this.pendingMissiles.length;
-        this.stats.missilesLaunched += this.pendingMissiles.length;
-        const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
-        this.missiles.push(...this.pendingMissiles.map((missile) => ({
-            ...missile,
-            progress: Math.max(missile.progress || 0, launchStartProgress)
-        })));
-        this.pendingMissiles = [];
-        this.missilesLockedThisTurn = 0;
+        this.beginAdvanceCycle();
 
         this.isAnimating = true;
         this.notify();
@@ -1615,16 +1605,7 @@ class Game {
 
     advanceImmediate() {
         if (this.isAnimating || this.isGameOver) return false;
-
-        this.missilesLaunchedThisCycle = this.pendingMissiles.length;
-        this.stats.missilesLaunched += this.pendingMissiles.length;
-        const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
-        this.missiles.push(...this.pendingMissiles.map((missile) => ({
-            ...missile,
-            progress: Math.max(missile.progress || 0, launchStartProgress)
-        })));
-        this.pendingMissiles = [];
-        this.missilesLockedThisTurn = 0;
+        this.beginAdvanceCycle();
 
         this.isAnimating = true;
         const totalFrames = Math.max(1, this.config.ANIMATION_FRAMES || 1);
@@ -1633,6 +1614,20 @@ class Game {
         }
         this.finishTurn();
         return true;
+    }
+
+    beginAdvanceCycle() {
+        // Move pending missiles to active at the configured visible launch progress.
+        const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
+        const pendingCount = this.pendingMissiles.length;
+        this.missilesLaunchedThisCycle = pendingCount;
+        this.stats.missilesLaunched += pendingCount;
+        this.missiles.push(...this.pendingMissiles.map((missile) => ({
+            ...missile,
+            progress: Math.max(missile.progress || 0, launchStartProgress)
+        })));
+        this.pendingMissiles = [];
+        this.missilesLockedThisTurn = 0;
     }
 
     createExplosion(x, y, radius = this.getCurrentExplosionRadius()) {
