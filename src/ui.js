@@ -9,10 +9,12 @@ class EarthGuardUI {
             energy: null,
             money: null
         };
+        this.prevTotalCycles = null;
         this.hudDeltaFx = {
             energy: null,
             money: null
         };
+        this.waveBonusFx = null;
         this.el = utils ? utils.cacheDom([
             'level',
             'hp',
@@ -55,6 +57,7 @@ class EarthGuardUI {
     trackHudDeltas(game) {
         this.trackHudDelta('energy', game.missileEnergy, 'EN');
         this.trackHudDelta('money', game.money, '$');
+        this.trackWaveBonusDelta(game);
     }
 
     trackHudDelta(key, nextValue, prefix) {
@@ -72,6 +75,28 @@ class EarthGuardUI {
         const fx = this.hudDeltaFx[key];
         if (!fx || Date.now() > fx.until) return '';
         return `<span class="hud-delta">${fx.text}</span>`;
+    }
+
+    trackWaveBonusDelta(game) {
+        const totalCycles = Math.floor(game.totalCycles || 0);
+        const waveMoney = Math.floor(game.lastWaveClearBonus || 0);
+        const waveEnergy = Math.floor(game.lastWaveClearEnergyBonus || 0);
+        if (this.prevTotalCycles !== null && totalCycles !== this.prevTotalCycles && (waveMoney > 0 || waveEnergy > 0)) {
+            const parts = [];
+            if (waveMoney > 0) parts.push(`+$${waveMoney}`);
+            if (waveEnergy > 0) parts.push(`+EN ${waveEnergy}`);
+            this.waveBonusFx = {
+                text: `WAVE ${parts.join(' | ')}`,
+                until: Date.now() + 2200
+            };
+        }
+        this.prevTotalCycles = totalCycles;
+    }
+
+    getWaveBonusMarkup() {
+        const fx = this.waveBonusFx;
+        if (!fx || Date.now() > fx.until) return '';
+        return `<span class="hud-wave-bonus">${fx.text}</span>`;
     }
 
     formatHudNumber(value) {
@@ -104,7 +129,7 @@ class EarthGuardUI {
         // HUD shows the upcoming decision cycle (the cycle the player is about to spend).
         const displayedCycle = Math.max(1, (game.levelCycles || 0) + 1);
         const liveBonus = game.getWaveClearSpeedBonus(displayedCycle, game.level);
-        this.el.level.innerHTML = `<span class="hud-line"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-line"><span class="hud-label">CYCLE</span><span class="hud-value">${displayedCycle}</span></span><span class="hud-line"><span class="hud-label">BONUS</span><span class="hud-value hud-value-hypo">+$${liveBonus}</span></span>`;
+        this.el.level.innerHTML = `<span class="hud-line"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-line"><span class="hud-label">CYCLE</span><span class="hud-value">${displayedCycle}</span></span><span class="hud-line"><span class="hud-label">BONUS</span><span class="hud-value hud-value-hypo">+$${liveBonus}</span></span>${this.getWaveBonusMarkup()}`;
         this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
         this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${this.formatHudNumber(game.missileEnergy)}/${this.formatHudNumber(game.config.MISSILE_ENERGY_MAX)}</span>${this.getHudDeltaMarkup('energy')}`;
         this.el.money.innerHTML = `<span class="hud-label">$</span><span class="hud-value">${this.formatHudNumber(game.money)}</span>${this.getHudDeltaMarkup('money')}`;
