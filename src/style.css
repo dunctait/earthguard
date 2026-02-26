@@ -59,7 +59,7 @@ html, body {
         linear-gradient(to bottom, rgba(0, 24, 10, 0.25), rgba(0, 0, 0, 0.15));
 }
 
-@media (orientation: portrait) {
+@media (orientation: landscape) {
     #game-container {
         width: min(100vw, calc(45vh));
         max-width: min(100vw, calc(45vh));

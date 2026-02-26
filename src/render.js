@@ -88,6 +88,7 @@ class Renderer {
         this.terrainPoints = null;
         this.lastMissileCount = 0;
         this.lastExplosionCount = 0;
+        this.lastBossesDefeated = 0;
         this.cannonRecoil = 0;
         this.impactFlash = 0;
         this.viewZoom = 1;
@@ -407,9 +408,14 @@ class Renderer {
         if (explosionCount > this.lastExplosionCount) {
             this.impactFlash = 1;
         }
+        const bossesDefeated = this.game.bossesDefeatedThisRun || 0;
+        if (bossesDefeated > this.lastBossesDefeated) {
+            this.impactFlash = Math.max(this.impactFlash, 1.35);
+        }
 
         this.lastMissileCount = missileCount;
         this.lastExplosionCount = explosionCount;
+        this.lastBossesDefeated = bossesDefeated;
 
         this.cannonRecoil *= 0.82;
         this.impactFlash *= 0.88;
@@ -625,12 +631,17 @@ class Renderer {
 
         // Terrain with glow
         if (this.terrainPoints && this.terrainPoints.length > 0) {
+            const zoom = this.viewZoom || 1;
+            const terrainOverscan = zoom < 0.999
+                ? ((w * ((1 / zoom) - 1)) * 0.5) + 6
+                : 0;
             const drawTerrainPath = () => {
                 ctx.beginPath();
-                ctx.moveTo(this.terrainPoints[0].x, this.terrainPoints[0].y);
+                ctx.moveTo(this.terrainPoints[0].x - terrainOverscan, this.terrainPoints[0].y);
                 for (let i = 1; i < this.terrainPoints.length; i++) {
                     ctx.lineTo(this.terrainPoints[i].x, this.terrainPoints[i].y);
                 }
+                ctx.lineTo(this.terrainPoints[this.terrainPoints.length - 1].x + terrainOverscan, this.terrainPoints[this.terrainPoints.length - 1].y);
             };
 
             // Under-shadow line for lit terrain edge
@@ -656,7 +667,13 @@ class Renderer {
 
         // Ground reflection glow
         ctx.fillStyle = 'rgba(0, 170, 68, 0.06)';
-        ctx.fillRect(0, h - 40, w, 40);
+        {
+            const zoom = this.viewZoom || 1;
+            const overscan = zoom < 0.999
+                ? ((w * ((1 / zoom) - 1)) * 0.5) + 8
+                : 0;
+            ctx.fillRect(-overscan, h - 40, w + (overscan * 2), 40);
+        }
 
         // Locked missiles predictions
         const lockedPredictions = this.game.getLockedMissilesPredictions();
@@ -1400,6 +1417,7 @@ class Renderer {
         const pulse = 1 + Math.sin(this.frameCount * 0.12) * 0.01;
         const centerX = w / 2;
         const isTargetMsg = banner.title === 'MISSILE TARGETED';
+        const isBossMsg = banner.title === 'BOSS DESTROYED';
         const centerY = isTargetMsg ? (h * 0.62) : (h * 0.46);
 
         ctx.save();
@@ -1410,20 +1428,30 @@ class Renderer {
 
         ctx.font = isTargetMsg
             ? "700 13px 'Share Tech Mono', monospace"
+            : isBossMsg
+                ? "700 20px Orbitron, 'Share Tech Mono', monospace"
             : "700 18px Orbitron, 'Share Tech Mono', monospace";
         ctx.fillStyle = isTargetMsg
             ? `rgba(0, 255, 255, ${alpha * 0.7})`
+            : isBossMsg
+                ? `rgba(255, 120, 120, ${alpha * 0.92})`
             : `rgba(0, 255, 102, ${alpha * 0.9})`;
-        ctx.shadowColor = isTargetMsg ? 'rgba(0, 255, 255, 0.20)' : 'rgba(0, 255, 102, 0.35)';
-        ctx.shadowBlur = isTargetMsg ? 8 : 12;
+        ctx.shadowColor = isTargetMsg
+            ? 'rgba(0, 255, 255, 0.20)'
+            : (isBossMsg ? 'rgba(255, 90, 90, 0.28)' : 'rgba(0, 255, 102, 0.35)');
+        ctx.shadowBlur = isTargetMsg ? 8 : (isBossMsg ? 14 : 12);
         ctx.fillText(banner.title, 0, 0);
 
         if (banner.subtitle) {
             ctx.font = "700 12px 'Share Tech Mono', monospace";
             ctx.fillStyle = isTargetMsg
                 ? `rgba(255, 220, 120, ${alpha * 0.75})`
+                : isBossMsg
+                    ? `rgba(255, 210, 140, ${alpha * 0.85})`
                 : `rgba(255, 170, 0, ${alpha * 0.85})`;
-            ctx.shadowColor = isTargetMsg ? 'rgba(255, 220, 120, 0.16)' : 'rgba(255, 170, 0, 0.22)';
+            ctx.shadowColor = isTargetMsg
+                ? 'rgba(255, 220, 120, 0.16)'
+                : (isBossMsg ? 'rgba(255, 180, 100, 0.25)' : 'rgba(255, 170, 0, 0.22)');
             ctx.shadowBlur = 8;
             ctx.fillText(banner.subtitle, 0, isTargetMsg ? 14 : 18);
         }
