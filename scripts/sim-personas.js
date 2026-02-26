@@ -261,6 +261,25 @@ const MATRIX_STRATEGIES = {
     }
 };
 
+const MATRIX_PERSONA_CRITERIA = {
+    '90acc_cheapestCombatUpgrade_1xBanked': {
+        designIntent: 'Simple combat-first upgrader at high accuracy should outperform no-upgrade baseline and usually reach mid-game.',
+        aggregate: {
+            avgFinalLevel: { min: 5.1, max: 8.5 },
+            avgFinalCycles: { min: 10, max: 28 },
+            gameOverRate: { min: 0.95, max: 1.0 }
+        }
+    },
+    '75acc_cheapestCombatUpgrade_1xBanked': {
+        designIntent: 'Average-accuracy combat-first upgrader should reach early-mid game while still dying consistently.',
+        aggregate: {
+            avgFinalLevel: { min: 4.5, max: 7.5 },
+            avgFinalCycles: { min: 8, max: 24 },
+            gameOverRate: { min: 0.95, max: 1.0 }
+        }
+    }
+};
+
 function addMatrixPersonas() {
     const accuracies = [50, 60, 75, 90];
     const bankMultipliers = [1, 2];
@@ -275,7 +294,8 @@ function addMatrixPersonas() {
                     description: `${acc}% hit-target persona using ${strategyName} strategy with ${bankMultiplier}x resource bank threshold before upgrades.`,
                     ...accuracyProfile,
                     ...strategy,
-                    bankMultiplier
+                    bankMultiplier,
+                    ...(MATRIX_PERSONA_CRITERIA[name] ? { criteria: MATRIX_PERSONA_CRITERIA[name] } : {})
                 };
             }
         }
