@@ -469,6 +469,15 @@ html, body {
     align-self: center;
 }
 
+.upgrade-cost-token {
+    color: inherit;
+}
+
+.upgrade-cost-token.missing {
+    color: #ffb347;
+    text-shadow: 0 0 6px rgba(255, 179, 71, 0.25);
+}
+
 /* Rotation controls */
 #rotation-controls {
     display: flex;

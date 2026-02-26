@@ -957,6 +957,25 @@ class Game {
         return true;
     }
 
+    getUpgradeAffordability(key) {
+        const upgrade = this.upgrades[key];
+        const nextTier = this.getNextUpgradeTier(key);
+        if (!upgrade || !nextTier) {
+            return {
+                canBuy: false,
+                hasEnoughMoney: false,
+                hasEnoughEnergy: false,
+                tier: nextTier || null
+            };
+        }
+        return {
+            canBuy: this.canPurchaseUpgrade(key),
+            hasEnoughMoney: this.money >= nextTier.moneyCost,
+            hasEnoughEnergy: this.missileEnergy >= nextTier.energyCost,
+            tier: nextTier
+        };
+    }
+
     purchaseUpgrade(key) {
         if (!this.canPurchaseUpgrade(key)) return false;
         const upgrade = this.upgrades[key];

@@ -85,11 +85,17 @@ class EarthGuardUI {
         return `L${upgrade.level}/${maxText}`;
     }
 
-    formatUpgradeCostText(tier) {
+    formatUpgradeCostText(tier, affordability = null) {
         if (!tier) return 'BUY';
         const parts = [];
-        if ((tier.moneyCost ?? 0) > 0) parts.push(`$${tier.moneyCost}`);
-        if ((tier.energyCost ?? 0) > 0) parts.push(`EN ${tier.energyCost}`);
+        if ((tier.moneyCost ?? 0) > 0) {
+            const missingMoney = affordability && !affordability.hasEnoughMoney;
+            parts.push(`<span class="upgrade-cost-token${missingMoney ? ' missing' : ''}">$${tier.moneyCost}</span>`);
+        }
+        if ((tier.energyCost ?? 0) > 0) {
+            const missingEnergy = affordability && !affordability.hasEnoughEnergy;
+            parts.push(`<span class="upgrade-cost-token${missingEnergy ? ' missing' : ''}">EN ${tier.energyCost}</span>`);
+        }
         if (parts.length === 0) return 'BUY [FREE]';
         return `BUY [${parts.join(' | ')}]`;
     }
@@ -185,11 +191,14 @@ class EarthGuardUI {
             const nextTier = game.getNextUpgradeTier(upgrade.key);
             const isOwnedOut = (upgrade.maxLevel !== null) && (upgrade.level >= upgrade.maxLevel);
             const canBuy = game.canPurchaseUpgrade(upgrade.key);
+            const affordability = typeof game.getUpgradeAffordability === 'function'
+                ? game.getUpgradeAffordability(upgrade.key)
+                : null;
             const levelText = this.formatUpgradeLevelText(upgrade);
             const effectText = game.getUpgradeNextTierText(upgrade.key);
             const costText = isOwnedOut
                 ? 'OWNED'
-                : this.formatUpgradeCostText(nextTier);
+                : this.formatUpgradeCostText(nextTier, affordability);
             const btnClass = isOwnedOut ? 'terminal-btn upgrade-btn owned' : 'terminal-btn upgrade-btn';
             const disabledAttr = (isOwnedOut || !canBuy) ? 'disabled' : '';
 
