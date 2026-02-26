@@ -31,8 +31,7 @@ class Renderer {
             'rot-right-small',
             'rot-right-big',
             'fire-btn',
-            'advance-btn',
-            'idle-cycle-btn'
+            'advance-btn'
         ]);
         this.canvas = this.dom['game-canvas'];
         this.ctx = this.canvas.getContext('2d');
@@ -236,9 +235,6 @@ class Renderer {
         this.utils.bindPressHandlers(fireBtn, { onStart: startCharge, onEnd: stopCharge });
 
         this.dom['advance-btn'].addEventListener('click', () => this.game.advance());
-        if (this.dom['idle-cycle-btn']) {
-            this.dom['idle-cycle-btn'].addEventListener('click', () => this.game.idleCycle());
-        }
         if (this.dom['upgrade-menu-btn']) {
             this.dom['upgrade-menu-btn'].addEventListener('click', () => this.game.toggleUpgradeMenu());
         }
@@ -816,7 +812,11 @@ class Renderer {
                 if (pos.y > h * 0.38 || pos.y < -40) continue;
                 const size = this.worldToScreenSize(alien.radius) * 0.75;
                 const distanceAlpha = Math.max(0.3, this.getDepthBrightness(pos.y) * 0.45);
-                this.drawUFO(pos.x, pos.y, size, distanceAlpha);
+                if (alien.type === 'scout') {
+                    this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, true);
+                } else {
+                    this.drawUFO(pos.x, pos.y, size, distanceAlpha);
+                }
             }
         }
 
@@ -828,7 +828,11 @@ class Renderer {
             const pos = this.worldToScreen(alien.x, displayY);
             const size = this.worldToScreenSize(alien.radius) * 0.75;
             const distanceAlpha = Math.max(0.7, this.getDepthBrightness(pos.y));
-            this.drawUFO(pos.x, pos.y, size, distanceAlpha);
+            if (alien.type === 'scout') {
+                this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, false);
+            } else {
+                this.drawUFO(pos.x, pos.y, size, distanceAlpha);
+            }
         }
 
         ctx.restore();
@@ -1147,6 +1151,54 @@ class Renderer {
             ctx.arc(x, drawY, pulseRadius, 0, Math.PI * 2);
             ctx.stroke();
         }
+
+        ctx.restore();
+        this.clearGlow();
+    }
+
+    drawScoutAlien(x, y, size, alpha = 1, alien = null, preview = false) {
+        const ctx = this.ctx;
+        const time = this.frameCount * 0.05;
+        const wobbleY = Math.sin(time + x * 0.03) * (preview ? 1.5 : 2.2);
+        const drawY = y + wobbleY;
+        const cAlpha = Math.max(0.2, alpha);
+        const width = size * 1.9;
+        const height = size * 0.75;
+        const dir = alien?.zigzagDir || 1;
+
+        ctx.save();
+        this.setGlow(`rgba(255, 80, 90, ${0.22 * cAlpha})`, 7);
+        ctx.strokeStyle = `rgba(255, 90, 100, ${cAlpha})`;
+        ctx.lineWidth = 1.6;
+
+        // Dashed predictor showing the next lateral drift direction.
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.lineDashOffset = -(this.frameCount * 0.6);
+        ctx.strokeStyle = `rgba(255, 120, 120, ${0.35 * cAlpha})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, drawY + height * 0.1);
+        ctx.lineTo(x + (dir * width * 1.35), drawY - height * 0.55);
+        ctx.stroke();
+        ctx.restore();
+
+        // Small arrow-like zig-zag scout silhouette.
+        ctx.beginPath();
+        ctx.moveTo(x - width, drawY);
+        ctx.lineTo(x - width * 0.25, drawY - height);
+        ctx.lineTo(x + width, drawY);
+        ctx.lineTo(x - width * 0.25, drawY + height);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Inner spine line.
+        ctx.strokeStyle = `rgba(255, 90, 100, ${cAlpha * 0.55})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - width * 0.35, drawY);
+        ctx.lineTo(x + width * 0.45, drawY);
+        ctx.stroke();
 
         ctx.restore();
         this.clearGlow();

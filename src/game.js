@@ -630,11 +630,11 @@ class Game {
             sizeMultiplier = Math.max(0.55, 0.9 - ((level - 8) * 0.05));
         }
 
-        if (level >= 8) {
+        if (level >= 4) {
             // Flatter formations with small banded Y offsets make later waves feel more "swarm / bullet hell".
             const bandCount = Math.min(3, Math.max(2, Math.ceil(alienCount / 4)));
             return Array.from({ length: alienCount }, (_, i) => ({
-                type: 'saucer',
+                type: (level >= 9 && (i % 6) === 0) ? 'scout' : 'saucer',
                 sizeMultiplier,
                 yBand: i % bandCount
             }));
@@ -661,7 +661,7 @@ class Game {
         const minSpacing = this.config.ALIEN_WAVE_VERTICAL_SPACING || 8;
         const spacing = Math.max(minSpacing, (this.config.ALIEN_RADIUS * (spec.maxSizeMultiplier || 1) * 2.6));
         const activeTopY = spec.activeTopY ?? this.config.ALIEN_ACTIVE_SPAWN_TOP_Y ?? (this.config.WORLD_HEIGHT - 5);
-        const isSwarm = spec.level >= 8;
+        const isSwarm = spec.level >= 4;
         const bandStep = isSwarm ? Math.max(2.2, spacing * 0.38) : spacing;
         const bandJitter = isSwarm ? Math.max(0.4, bandStep * 0.18) : 0;
 
@@ -686,7 +686,8 @@ class Game {
             const enemyTemplate = spec.enemies[i] || { type: 'saucer', sizeMultiplier: 1 };
             const sizeMultiplier = enemyTemplate.sizeMultiplier || 1;
             const bandOffset = (enemyTemplate.yBand || 0) * bandStep;
-            const radius = this.config.ALIEN_RADIUS * sizeMultiplier;
+            const isScout = (enemyTemplate.type || 'saucer') === 'scout';
+            const radius = this.config.ALIEN_RADIUS * sizeMultiplier * (isScout ? 0.62 : 1);
             let x = 10 + Math.random() * (this.config.WORLD_WIDTH - 20);
             let y = startY - bandOffset;
             if (isSwarm && clusterCenters) {
@@ -720,23 +721,32 @@ class Game {
                 x,
                 y,
                 speed: spec.speed,
-                hp: 1,
+                hp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && (i % 5 === 1)) ? 2 : 1),
+                maxHp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && (i % 5 === 1)) ? 2 : 1),
                 damage: this.config.ALIEN_DAMAGE,
                 radius,
                 type: enemyTemplate.type || 'saucer',
                 sizeMultiplier,
                 waveLevel: spec.level,
-                incoming
+                incoming,
+                zigzagDir: isScout ? (Math.random() > 0.5 ? 1 : -1) : 0,
+                zigzagSpeedX: isScout ? (1.4 + (Math.random() * 0.8)) : 0
             });
         }
-        if (isSwarm && aliens.length > 1) {
-            this.relaxSwarmFormation(aliens);
+        if (aliens.length > 1) {
+            this.relaxAlienFormation(aliens, {
+                minSepFactor: isSwarm ? (this.config.ALIEN_SWARM_MIN_SEPARATION_FACTOR || 1.9) : 1.55,
+                horizontalBias: isSwarm ? 0.42 : 0.36,
+                verticalBias: isSwarm ? 0.10 : 0.14
+            });
         }
         return aliens;
     }
 
-    relaxSwarmFormation(aliens) {
-        const minSepFactor = this.config.ALIEN_SWARM_MIN_SEPARATION_FACTOR || 1.9;
+    relaxAlienFormation(aliens, options = {}) {
+        const minSepFactor = options.minSepFactor || 1.2;
+        const horizontalBias = options.horizontalBias || 0.28;
+        const verticalBias = options.verticalBias || 0.18;
         const worldMinX = 6;
         const worldMaxX = this.config.WORLD_WIDTH - 6;
         for (let iter = 0; iter < 28; iter++) {
@@ -753,9 +763,8 @@ class Game {
                     const overlap = minDist - dist;
                     const nx = dx / dist;
                     const ny = dy / dist;
-                    // Prefer horizontal separation so late waves remain banded.
-                    const pushX = (nx === 0 ? (Math.random() > 0.5 ? 1 : -1) : nx) * overlap * 0.42;
-                    const pushY = (ny === 0 ? 0 : ny) * overlap * 0.10;
+                    const pushX = (nx === 0 ? (Math.random() > 0.5 ? 1 : -1) : nx) * overlap * horizontalBias;
+                    const pushY = (ny === 0 ? 0 : ny) * overlap * verticalBias;
                     a.x = this.utils.clamp(a.x - pushX, worldMinX, worldMaxX);
                     b.x = this.utils.clamp(b.x + pushX, worldMinX, worldMaxX);
                     a.y -= pushY;
@@ -1240,9 +1249,31 @@ class Game {
 
         for (const alien of this.aliens) {
             alien.y -= alien.speed / totalFrames;
+            if (alien.type === 'scout') {
+                alien.x += ((alien.zigzagDir || 1) * (alien.zigzagSpeedX || 2.6)) / totalFrames;
+                const edgePad = 4 + (alien.radius || 0);
+                if (alien.x <= edgePad) {
+                    alien.x = edgePad;
+                    alien.zigzagDir = 1;
+                } else if (alien.x >= (this.config.WORLD_WIDTH - edgePad)) {
+                    alien.x = this.config.WORLD_WIDTH - edgePad;
+                    alien.zigzagDir = -1;
+                }
+            }
         }
         for (const alien of this.incomingAliens) {
             alien.y -= (alien.speed * 0.55) / totalFrames;
+            if (alien.type === 'scout') {
+                alien.x += ((alien.zigzagDir || 1) * (alien.zigzagSpeedX || 2.6) * 0.65) / totalFrames;
+                const edgePad = 4 + (alien.radius || 0);
+                if (alien.x <= edgePad) {
+                    alien.x = edgePad;
+                    alien.zigzagDir = 1;
+                } else if (alien.x >= (this.config.WORLD_WIDTH - edgePad)) {
+                    alien.x = this.config.WORLD_WIDTH - edgePad;
+                    alien.zigzagDir = -1;
+                }
+            }
         }
 
         for (const explosion of this.explosions) {
