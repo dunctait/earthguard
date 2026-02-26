@@ -534,6 +534,38 @@ html, body {
     opacity: 0.6;
 }
 
+.recent-runs {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(0, 68, 34, 0.6);
+}
+
+.recent-run-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.recent-run-summary {
+    color: var(--green-secondary);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 6px rgba(0, 170, 68, 0.16);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.recent-run-empty {
+    color: rgba(0, 170, 68, 0.7);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+}
+
 .upgrade-list {
     display: flex;
     flex-direction: column;

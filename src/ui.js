@@ -42,6 +42,8 @@ class EarthGuardUI {
             'game-over-title',
             'game-over-subtitle',
             'game-over-stats',
+            'career-stats',
+            'recent-runs',
             'play-again-btn',
             'meta-upgrade-menu',
             'meta-upgrade-list',
@@ -309,6 +311,7 @@ class EarthGuardUI {
                 `<div class="game-over-upgrades"><span class="hud-label">UPGRADES</span><span class="game-over-upgrade-list">${boughtSummary}</span></div>`
             ].join('');
         }
+        this.renderCareerSummary(game);
 
         const jumpWrap = this.el['game-over-jump'];
         const jumpSelect = this.el['jump-level-select'];
@@ -381,6 +384,42 @@ class EarthGuardUI {
                     </div>
                 `;
             }).join('');
+        }
+    }
+
+    renderCareerSummary(game) {
+        const careerEl = this.el['career-stats'];
+        const recentRunsEl = this.el['recent-runs'];
+        if (!careerEl && !recentRunsEl) return;
+
+        const metaProgress = game.metaProgress || {};
+        const totalRuns = Math.floor(metaProgress.totalRuns || 0);
+        const bestLevelReached = Math.floor(metaProgress.bestLevelReached || 0);
+        const preferredJump = (typeof game.getPreferredJumpStartLevel === 'function')
+            ? game.getPreferredJumpStartLevel()
+            : null;
+        const currentLevel = Math.floor(game.level || 1);
+        const bestCurrentLevelMoney = Math.floor(metaProgress.bestMoneyByLevel?.[String(currentLevel)] || 0);
+
+        if (careerEl) {
+            careerEl.innerHTML = [
+                `<div class="game-over-stat-row"><span class="hud-label">RUNS</span><span class="hud-value">${totalRuns}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">BEST LV</span><span class="hud-value">${bestLevelReached}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">BEST $ @ L${currentLevel}</span><span class="hud-value">${bestCurrentLevelMoney}</span></div>`,
+                `<div class="game-over-stat-row"><span class="hud-label">JUMP PREF</span><span class="hud-value">${preferredJump ? `L${preferredJump}` : 'NONE'}</span></div>`
+            ].join('');
+        }
+
+        if (recentRunsEl) {
+            const history = Array.isArray(metaProgress.runHistory) ? metaProgress.runHistory.slice(0, 5) : [];
+            recentRunsEl.innerHTML = history.length
+                ? history.map((run, idx) => `
+                    <div class="recent-run-row">
+                        <span class="hud-label">#${idx + 1}</span>
+                        <span class="recent-run-summary">L${Math.floor(run.level || 0)} • C${Math.floor(run.cycles || 0)} • K${Math.floor(run.kills || 0)} • $${Math.floor(run.money || 0)} • +S${Math.floor(run.salvage || 0)}</span>
+                    </div>
+                `).join('')
+                : '<div class="recent-run-empty">NO PRIOR RUNS</div>';
         }
     }
 

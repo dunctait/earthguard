@@ -16,7 +16,9 @@ async function main() {
                 metaCurrency: 24,
                 metaUpgrades: {},
                 bestMoneyByLevel: { '2': 18, '4': 77, '6': 132 },
-                lastRun: null
+                preferredJumpStartLevel: 2,
+                lastRun: null,
+                runHistory: []
             }));
         }
     });
@@ -50,6 +52,7 @@ async function main() {
     }));
 
     await page.selectOption('#jump-level-select', '4');
+    await page.evaluate(() => window.game.metaProgress && (window.game.metaProgress.totalRuns = 10));
     await page.evaluate(() => document.querySelector('#jump-start-btn')?.click());
     await page.waitForFunction(() => window.game.isGameOver === false);
 
@@ -67,7 +70,8 @@ async function main() {
         salvage: Math.floor(window.game.metaProgress?.metaCurrency || 0),
         reserveLevel: window.game.getMetaUpgradeLevel('startingReserve'),
         startMoney: Math.floor(window.game.money || 0),
-        jumpLevels: Array.from(window.game.getAvailableJumpStartLevels() || []).map((j) => j.level)
+        jumpLevels: Array.from(window.game.getAvailableJumpStartLevels() || []).map((j) => j.level),
+        preferredJumpStartLevel: Math.floor(window.game.metaProgress?.preferredJumpStartLevel || 0)
     }));
 
     if (before.jumpLevels.length === 0) {
@@ -81,6 +85,9 @@ async function main() {
     }
     if (afterReload.reserveLevel < 1 || afterReload.salvage !== afterBuy.salvage) {
         throw new Error(`Meta persistence reload failed: ${JSON.stringify({ afterBuy, afterReload })}`);
+    }
+    if (afterReload.preferredJumpStartLevel !== 4) {
+        throw new Error(`Preferred jump persistence failed: ${JSON.stringify({ afterReload })}`);
     }
 
     await browser.close();

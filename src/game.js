@@ -458,7 +458,8 @@ class Game {
             metaUpgrades: {},
             bestMoneyByLevel: {},
             preferredJumpStartLevel: null,
-            lastRun: null
+            lastRun: null,
+            runHistory: []
         };
     }
 
@@ -475,7 +476,8 @@ class Game {
                 ...fallback,
                 ...parsed,
                 metaUpgrades: (parsed.metaUpgrades && typeof parsed.metaUpgrades === 'object') ? parsed.metaUpgrades : {},
-                bestMoneyByLevel: (parsed.bestMoneyByLevel && typeof parsed.bestMoneyByLevel === 'object') ? parsed.bestMoneyByLevel : {}
+                bestMoneyByLevel: (parsed.bestMoneyByLevel && typeof parsed.bestMoneyByLevel === 'object') ? parsed.bestMoneyByLevel : {},
+                runHistory: Array.isArray(parsed.runHistory) ? parsed.runHistory.slice(0, 5) : []
             };
         } catch {
             return fallback;
@@ -507,6 +509,16 @@ class Game {
             reason: this.gameOverReason || '',
             metaReward: runMetaReward
         };
+        const historyEntry = {
+            level: Math.floor(this.level || 0),
+            cycles: Math.floor(this.totalCycles || 0),
+            kills: Math.floor(this.stats?.kills || 0),
+            money: Math.floor(this.money || 0),
+            salvage: Math.floor(runMetaReward || 0),
+            reason: this.gameOverReason || ''
+        };
+        const history = Array.isArray(this.metaProgress.runHistory) ? this.metaProgress.runHistory : [];
+        this.metaProgress.runHistory = [historyEntry, ...history].slice(0, 5);
         this.saveMetaProgress();
     }
 
