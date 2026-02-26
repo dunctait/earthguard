@@ -366,6 +366,27 @@ html, body {
     margin: 0;
 }
 
+#meta-upgrade-modal {
+    width: min(420px, calc(100% - 20px));
+}
+
+#meta-upgrade-modal .ui-modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: rgba(0, 8, 2, 0.98);
+}
+
+#meta-upgrade-modal .ui-modal-body {
+    max-height: min(78vh, 680px);
+}
+
+#meta-upgrade-list {
+    max-height: min(64vh, 560px);
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
 .game-over-subtitle {
     color: var(--green-secondary);
     font-size: 12px;

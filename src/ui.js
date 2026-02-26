@@ -15,6 +15,7 @@ class EarthGuardUI {
             money: null
         };
         this.waveBonusFx = null;
+        this.clearDataConfirmUntil = 0;
         this.el = utils ? utils.cacheDom([
             'level',
             'hp',
@@ -84,6 +85,21 @@ class EarthGuardUI {
         this.renderSplash(game);
         this.renderGameOverBattlefieldPrompt(game);
         this.renderGameOver(game);
+    }
+
+    armClearDataConfirmation() {
+        this.clearDataConfirmUntil = Date.now() + 3500;
+        return true;
+    }
+
+    isClearDataConfirmArmed() {
+        return Date.now() < (this.clearDataConfirmUntil || 0);
+    }
+
+    consumeClearDataConfirmation() {
+        const armed = this.isClearDataConfirmArmed();
+        this.clearDataConfirmUntil = 0;
+        return armed;
     }
 
     trackHudDeltas(game) {
@@ -453,12 +469,26 @@ class EarthGuardUI {
         if (splashStats) {
             const m = game.metaProgress || {};
             const best = m.careerBest || {};
+            const bestMoneyEntries = Object.entries(m.bestMoneyByLevel || {})
+                .map(([level, money]) => ({ level: Math.floor(Number(level)), money: Math.floor(Number(money) || 0) }))
+                .filter((e) => Number.isFinite(e.level) && e.level >= 1)
+                .sort((a, b) => b.level - a.level)
+                .slice(0, 3);
+            const history = Array.isArray(m.runHistory) ? m.runHistory.slice(0, 2) : [];
             splashStats.innerHTML = [
                 `<div class="game-over-stat-row"><span class="hud-label">RUNS</span><span class="hud-value">${Math.floor(m.totalRuns || 0)}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">BEST LV</span><span class="hud-value">${Math.floor(m.bestLevelReached || 0)}</span></div>`,
                 `<div class="game-over-stat-row"><span class="hud-label">SALVAGE</span><span class="hud-value">${Math.floor(m.metaCurrency || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">BEST KILLS</span><span class="hud-value">${Math.floor(best.maxKills || 0)}</span></div>`
+                `<div class="game-over-stat-row"><span class="hud-label">BEST KILLS</span><span class="hud-value">${Math.floor(best.maxKills || 0)}</span></div>`,
+                `<div class="game-over-upgrades"><span class="hud-label">BEST $</span><span class="game-over-upgrade-list">${bestMoneyEntries.length ? bestMoneyEntries.map((e) => `L${e.level}:$${e.money}`).join(' • ') : 'NONE'}</span></div>`,
+                `<div class="game-over-upgrades"><span class="hud-label">RECENT</span><span class="game-over-upgrade-list">${history.length ? history.map((r) => `L${Math.floor(r.level || 0)}/$${Math.floor(r.money || 0)}`).join(' • ') : 'NONE'}</span></div>`
             ].join('');
+        }
+        const clearBtn = this.el['splash-clear-data-btn'];
+        if (clearBtn) {
+            const armed = this.isClearDataConfirmArmed();
+            clearBtn.textContent = armed ? 'CONFIRM CLEAR DATA' : 'CLEAR LOCAL DATA';
+            clearBtn.classList.toggle('pulse', armed);
         }
     }
 

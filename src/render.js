@@ -359,6 +359,11 @@ class Renderer {
         }
         if (this.dom['splash-clear-data-btn']) {
             this.dom['splash-clear-data-btn'].addEventListener('click', () => {
+                if (!this.game.ui?.consumeClearDataConfirmation?.()) {
+                    this.game.ui?.armClearDataConfirmation?.();
+                    this.game.notify();
+                    return;
+                }
                 this.game.clearAllLocalData?.();
             });
         }
@@ -378,6 +383,12 @@ class Renderer {
                 }
             });
         }
+        window.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            if (this.game?.isMetaUpgradeModalOpen) {
+                this.game.closeMetaUpgradeModal?.();
+            }
+        });
     }
 
     animate() {

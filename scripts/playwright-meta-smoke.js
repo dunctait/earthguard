@@ -28,6 +28,19 @@ async function main() {
     await page.waitForFunction(() => window.game && window.renderer);
     await page.evaluate(() => window.game.closeSplash && window.game.closeSplash());
 
+    // Re-open splash to test splash controls.
+    await page.evaluate(() => window.game.openSplash && window.game.openSplash());
+    const clearDataBefore = await page.evaluate(() => ({
+        runs: Math.floor(window.game.metaProgress?.totalRuns || 0),
+        label: (document.querySelector('#splash-clear-data-btn')?.textContent || '').trim()
+    }));
+    await page.evaluate(() => document.querySelector('#splash-clear-data-btn')?.click());
+    const clearDataArmed = await page.evaluate(() => ({
+        runs: Math.floor(window.game.metaProgress?.totalRuns || 0),
+        label: (document.querySelector('#splash-clear-data-btn')?.textContent || '').trim()
+    }));
+    await page.evaluate(() => window.game.closeSplash && window.game.closeSplash());
+
     // Open game-over modal and interact with meta + jump controls.
     await page.evaluate(() => window.game.triggerGameOver('EARTH BREACHED'));
     await page.waitForFunction(() => window.game.isGameOver === true);
@@ -92,6 +105,9 @@ async function main() {
     if (before.jumpLevels.length === 0) {
         throw new Error('Expected jump-start options to be available');
     }
+    if (clearDataBefore.runs !== clearDataArmed.runs || !/CONFIRM/i.test(clearDataArmed.label)) {
+        throw new Error(`Clear data confirmation did not arm correctly: ${JSON.stringify({ clearDataBefore, clearDataArmed })}`);
+    }
     if (afterHighest.jumpSelected !== 6) {
         throw new Error(`Highest jump helper failed: ${JSON.stringify({ before, afterHighest })}`);
     }
@@ -115,7 +131,7 @@ async function main() {
     }
 
     await browser.close();
-    console.log(JSON.stringify({ ok: true, before, afterHighest, afterBuy, afterJump, afterReload }, null, 2));
+    console.log(JSON.stringify({ ok: true, clearDataBefore, clearDataArmed, before, afterHighest, afterBuy, afterJump, afterReload }, null, 2));
 }
 
 main().catch((err) => {
