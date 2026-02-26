@@ -837,7 +837,7 @@ class Renderer {
                 if (alien.type === 'scout') {
                     this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, true);
                 } else {
-                    this.drawUFO(pos.x, pos.y, size, distanceAlpha);
+                    this.drawUFO(pos.x, pos.y, size, distanceAlpha, alien);
                 }
             }
         }
@@ -853,7 +853,7 @@ class Renderer {
             if (alien.type === 'scout') {
                 this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, false);
             } else {
-                this.drawUFO(pos.x, pos.y, size, distanceAlpha);
+                this.drawUFO(pos.x, pos.y, size, distanceAlpha, alien);
             }
         }
 
@@ -1115,7 +1115,7 @@ class Renderer {
         this.clearGlow();
     }
 
-    drawUFO(x, y, size, alpha = 1) {
+    drawUFO(x, y, size, alpha = 1, alien = null) {
         const ctx = this.ctx;
         const c = this.colors;
         const time = this.frameCount * 0.03;
@@ -1175,6 +1175,8 @@ class Renderer {
             ctx.stroke();
         }
 
+        this.drawAlienHpIndicator(x, drawY, size, alpha, alien);
+
         ctx.restore();
         this.clearGlow();
     }
@@ -1225,6 +1227,51 @@ class Renderer {
 
         ctx.restore();
         this.clearGlow();
+
+        this.drawAlienHpIndicator(x, drawY, size, alpha, alien);
+    }
+
+    drawAlienHpIndicator(x, y, size, alpha = 1, alien = null) {
+        if (!alien || !alien.maxHp || alien.maxHp <= 1) return;
+        const ctx = this.ctx;
+        const hp = Math.max(0, Math.floor(alien.hp || 0));
+        const maxHp = Math.max(1, Math.floor(alien.maxHp || 1));
+        const heartSpacing = Math.max(5, size * 0.95);
+        const totalWidth = (maxHp - 1) * heartSpacing;
+        const baseX = x - (totalWidth / 2);
+        const yPos = y - Math.max(10, size * 1.7);
+
+        for (let i = 0; i < maxHp; i++) {
+            const hx = baseX + (i * heartSpacing);
+            const filled = i < hp;
+            ctx.save();
+            ctx.translate(hx, yPos);
+            ctx.rotate(Math.PI / 4);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = filled
+                ? `rgba(255, 120, 130, ${0.95 * alpha})`
+                : `rgba(120, 40, 50, ${0.55 * alpha})`;
+            ctx.fillStyle = filled
+                ? `rgba(255, 80, 90, ${0.38 * alpha})`
+                : 'rgba(0,0,0,0)';
+            ctx.beginPath();
+            ctx.rect(-2.6, -2.6, 5.2, 5.2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        if (hp > 0 && hp < maxHp) {
+            // Damaged indicator pulse ring.
+            const pulse = 0.4 + (Math.sin(this.frameCount * 0.18 + x * 0.02) * 0.2);
+            ctx.strokeStyle = `rgba(255, 130, 100, ${alpha * pulse})`;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 3]);
+            ctx.beginPath();
+            ctx.arc(x, y, Math.max(5, size * 1.4), 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
     }
 
     drawWaveClearBanners() {
