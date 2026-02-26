@@ -4,23 +4,28 @@
 *Use with `docs/ITERATION_LOOP.md` and log outcomes in `docs/BALANCE_LOG.md`.*
 
 ### Current Iteration (Now)
-- [ ] **I1** - Build post-death meta loop v1 (run summary + persistent upgrade choices + replay flow)
-- [ ] **I2** - Add game over run summary modal content (level/cycles/kills/money/upgrades/death reason)
-- [ ] **I3** - Persist meta progression stub (`localStorage`) + schema version
+- [x] **I1** - Build post-death meta loop v1 (run summary + persistent upgrade choices + replay flow)
+- [x] **I2** - Add game over run summary modal content (level/cycles/kills/money/upgrades/death reason)
+- [x] **I3** - Persist meta progression stub (`localStorage`) + schema version
+- [x] **I4** - Highest-money-per-level tracking + persistence (`T59`)
+- [x] **I5** - Level jump system core rules (`T60`)
+- [x] **I6** - Level jump UI / preview modal (`T61`)
+- [x] **I7** - Post-death persistent upgrade menu v1 (`T55`)
+- [x] **I8** - Disabled upgrade cost shortfall highlighting (keep cost visible) (`T56`)
+- [x] **I9** - HUD wave bonus feedback polish (`T57`)
+- [x] **I10** - Enemy overlap/occlusion rendering (`T46`)
+- [x] **I14** - Explicit `IDLE CYCLE` action (`T51`)
+- [x] **I15** - Balance sim CI expansion (`T63`)
+- [ ] **I16** - Jump-start preview details (selected level + start bonuses + rules copy)
+- [ ] **I17** - Meta-upgrade shortfall highlighting / disabled affordance
+- [ ] **I18** - Meta progression persistence smoke: reload + retained purchases
+- [ ] **I19** - Balance sim CI: add `cheapestCombatUpgrade_2xBanked` persona (`T63`)
+- [ ] **I20** - Meta flow polish: game-over sections ordering + labels (`T64` partial)
 
 ### Next Iterations (Queued)
-- [ ] **I4** - Highest-money-per-level tracking + persistence (`T59`)
-- [ ] **I5** - Level jump system core rules (`T60`)
-- [ ] **I6** - Level jump UI / preview modal (`T61`)
-- [ ] **I7** - Post-death persistent upgrade menu v1 (`T55`)
-- [ ] **I8** - Disabled upgrade cost shortfall highlighting (keep cost visible) (`T56`)
-- [ ] **I9** - HUD wave bonus feedback polish (`T57`)
-- [ ] **I10** - Enemy overlap/occlusion rendering (`T46`)
 - [ ] **I11** - Enemy health + damaged indicator + heart HUD pass (`T48`,`T49`,`T50`)
 - [ ] **I12** - First alternate enemy type + boss prototype + boss health (`T52`,`T53`,`T54`)
 - [ ] **I13** - Zoom-out after boss defeat (`T47`)
-- [ ] **I14** - Explicit `IDLE CYCLE` action (`T51`)
-- [ ] **I15** - Balance sim CI expansion (`T63`)
 
 ## Roadmap
 *Prioritized sequence based on current goals (upgrade-game feel, meta loop, later bullet-hell escalation).*
