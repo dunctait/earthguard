@@ -7,7 +7,7 @@
     "sim:core:perfect:10": "node scripts/simulate-game-core.js --persona=perfect --runs=10 --quiet",
     "sim:batch": "node scripts/sim-batch.js",
     "sim:batch:default": "node scripts/sim-batch.js --personas=good,perfect,noUpgrades,missesTwoThirds --runs=10",
-    "sim:batch:ci": "node scripts/sim-batch.js --personas=good,perfect,noUpgrades,perfectNoUpgrades,missesTwoThirds,75acc_cheapestCombatUpgrade_1xBanked,90acc_cheapestCombatUpgrade_1xBanked --runs=50 --max-turns=120 --strict",
+    "sim:batch:ci": "node scripts/sim-batch.js --personas=good,perfect,noUpgrades,perfectNoUpgrades,missesTwoThirds,75acc_cheapestCombatUpgrade_1xBanked,75acc_cheapestCombatUpgrade_2xBanked,90acc_cheapestCombatUpgrade_1xBanked,90acc_cheapestCombatUpgrade_2xBanked --runs=50 --max-turns=120 --strict",
     "sim:sweep:missile-cost": "node scripts/sim-sweep-missile-cost.js",
     "sim": "node scripts/playwright-simulate-game.js",
     "sim:good": "node scripts/playwright-simulate-game.js --persona=good",

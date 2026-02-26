@@ -277,6 +277,22 @@ const MATRIX_PERSONA_CRITERIA = {
             avgFinalCycles: { min: 8, max: 24 },
             gameOverRate: { min: 0.95, max: 1.0 }
         }
+    },
+    '90acc_cheapestCombatUpgrade_2xBanked': {
+        designIntent: 'Banked high-accuracy combat upgrader should remain viable and roughly track the 1x variant.',
+        aggregate: {
+            avgFinalLevel: { min: 4.8, max: 8.3 },
+            avgFinalCycles: { min: 10, max: 28 },
+            gameOverRate: { min: 0.95, max: 1.0 }
+        }
+    },
+    '75acc_cheapestCombatUpgrade_2xBanked': {
+        designIntent: 'Banked average-accuracy combat upgrader should still outperform low-skill baselines while dying consistently.',
+        aggregate: {
+            avgFinalLevel: { min: 4.2, max: 7.2 },
+            avgFinalCycles: { min: 8, max: 25 },
+            gameOverRate: { min: 0.95, max: 1.0 }
+        }
     }
 };
 
