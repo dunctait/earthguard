@@ -1321,6 +1321,9 @@ class Renderer {
         ctx.lineWidth = 1.6;
 
         // Dashed predictor showing the next lateral drift direction.
+        const arrowLen = width * 1.45;
+        const arrowEndX = x + (dir * arrowLen);
+        const arrowEndY = drawY - height * 0.55;
         ctx.save();
         ctx.setLineDash([4, 4]);
         ctx.lineDashOffset = -(this.frameCount * 0.6);
@@ -1328,9 +1331,31 @@ class Renderer {
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x, drawY + height * 0.1);
-        ctx.lineTo(x + (dir * width * 1.35), drawY - height * 0.55);
+        ctx.lineTo(arrowEndX, arrowEndY);
         ctx.stroke();
         ctx.restore();
+
+        // Obvious directional arrowhead at the end of the predictor.
+        ctx.save();
+        const arrowPulse = 0.85 + (Math.sin(this.frameCount * 0.18) * 0.12);
+        const headSize = Math.max(5, size * 0.9);
+        const shaftAngle = Math.atan2(arrowEndY - (drawY + height * 0.1), arrowEndX - x);
+        ctx.translate(arrowEndX, arrowEndY);
+        ctx.rotate(shaftAngle);
+        ctx.fillStyle = `rgba(255, 140, 140, ${0.75 * cAlpha * arrowPulse})`;
+        ctx.strokeStyle = `rgba(255, 190, 190, ${0.95 * cAlpha})`;
+        ctx.lineWidth = 1;
+        this.setGlow('rgba(255, 120, 120, 0.28)', 7);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-headSize, headSize * 0.55);
+        ctx.lineTo(-headSize * 0.72, 0);
+        ctx.lineTo(-headSize, -headSize * 0.55);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+        this.clearGlow();
 
         // Small arrow-like zig-zag scout silhouette.
         ctx.beginPath();
