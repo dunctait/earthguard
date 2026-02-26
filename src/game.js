@@ -486,6 +486,7 @@ class Game {
         this.gameOverContinueUnlockAtMs = 0;
         this.gameOverBreachAliens = [];
         this.metaProgress = this.loadMetaProgress();
+        this.isSplashOpen = this.shouldShowSplashOnBoot();
         this.upgrades = this.createUpgradeState();
         this.upgradeEffects = this.getDefaultUpgradeEffects();
         this.rebuildUpgradeEffects();
@@ -565,6 +566,17 @@ class Game {
         } catch {
             return fallback;
         }
+    }
+
+    shouldShowSplashOnBoot() {
+        const meta = this.metaProgress || {};
+        const totalRuns = Math.floor(meta.totalRuns || 0);
+        const hasBestMoney = Object.keys(meta.bestMoneyByLevel || {}).length > 0;
+        const hasMetaCurrency = Math.floor(meta.metaCurrency || 0) > 0;
+        const hasMetaUpgrades = Object.values(meta.metaUpgrades || {}).some((level) => Math.floor(level || 0) > 0);
+        const hasRunHistory = Array.isArray(meta.runHistory) && meta.runHistory.length > 0;
+        const hasLastRun = !!meta.lastRun;
+        return totalRuns > 0 || hasBestMoney || hasMetaCurrency || hasMetaUpgrades || hasRunHistory || hasLastRun;
     }
 
     saveMetaProgress() {
