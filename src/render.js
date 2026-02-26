@@ -1271,6 +1271,19 @@ class Renderer {
             ctx.stroke();
         }
 
+        // Forward intent indicator (subtle dashed heading line) to telegraph drift.
+        const dir = Math.cos(alien?.bossPhase || 0) >= 0 ? 1 : -1;
+        ctx.save();
+        ctx.setLineDash([5, 4]);
+        ctx.lineDashOffset = -(this.frameCount * 0.45);
+        ctx.strokeStyle = `rgba(255, 130, 130, ${alpha * 0.28})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, drawY + h * 0.15);
+        ctx.lineTo(x + (dir * w * 0.8), drawY - h * 0.1);
+        ctx.stroke();
+        ctx.restore();
+
         this.drawAlienHpIndicator(x, drawY, size * 1.2, alpha, alien);
         ctx.restore();
         this.clearGlow();

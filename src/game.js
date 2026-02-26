@@ -743,7 +743,10 @@ class Game {
                 waveLevel: spec.level,
                 incoming,
                 zigzagDir: isScout ? (Math.random() > 0.5 ? 1 : -1) : 0,
-                zigzagSpeedX: isScout ? (1.4 + (Math.random() * 0.8)) : 0
+                zigzagSpeedX: isScout ? (1.4 + (Math.random() * 0.8)) : 0,
+                bossPhase: isBoss ? (Math.random() * Math.PI * 2) : 0,
+                bossDriftAmplitude: isBoss ? (6 + (Math.random() * 2)) : 0,
+                bossDriftSpeed: isBoss ? (0.045 + (Math.random() * 0.02)) : 0
             });
         }
         if (aliens.length > 1) {
@@ -1272,6 +1275,14 @@ class Game {
                     alien.x = this.config.WORLD_WIDTH - edgePad;
                     alien.zigzagDir = -1;
                 }
+            } else if (alien.type === 'boss') {
+                alien.bossPhase = (alien.bossPhase || 0) + (alien.bossDriftSpeed || 0.05);
+                const centerX = this.config.WORLD_WIDTH / 2;
+                alien.x = this.utils.clamp(
+                    centerX + Math.sin(alien.bossPhase) * (alien.bossDriftAmplitude || 6),
+                    8 + (alien.radius || 0),
+                    this.config.WORLD_WIDTH - 8 - (alien.radius || 0)
+                );
             }
         }
         for (const alien of this.incomingAliens) {
@@ -1286,6 +1297,14 @@ class Game {
                     alien.x = this.config.WORLD_WIDTH - edgePad;
                     alien.zigzagDir = -1;
                 }
+            } else if (alien.type === 'boss') {
+                alien.bossPhase = (alien.bossPhase || 0) + ((alien.bossDriftSpeed || 0.05) * 0.55);
+                const centerX = this.config.WORLD_WIDTH / 2;
+                alien.x = this.utils.clamp(
+                    centerX + Math.sin(alien.bossPhase) * (alien.bossDriftAmplitude || 6),
+                    8 + (alien.radius || 0),
+                    this.config.WORLD_WIDTH - 8 - (alien.radius || 0)
+                );
             }
         }
 
