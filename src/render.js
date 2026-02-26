@@ -90,6 +90,7 @@ class Renderer {
         this.lastExplosionCount = 0;
         this.cannonRecoil = 0;
         this.impactFlash = 0;
+        this.viewZoom = 1;
         this.seenGameExplosionIds = new Set();
         this.seenEnemyDeathFxIds = new Set();
         this.seenWaveClearFxIds = new Set();
@@ -422,6 +423,22 @@ class Renderer {
 
         this.updateAlienEntryFastForwardFx(this.game.aliens);
         this.updateAlienEntryFastForwardFx(this.game.incomingAliens);
+
+        const targetZoom = Math.max(0.75, Math.min(1.05, this.game?.viewZoomTarget || 1));
+        this.viewZoom = this.utils.lerp(this.viewZoom || 1, targetZoom, 0.12);
+        if (Math.abs((this.viewZoom || 1) - targetZoom) < 0.001) {
+            this.viewZoom = targetZoom;
+        }
+    }
+
+    applyBattlefieldViewTransform() {
+        const z = this.viewZoom || 1;
+        if (Math.abs(z - 1) < 0.0001) return;
+        const cx = this.canvas.width * 0.5;
+        const cy = this.canvas.height * 0.52;
+        this.ctx.translate(cx, cy);
+        this.ctx.scale(z, z);
+        this.ctx.translate(-cx, -cy);
     }
 
     updateAlienEntryFastForwardFx(aliens) {
@@ -594,9 +611,10 @@ class Renderer {
             ctx.fillRect(0, y, w, 1);
         }
 
+        ctx.save();
+        this.applyBattlefieldViewTransform();
         const camX = Math.sin(time * 0.4) * 0.5;
         const camY = Math.cos(time * 0.33) * 0.5;
-        ctx.save();
         ctx.translate(camX, camY);
 
         const launcherScreen = this.worldToScreen(this.game.WORLD_WIDTH / 2, this.game.config.LAUNCHER_Y);

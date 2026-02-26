@@ -67,7 +67,11 @@ const GameConfig = {
 
     // Animation
     ANIMATION_FRAMES: 24,
-    ANIMATION_FRAME_MS: 10
+    ANIMATION_FRAME_MS: 10,
+
+    // View / presentation
+    DEFAULT_VIEW_ZOOM: 1,
+    POST_BOSS_ZOOM_OUT: 0.88
 };
 
 const UpgradeDefinitions = {
@@ -328,6 +332,8 @@ class Game {
         this.totalCycles = 0;
         this.lastWaveClearBonus = 0;
         this.lastWaveClearEnergyBonus = 0;
+        this.viewZoomTarget = this.config.DEFAULT_VIEW_ZOOM || 1;
+        this.bossesDefeatedThisRun = 0;
         this.stats = {
             missilesTargeted: 0,
             missilesLaunched: 0,
@@ -1570,6 +1576,8 @@ class Game {
         this.totalCycles = 0;
         this.lastWaveClearBonus = 0;
         this.lastWaveClearEnergyBonus = 0;
+        this.viewZoomTarget = this.config.DEFAULT_VIEW_ZOOM || 1;
+        this.bossesDefeatedThisRun = 0;
         this.stats = {
             missilesTargeted: 0,
             missilesLaunched: 0,
@@ -1619,6 +1627,9 @@ class Game {
                         0,
                         this.config.MISSILE_ENERGY_MAX
                     );
+                    if (alien.type === 'boss') {
+                        this.handleBossDefeat(alien, exactHit);
+                    }
                     this.queueEnemyDeathFx(alien, exactHit);
                 }
             }
@@ -1628,6 +1639,17 @@ class Game {
 
     notify() {
         if (this.onStateChange) this.onStateChange();
+    }
+
+    handleBossDefeat(alien, exactHit = false) {
+        this.bossesDefeatedThisRun = (this.bossesDefeatedThisRun || 0) + 1;
+        const zoomOutTarget = this.config.POST_BOSS_ZOOM_OUT || 0.88;
+        this.viewZoomTarget = Math.min(this.viewZoomTarget || 1, zoomOutTarget);
+        this.emitStatusFx(
+            'BOSS DESTROYED',
+            exactHit ? 'EXACT HIT' : 'SECTOR EXPANDING',
+            150
+        );
     }
 
     updateUI() {
@@ -1657,6 +1679,8 @@ class Game {
             missilesLocked: this.missilesLockedThisTurn,
             missilesPerTurn: this.getMissilesPerTurn(),
             missilesInFlight: this.missiles.length,
+            viewZoomTarget: this.viewZoomTarget,
+            bossesDefeatedThisRun: this.bossesDefeatedThisRun || 0,
             blastResidue: this.blastResidue.length,
             isAnimating: this.isAnimating,
             aliens: this.aliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),

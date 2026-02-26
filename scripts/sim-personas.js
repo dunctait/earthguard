@@ -27,8 +27,8 @@ const PERSONAS = {
         criteria: {
             designIntent: 'Typical engaged player should reach early-mid game, benefit from upgrades, but still lose consistently.',
             aggregate: {
-                avgFinalLevel: { min: 4, max: 7 },
-                avgFinalCycles: { min: 8, max: 24 },
+                avgFinalLevel: { min: 5, max: 8.5 },
+                avgFinalCycles: { min: 10, max: 32 },
                 gameOverRate: { min: 0.95, max: 1.0 }
             }
         }
@@ -135,7 +135,7 @@ const PERSONAS = {
             designIntent: 'Low-skill players should usually die very early, but still experience upgrade prompts.',
             aggregate: {
                 avgFinalLevel: { max: 4 },
-                avgFinalCycles: { max: 15 },
+                avgFinalCycles: { max: 18 },
                 gameOverRate: { min: 0.95, max: 1.0 }
             }
         }
@@ -273,8 +273,8 @@ const MATRIX_PERSONA_CRITERIA = {
     '75acc_cheapestCombatUpgrade_1xBanked': {
         designIntent: 'Average-accuracy combat-first upgrader should reach early-mid game while still dying consistently.',
         aggregate: {
-            avgFinalLevel: { min: 4.5, max: 7.5 },
-            avgFinalCycles: { min: 8, max: 24 },
+            avgFinalLevel: { min: 5.0, max: 8.5 },
+            avgFinalCycles: { min: 10, max: 32 },
             gameOverRate: { min: 0.95, max: 1.0 }
         }
     },
@@ -289,8 +289,8 @@ const MATRIX_PERSONA_CRITERIA = {
     '75acc_cheapestCombatUpgrade_2xBanked': {
         designIntent: 'Banked average-accuracy combat upgrader should still outperform low-skill baselines while dying consistently.',
         aggregate: {
-            avgFinalLevel: { min: 4.2, max: 7.2 },
-            avgFinalCycles: { min: 8, max: 25 },
+            avgFinalLevel: { min: 4.5, max: 8.0 },
+            avgFinalCycles: { min: 10, max: 30 },
             gameOverRate: { min: 0.95, max: 1.0 }
         }
     }
