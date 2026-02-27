@@ -9,13 +9,9 @@ Completed items are removed from this file to keep it current.
 - [ ] **T3** - Change power display from % to distance units (meters/km)
 - [ ] **T10** - Reduce HP model to low-heart style gameplay (e.g. 4 HP / 2 damage aliens)
 - [ ] **T13** - Alien entry animation pass (FTL drop-in feel)
-- [ ] **T15** - Add screen shake on explosions and alien impacts
-- [ ] **T16** - Longer fading missile trails
 - [ ] **T17** - Score system (points + accuracy + combo)
-- [ ] **T18** - Wave announcer text (e.g. `WAVE N` transition)
 - [ ] **T19** - Additional enemy classes beyond scout/boss (e.g. tanker/swarmer/splitter)
 - [ ] **T20** - Critical-hit visual differentiation and behavior
-- [ ] **T22** - Proximity warning when enemies are near Earth
 - [ ] **T28** - Upgrade for missile speed/range
 - [ ] **T50** - Decide and implement final player HP indicator format (hearts vs numeric)
 

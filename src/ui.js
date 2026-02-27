@@ -380,7 +380,11 @@ class EarthGuardUI {
         const displayedCycle = Math.max(1, (game.levelCycles || 0) + 1);
         const liveBonus = game.getWaveClearSpeedBonus(displayedCycle, game.level);
         this.el.level.innerHTML = `<span class="hud-line"><span class="hud-label">LEVEL</span><span class="hud-value">${game.level}</span></span><span class="hud-line"><span class="hud-label">CYCLE</span><span class="hud-value">${displayedCycle}</span></span><span class="hud-line"><span class="hud-label">BONUS</span><span class="hud-value hud-value-hypo">+$${liveBonus}</span></span>${this.getWaveBonusMarkup()}`;
-        this.el.hp.innerHTML = `<span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span>`;
+        const warning = (typeof game.getProximityWarning === 'function') ? game.getProximityWarning() : null;
+        const warningMarkup = warning
+            ? `<span class="hud-line"><span class="hud-label">THREAT</span><span class="hud-value${warning === 'CRITICAL' ? ' hud-value-critical' : ''}">${warning}</span></span>`
+            : '';
+        this.el.hp.innerHTML = `<span class="hud-line"><span class="hud-label">HP</span><span class="hud-value">${Math.max(0, game.baseHP)}</span></span>${warningMarkup}`;
         const maxEnergy = (typeof game.getMaxEnergy === 'function') ? game.getMaxEnergy() : game.config.MISSILE_ENERGY_MAX;
         this.el.energy.innerHTML = `<span class="hud-label">EN</span><span class="hud-value">${this.formatHudNumber(game.missileEnergy)}/${this.formatHudNumber(maxEnergy)}</span>${this.getHudDeltaMarkup('energy')}`;
         const postBossPhase = Math.max(0, game.viewZoomStage || game.bossesDefeatedThisRun || 0);

@@ -757,8 +757,11 @@ class Renderer {
 
         ctx.save();
         this.applyBattlefieldViewTransform();
-        const camX = Math.sin(time * 0.4) * 0.5;
-        const camY = Math.cos(time * 0.33) * 0.5;
+        const shake = (typeof this.game.consumeScreenShake === 'function')
+            ? this.game.consumeScreenShake()
+            : 0;
+        const camX = (Math.sin(time * 0.4) * 0.5) + ((Math.random() - 0.5) * shake * 6);
+        const camY = (Math.cos(time * 0.33) * 0.5) + ((Math.random() - 0.5) * shake * 6);
         ctx.translate(camX, camY);
 
         const launcherScreen = this.worldToScreen(this.game.WORLD_WIDTH / 2, this.game.config.LAUNCHER_Y);
@@ -914,16 +917,26 @@ class Renderer {
             ctx.fill();
             this.clearGlow();
 
-            // Trail
-            ctx.strokeStyle = `rgba(0, 170, 68, ${Math.max(0.35, missileAlpha * 0.75)})`;
-            ctx.lineWidth = 2;
-            const trailProgress = Math.max(0, missile.progress - 0.2);
+            // Trail (longer + fading layers)
+            const trailProgressFar = Math.max(0, missile.progress - 0.42);
+            const trailProgressNear = Math.max(0, missile.progress - 0.22);
+            const trailFarX = startPos.x + (endPos.x - startPos.x) * trailProgressFar;
+            const trailFarY = startPos.y + (endPos.y - startPos.y) * trailProgressFar;
+            const trailNearX = startPos.x + (endPos.x - startPos.x) * trailProgressNear;
+            const trailNearY = startPos.y + (endPos.y - startPos.y) * trailProgressNear;
+
+            ctx.strokeStyle = `rgba(0, 170, 68, ${Math.max(0.18, missileAlpha * 0.34)})`;
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(currentX, currentY);
-            ctx.lineTo(
-                startPos.x + (endPos.x - startPos.x) * trailProgress,
-                startPos.y + (endPos.y - startPos.y) * trailProgress
-            );
+            ctx.lineTo(trailFarX, trailFarY);
+            ctx.stroke();
+
+            ctx.strokeStyle = `rgba(0, 255, 102, ${Math.max(0.28, missileAlpha * 0.55)})`;
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(currentX, currentY);
+            ctx.lineTo(trailNearX, trailNearY);
             ctx.stroke();
 
             // Target zone

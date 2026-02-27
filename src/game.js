@@ -686,6 +686,7 @@ class Game {
         this.lastWaveClearEnergyBonus = 0;
         this.viewZoomTarget = this.config.DEFAULT_VIEW_ZOOM || 1;
         this.viewZoomStage = 0;
+        this.screenShakeImpulse = 0;
         this.bossesDefeatedThisRun = 0;
         this.stats = {
             missilesTargeted: 0,
@@ -721,6 +722,7 @@ class Game {
         this.assistantCannons = [];
         this.assistantPendingMissiles = [];
         this.nextFxEventId = 1;
+        this.screenShakeImpulse = 0;
 
         // Callbacks
         this.onStateChange = null;
@@ -1096,6 +1098,7 @@ class Game {
         const waveSpec = this.getWaveSpec(level);
         this.aliens = this.createAliensFromWaveSpec(waveSpec, false);
         this.fastForwardWaveEntry(this.aliens, waveSpec);
+        this.emitStatusFx(`WAVE ${Math.floor(level)}`, '', 55);
     }
 
     primeIncomingWave(level) {
@@ -1824,6 +1827,17 @@ class Game {
             maxAge: 30,
             damageApplied: false
         });
+        this.addScreenShake(0.06 + ((radius || 0) * 0.01));
+    }
+
+    addScreenShake(amount = 0.1) {
+        this.screenShakeImpulse = this.utils.clamp((this.screenShakeImpulse || 0) + amount, 0, 2.5);
+    }
+
+    consumeScreenShake() {
+        const current = Math.max(0, this.screenShakeImpulse || 0);
+        this.screenShakeImpulse = Math.max(0, (current * 0.84) - 0.01);
+        return current;
     }
 
     queueEnemyDeathFx(alien, exactHit = false) {
@@ -1881,6 +1895,22 @@ class Game {
         if (!alien) return false;
         if (alien.incoming) return false;
         return alien.waveLevel === this.level;
+    }
+
+    getNearestThreatDistance() {
+        const damageable = this.aliens.filter((alien) => this.isAlienDamageable(alien));
+        if (!damageable.length) return Number.POSITIVE_INFINITY;
+        const minY = Math.min(...damageable.map((alien) => alien.y - (alien.radius || 0)));
+        return Math.max(0, minY - this.config.LAUNCHER_Y);
+    }
+
+    getProximityWarning() {
+        const distance = this.getNearestThreatDistance();
+        if (!Number.isFinite(distance)) return null;
+        if (distance <= 7) return 'CRITICAL';
+        if (distance <= 14) return 'WARNING';
+        if (distance <= 22) return 'CAUTION';
+        return null;
     }
 
     canAlienBeHitNextCycle(alien) {
@@ -1960,6 +1990,7 @@ class Game {
         const reachedEarth = this.aliens.filter(a => this.alienTouchesEarthLine(a));
         if (reachedEarth.length > 0) {
             this.baseHP = 0;
+            this.addScreenShake(1.2);
             this.triggerGameOver('EARTH BREACHED');
             return;
         }
