@@ -1791,23 +1791,17 @@ class Game {
     }
 
     advanceScoutZigZag(alien, totalFrames, speedScale = 1) {
-        const step = (((alien.zigzagDir || 1) * (alien.zigzagSpeedX || 4.4)) * speedScale) / totalFrames;
+        const direction = alien.cycleZigDir || alien.zigzagDir || 1;
+        const step = ((direction * (alien.zigzagSpeedX || 4.4)) * speedScale) / totalFrames;
         alien.x += step;
-        alien.zigzagRunRemaining = (alien.zigzagRunRemaining ?? (3 + Math.random() * 3.5)) - Math.abs(step);
-        if (alien.zigzagRunRemaining <= 0) {
-            alien.zigzagDir = (alien.zigzagDir || 1) * -1;
-            alien.zigzagRunRemaining = 2.6 + (Math.random() * 4.4);
-        }
 
         const edgePad = 4 + (alien.radius || 0);
         if (alien.x <= edgePad) {
             alien.x = edgePad;
-            alien.zigzagDir = 1;
-            alien.zigzagRunRemaining = 2 + (Math.random() * 3);
+            alien.cycleZigDir = 1;
         } else if (alien.x >= (this.config.WORLD_WIDTH - edgePad)) {
             alien.x = this.config.WORLD_WIDTH - edgePad;
-            alien.zigzagDir = -1;
-            alien.zigzagRunRemaining = 2 + (Math.random() * 3);
+            alien.cycleZigDir = -1;
         }
     }
 
@@ -1847,6 +1841,16 @@ class Game {
     beginAdvanceCycle() {
         // Move pending missiles to active at the configured visible launch progress.
         this.killsThisCycle = 0;
+        for (const alien of this.aliens) {
+            if (alien.type === 'scout') {
+                alien.cycleZigDir = alien.zigzagDir || 1;
+            }
+        }
+        for (const alien of this.incomingAliens) {
+            if (alien.type === 'scout') {
+                alien.cycleZigDir = alien.zigzagDir || 1;
+            }
+        }
         const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
         const pendingCount = this.pendingMissiles.length;
         this.missilesLaunchedThisCycle = pendingCount;
@@ -2100,6 +2104,25 @@ class Game {
         if (this.killsThisCycle === 0) {
             this.comboStreak = 0;
         }
+
+        const resolveScoutDirection = (alien, speedScale = 1) => {
+            if (!alien || alien.type !== 'scout') return;
+            const edgePad = 4 + (alien.radius || 0);
+            const currentDir = alien.cycleZigDir || alien.zigzagDir || 1;
+            const cycleTravel = Math.abs((alien.zigzagSpeedX || 4.4) * speedScale);
+            alien.zigzagRunRemaining = (alien.zigzagRunRemaining ?? (3 + Math.random() * 3.5)) - cycleTravel;
+            let nextDir = currentDir;
+            if (alien.x <= edgePad + 0.01) nextDir = 1;
+            else if (alien.x >= (this.config.WORLD_WIDTH - edgePad - 0.01)) nextDir = -1;
+            else if ((alien.zigzagRunRemaining || 0) <= 0) {
+                nextDir = currentDir * -1;
+                alien.zigzagRunRemaining = 2.6 + (Math.random() * 4.4);
+            }
+            alien.zigzagDir = nextDir;
+            alien.cycleZigDir = nextDir;
+        };
+        for (const alien of this.aliens) resolveScoutDirection(alien, 1);
+        for (const alien of this.incomingAliens) resolveScoutDirection(alien, 0.55);
 
         // End of cycle state updates
         this.isAnimating = false;
