@@ -290,68 +290,70 @@ function playTurn(game, persona, rng) {
     return { logs, actionMeta };
 }
 
+function runGameToEnd(game, persona, options, rng) {
+    const purchases = [];
+    const turnLogs = [];
+    const simMetrics = { energyBlockedTurns: 0 };
+    let turnCount = 0;
+
+    if (options.verbose) {
+        const s = game.getState();
+        console.log(`[sim-core] start level=${s.level} hp=${s.hp} en=${s.missileEnergy} $=${s.money}`);
+    }
+
+    while (turnCount < options.maxTurns && !game.isGameOver) {
+        const pre = game.getState();
+        const purchasedThisTurn = tryPurchasePriority(game, persona, turnCount + 1, purchases, options.verbose);
+        const actions = playTurn(game, persona, rng);
+        if (actions.actionMeta.energyBlocked) simMetrics.energyBlockedTurns += 1;
+        const post = game.getState();
+        turnCount += 1;
+
+        const logRow = {
+            turn: turnCount,
+            before: { level: pre.level, cycle: pre.levelCycles + 1, totalCycles: pre.totalCycles, hp: pre.hp, energy: +Number(pre.missileEnergy).toFixed(1), money: +Number(pre.money).toFixed(1), aliens: pre.aliens.length },
+            after: { level: post.level, cycle: post.levelCycles + 1, totalCycles: post.totalCycles, hp: post.hp, energy: +Number(post.missileEnergy).toFixed(1), money: +Number(post.money).toFixed(1), aliens: post.aliens.length, gameOver: !!post.isGameOver, reason: post.gameOverReason || '' },
+            actions,
+            purchases: purchasedThisTurn
+        };
+        turnLogs.push(logRow);
+
+        if (options.verbose) {
+            const a = actions.actionMeta;
+            console.log(
+                `[turn ${turnCount}] L${logRow.before.level}C${logRow.before.cycle} (T${logRow.before.totalCycles}) HP ${logRow.before.hp} EN ${logRow.before.energy} $${logRow.before.money} ` +
+                `aliens=${logRow.before.aliens} | shots ${a.shotsLocked}/${a.shotsAttempted}${a.autoCycleTriggered ? ' [AUTO-CYCLE]' : ''}`
+            );
+        }
+    }
+
+    return {
+        turnsPlayed: turnCount,
+        finalState: game.getState(),
+        upgrades: snapshotUpgrades(game),
+        purchases,
+        turnLogs,
+        simMetrics
+    };
+}
+
 function runSingleSimulation(persona, options) {
     return withSeededMathRandom(options.seed, (rng) => {
-        const game = new Game({ root: {}, ui: null, instantAutoCycle: true });
+        const game = new Game({ root: options.root || {}, ui: null, instantAutoCycle: true });
         if (options.configOverrides && typeof options.configOverrides === 'object') {
             Object.assign(game.config, options.configOverrides);
         }
         game.config.ANIMATION_FRAMES = 2;
         game.config.ANIMATION_FRAME_MS = 1;
 
-        const purchases = [];
-        const turnLogs = [];
-        const simMetrics = { energyBlockedTurns: 0 };
-        let turnCount = 0;
-
         if (options.verbose) {
-            const s = game.getState();
             console.log(`\n[sim-core] persona=${persona.name} seed=${options.seed}`);
-            console.log(`[sim-core] start level=${s.level} hp=${s.hp} en=${s.missileEnergy} $=${s.money}`);
         }
-
-        while (turnCount < options.maxTurns && !game.isGameOver) {
-            const pre = game.getState();
-            const purchasedThisTurn = tryPurchasePriority(game, persona, turnCount + 1, purchases, options.verbose);
-            const actions = playTurn(game, persona, rng);
-            if (actions.actionMeta.energyBlocked) simMetrics.energyBlockedTurns += 1;
-            const post = game.getState();
-            turnCount += 1;
-
-            const logRow = {
-                turn: turnCount,
-                before: { level: pre.level, cycle: pre.levelCycles + 1, totalCycles: pre.totalCycles, hp: pre.hp, energy: +Number(pre.missileEnergy).toFixed(1), money: +Number(pre.money).toFixed(1), aliens: pre.aliens.length },
-                after: { level: post.level, cycle: post.levelCycles + 1, totalCycles: post.totalCycles, hp: post.hp, energy: +Number(post.missileEnergy).toFixed(1), money: +Number(post.money).toFixed(1), aliens: post.aliens.length, gameOver: !!post.isGameOver, reason: post.gameOverReason || '' },
-                actions,
-                purchases: purchasedThisTurn
-            };
-            turnLogs.push(logRow);
-
-            if (options.verbose) {
-                const a = actions.actionMeta;
-                console.log(
-                    `[turn ${turnCount}] L${logRow.before.level}C${logRow.before.cycle} (T${logRow.before.totalCycles}) HP ${logRow.before.hp} EN ${logRow.before.energy} $${logRow.before.money} ` +
-                    `aliens=${logRow.before.aliens} | shots ${a.shotsLocked}/${a.shotsAttempted}${a.autoCycleTriggered ? ' [AUTO-CYCLE]' : ''}`
-                );
-                for (const s of actions.logs) {
-                    console.log(`  - shot t${s.targetIndex} angle=${s.variedAngle} power=${s.variedPower}${s.shouldMiss ? ' [MISS BIAS]' : ''}${s.locked ? '' : ' [LOCK FAILED]'}`);
-                }
-                if (purchasedThisTurn.length) {
-                    console.log(`  - purchases: ${purchasedThisTurn.map((p) => `${p.key}@L${p.level}`).join(', ')}`);
-                }
-                console.log(`  -> after: L${logRow.after.level}C${logRow.after.cycle} (T${logRow.after.totalCycles}) HP ${logRow.after.hp} EN ${logRow.after.energy} $${logRow.after.money} aliens=${logRow.after.aliens}${logRow.after.gameOver ? ` [GAME OVER: ${logRow.after.reason}]` : ''}`);
-            }
-        }
-
+        const run = runGameToEnd(game, persona, options, rng);
         return {
             persona: persona.name,
             seed: options.seed,
-            turnsPlayed: turnCount,
-            finalState: game.getState(),
-            upgrades: snapshotUpgrades(game),
-            purchases,
-            turnLogs,
-            simMetrics
+            ...run
         };
     });
 }
@@ -428,6 +430,7 @@ module.exports = {
     parseArgs,
     makeMulberry32,
     avg,
+    runGameToEnd,
     runSingleSimulation,
     PERSONA_NAMES: listPersonaNames,
     getPersona

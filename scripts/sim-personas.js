@@ -6,6 +6,8 @@ const PERSONAS = {
         angleJitterDeg: 0.7,
         powerJitterPct: 2.5,
         exactAimBias: 0.98,
+        jumpStrategy: 'highest',
+        metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
         upgradePriority: ['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'energyHarvest', 'reactorRegen', 'bountyLink', 'energyResupply', 'trajectoryProcessor', 'targetAreas'],
         criteria: {
             designIntent: 'Skilled players who engage with upgrades should survive meaningfully longer than average and usually reach mid-game.',
@@ -13,6 +15,14 @@ const PERSONAS = {
                 avgFinalLevel: { min: 5, max: 8 },
                 avgFinalCycles: { min: 10, max: 28 },
                 gameOverRate: { min: 0.95, max: 1.0 }
+            }
+        },
+        campaignCriteria: {
+            designIntent: 'Perfect player should leverage jumps/meta to reach materially higher levels over multi-run campaigns.',
+            aggregate: {
+                avgBestLevel: { min: 6.5 },
+                avgFinalRunLevel: { min: 6.2 },
+                avgFinalMetaCurrency: { min: 10 }
             }
         }
     },
@@ -23,6 +33,8 @@ const PERSONAS = {
         angleJitterDeg: 3.5,
         powerJitterPct: 10,
         exactAimBias: 0.55,
+        jumpStrategy: 'highest',
+        metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
         upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas'],
         criteria: {
             designIntent: 'Typical engaged player should reach early-mid game, benefit from upgrades, but still lose consistently.',
@@ -30,6 +42,14 @@ const PERSONAS = {
                 avgFinalLevel: { min: 5, max: 8.5 },
                 avgFinalCycles: { min: 10, max: 32 },
                 gameOverRate: { min: 0.95, max: 1.0 }
+            }
+        },
+        campaignCriteria: {
+            designIntent: 'Good player should show clear progression across runs via salvage/meta and jump starts.',
+            aggregate: {
+                avgBestLevel: { min: 7 },
+                avgFinalRunLevel: { min: 6.5 },
+                avgFinalMetaCurrency: { min: 8 }
             }
         }
     },
@@ -40,6 +60,8 @@ const PERSONAS = {
         angleJitterDeg: 4.0,
         powerJitterPct: 11,
         exactAimBias: 0.45,
+        jumpStrategy: 'highest',
+        metaUpgradePriority: ['startingReserve', 'jumpBroker', 'salvageYield', 'salvageBank'],
         upgradeStrategy: 'none',
         upgradePriority: [],
         criteria: {
@@ -51,6 +73,13 @@ const PERSONAS = {
             },
             run: {
                 maxFinalLevel: { max: 7 }
+            }
+        },
+        campaignCriteria: {
+            designIntent: 'No-upgrade campaign should still benefit from jump starts and meta economy, but trail good/perfect.',
+            aggregate: {
+                avgBestLevel: { min: 6, max: 10 },
+                avgFinalRunLevel: { min: 4.5 }
             }
         }
     },
