@@ -77,24 +77,24 @@ const GameConfig = {
 
     // Autonomous assistant cannons
     ASSISTANT_CANNON_MAX: 4,
-    ASSISTANT_CANNON_BASE_FIRE_CHANCE: 0.72,
+    ASSISTANT_CANNON_BASE_FIRE_CHANCE: 0.62,
     ASSISTANT_CANNON_COOLDOWN_MIN: 1,
     ASSISTANT_CANNON_COOLDOWN_MAX: 2,
-    ASSISTANT_CANNON_BASE_ENERGY_COST: 12,
-    ASSISTANT_CANNON_BASE_RANGE_PCT: 52,
+    ASSISTANT_CANNON_BASE_ENERGY_COST: 8,
+    ASSISTANT_CANNON_BASE_RANGE_PCT: 58,
     ASSISTANT_CANNON_BASE_EXPLOSION_RADIUS_SCALE: 0.7,
     ASSISTANT_CANNON_BASE_TARGETING_QUALITY: 0.22,
 
     // Jump-start balancing (intended as convenience, not power gain)
-    JUMP_START_BASE_MONEY_RETENTION: 0.66,
-    JUMP_START_MIN_MONEY_RETENTION: 0.42,
-    JUMP_START_MONEY_RETENTION_LEVEL_STEP: 0.012,
-    JUMP_START_BASE_ENERGY_RETENTION: 0.8,
-    JUMP_START_MIN_ENERGY_RETENTION: 0.62,
-    JUMP_START_ENERGY_RETENTION_LEVEL_STEP: 0.008,
-    JUMP_START_ENTRY_SHIFT_BASE: 5.5,
-    JUMP_START_ENTRY_SHIFT_LEVEL_STEP: 0.6,
-    JUMP_START_ENTRY_SHIFT_MAX: 12
+    JUMP_START_BASE_MONEY_RETENTION: 0.6,
+    JUMP_START_MIN_MONEY_RETENTION: 0.36,
+    JUMP_START_MONEY_RETENTION_LEVEL_STEP: 0.014,
+    JUMP_START_BASE_ENERGY_RETENTION: 0.74,
+    JUMP_START_MIN_ENERGY_RETENTION: 0.54,
+    JUMP_START_ENERGY_RETENTION_LEVEL_STEP: 0.01,
+    JUMP_START_ENTRY_SHIFT_BASE: 7,
+    JUMP_START_ENTRY_SHIFT_LEVEL_STEP: 0.65,
+    JUMP_START_ENTRY_SHIFT_MAX: 14
 };
 
 function buildProgressionTiers(levels, factory) {
@@ -113,7 +113,7 @@ const UpgradeDefinitions = {
         description: 'Unlocks 1 allied AI cannon and its dedicated upgrade menu.',
         stackingMode: 'unlock',
         tiers: [
-            { moneyCost: 18, energyCost: 2, label: 'Deploy AI cannon control' }
+            { moneyCost: 12, energyCost: 1, label: 'Deploy AI cannon control' }
         ],
         uiLabelForTier: (tier) => tier.label || 'UNLOCK',
         apply: ({ effects }) => {
@@ -359,8 +359,8 @@ const UpgradeDefinitions = {
         tiers: buildProgressionTiers(3, (i) => {
             const cannonCount = 2 + i;
             return {
-                moneyCost: Math.floor(70 * Math.pow(1.95, i)),
-                energyCost: Math.max(4, Math.floor(8 * Math.pow(1.6, i))),
+                moneyCost: Math.floor(52 * Math.pow(2.1, i)),
+                energyCost: Math.max(3, Math.floor(5 * Math.pow(1.8, i))),
                 cannonCount,
                 label: `${cannonCount} cannons`
             };
@@ -396,11 +396,11 @@ const UpgradeDefinitions = {
         name: 'Volley Controller',
         description: 'Increase missiles launched per cannon each cycle.',
         stackingMode: 'replace',
-        tiers: buildProgressionTiers(4, (i) => {
+        tiers: buildProgressionTiers(5, (i) => {
             const missilesPerCannon = 2 + i;
             return {
-                moneyCost: Math.floor(50 * Math.pow(1.72, i)),
-                energyCost: Math.max(4, Math.floor(6 + (i * 1.4))),
+                moneyCost: Math.floor(45 * Math.pow(1.78, i)),
+                energyCost: Math.max(3, Math.floor(5 + (i * 1.6))),
                 missilesPerCannon,
                 label: `${missilesPerCannon} missiles/cannon`
             };
@@ -417,7 +417,7 @@ const UpgradeDefinitions = {
         description: 'Improves AI cannon threat selection and precision.',
         stackingMode: 'replace',
         tiers: buildProgressionTiers(10, (i) => {
-            const targetingQuality = round2(Math.min(0.95, 0.28 + ((i + 1) * 0.07)));
+            const targetingQuality = round2(Math.min(0.95, 0.3 + ((i + 1) * 0.065)));
             return {
                 moneyCost: Math.floor(38 * Math.pow(1.52, i)),
                 energyCost: Math.max(2, Math.floor(3 + (i * 0.8))),
@@ -437,7 +437,7 @@ const UpgradeDefinitions = {
         description: 'Increase AI cannon explosion radius.',
         stackingMode: 'replace',
         tiers: buildProgressionTiers(10, (i) => {
-            const radiusScale = round2(0.75 + ((i + 1) * 0.09));
+            const radiusScale = round2(0.78 + ((i + 1) * 0.1));
             return {
                 moneyCost: Math.floor(36 * Math.pow(1.54, i)),
                 energyCost: Math.max(2, Math.floor(3 + (i * 0.8))),
@@ -457,7 +457,7 @@ const UpgradeDefinitions = {
         description: 'Extends allied cannon targeting range.',
         stackingMode: 'replace',
         tiers: buildProgressionTiers(10, (i) => {
-            const rangePct = Math.min(100, 58 + ((i + 1) * 5));
+            const rangePct = Math.min(100, 62 + ((i + 1) * 4));
             return {
                 moneyCost: Math.floor(30 * Math.pow(1.48, i)),
                 energyCost: Math.max(1, Math.floor(2 + (i * 0.7))),
@@ -467,7 +467,27 @@ const UpgradeDefinitions = {
         }),
         uiLabelForTier: (tier) => tier.label || `Range ${tier.rangePct || 0}%`,
         apply: ({ effects, tier }) => {
-            effects.assistantCannonRangePct = tier.rangePct || 52;
+            effects.assistantCannonRangePct = tier.rangePct || 58;
+        }
+    },
+    assistantCannonOverclock: {
+        key: 'assistantCannonOverclock',
+        group: 'assistant',
+        name: 'Overclock Scheduler',
+        description: 'Increases AI cannon fire chance each cycle.',
+        stackingMode: 'replace',
+        tiers: buildProgressionTiers(10, (i) => {
+            const fireChanceMultiplier = round2(1.08 + ((i + 1) * 0.05));
+            return {
+                moneyCost: Math.floor(42 * Math.pow(1.58, i)),
+                energyCost: Math.max(2, Math.floor(3 + (i * 0.8))),
+                fireChanceMultiplier,
+                label: `${fireChanceMultiplier.toFixed(2)}x fire chance`
+            };
+        }),
+        uiLabelForTier: (tier) => tier.label || `${tier.fireChanceMultiplier || 1}x`,
+        apply: ({ effects, tier }) => {
+            effects.assistantCannonFireChanceMultiplier = tier.fireChanceMultiplier || 1;
         }
     }
 };
@@ -834,9 +854,9 @@ class Game {
 
     getJumpMoneyRetention(level) {
         const numericLevel = Math.max(1, Math.floor(level || 1));
-        const baseRetention = this.config.JUMP_START_BASE_MONEY_RETENTION || 0.66;
-        const step = this.config.JUMP_START_MONEY_RETENTION_LEVEL_STEP || 0.012;
-        const minRetention = this.config.JUMP_START_MIN_MONEY_RETENTION || 0.42;
+        const baseRetention = this.config.JUMP_START_BASE_MONEY_RETENTION || 0.6;
+        const step = this.config.JUMP_START_MONEY_RETENTION_LEVEL_STEP || 0.014;
+        const minRetention = this.config.JUMP_START_MIN_MONEY_RETENTION || 0.36;
         return Math.max(minRetention, baseRetention - ((numericLevel - 1) * step));
     }
 
@@ -851,9 +871,9 @@ class Game {
 
     getJumpStartEnergy(level) {
         const numericLevel = Math.max(1, Math.floor(level || 1));
-        const baseRetention = this.config.JUMP_START_BASE_ENERGY_RETENTION || 0.8;
-        const step = this.config.JUMP_START_ENERGY_RETENTION_LEVEL_STEP || 0.008;
-        const minRetention = this.config.JUMP_START_MIN_ENERGY_RETENTION || 0.62;
+        const baseRetention = this.config.JUMP_START_BASE_ENERGY_RETENTION || 0.74;
+        const step = this.config.JUMP_START_ENERGY_RETENTION_LEVEL_STEP || 0.01;
+        const minRetention = this.config.JUMP_START_MIN_ENERGY_RETENTION || 0.54;
         const retention = Math.max(minRetention, baseRetention - ((numericLevel - 1) * step));
         return Math.max(0, Math.floor(this.getMaxEnergy() * retention));
     }

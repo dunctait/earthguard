@@ -65,7 +65,8 @@ function getUpgradePurchaseOrder(game, persona) {
         'assistantCannonRange',
         'assistantCannonBlastRadius',
         'assistantCannonEnergyEfficiency',
-        'assistantCannonVolley'
+        'assistantCannonVolley',
+        'assistantCannonOverclock'
     ]);
     const orderedUpgrades = [
         ...game.getOrderedUpgrades('core'),

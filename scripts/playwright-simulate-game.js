@@ -118,7 +118,8 @@ async function runSingleSimulation(page, personaConfig, options) {
                         'assistantCannonRange',
                         'assistantCannonBlastRadius',
                         'assistantCannonEnergyEfficiency',
-                        'assistantCannonVolley'
+                        'assistantCannonVolley',
+                        'assistantCannonOverclock'
                     ]);
                     if (strategy === 'none') return [];
                     if (strategy === 'cheapest') return orderedUpgrades;
