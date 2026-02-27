@@ -1167,7 +1167,7 @@ class Game {
         const next = [];
         for (let i = 0; i < count; i++) {
             const id = `ac-${i}`;
-            const lane = count === 1 ? 0.5 : ((i + 1) / (count + 1));
+            const lane = count === 1 ? 0.28 : ((i + 1) / (count + 1));
             const x = this.utils.clamp(this.config.WORLD_WIDTH * lane, 7, this.config.WORLD_WIDTH - 7);
             const existing = existingById.get(id);
             next.push({
@@ -1547,6 +1547,9 @@ class Game {
         return Object.values(this.upgrades)
             .filter((upgrade) => (upgrade.group || 'core') === group)
             .sort((a, b) => {
+            const aMaxed = a.maxLevel !== null && a.level >= a.maxLevel;
+            const bMaxed = b.maxLevel !== null && b.level >= b.maxLevel;
+            if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
             if (group === 'core') {
                 if (a.key === 'assistantCannonsUnlock' && b.key !== 'assistantCannonsUnlock') return -1;
                 if (b.key === 'assistantCannonsUnlock' && a.key !== 'assistantCannonsUnlock') return 1;
