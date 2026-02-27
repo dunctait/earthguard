@@ -73,7 +73,15 @@ const GameConfig = {
     DEFAULT_VIEW_ZOOM: 1,
     POST_BOSS_ZOOM_OUT: 0.88,
     POST_BOSS_ZOOM_STEP: 0.08,
-    POST_BOSS_ZOOM_MIN: 0.72
+    POST_BOSS_ZOOM_MIN: 0.72,
+
+    // Autonomous assistant cannons
+    ASSISTANT_CANNON_UNLOCK_LEVEL: 6,
+    ASSISTANT_CANNON_MAX: 2,
+    ASSISTANT_CANNON_FIRE_CHANCE: 0.8,
+    ASSISTANT_CANNON_COOLDOWN_MIN: 1,
+    ASSISTANT_CANNON_COOLDOWN_MAX: 2,
+    ASSISTANT_CANNON_EXPLOSION_RADIUS_SCALE: 0.8
 };
 
 function buildProgressionTiers(levels, factory) {
@@ -529,6 +537,8 @@ class Game {
         this.blastResidue = [];
         this.enemyDeathFxEvents = [];
         this.waveClearFxEvents = [];
+        this.assistantCannons = [];
+        this.assistantPendingMissiles = [];
         this.nextFxEventId = 1;
 
         // Callbacks
@@ -537,6 +547,8 @@ class Game {
         // Initialize
         this.spawnWave();
         this.queueIncomingWavePreview(this.level + 1);
+        this.refreshAssistantCannons();
+        this.planAssistantTargetsForNextCycle();
         this.applyMetaStartBonuses();
         this.notify();
     }
@@ -873,6 +885,89 @@ class Game {
         this.levelCycles = 0;
         this.fastForwardWaveEntry(this.aliens);
         return true;
+    }
+
+    getAssistantCannonCountForLevel(level = this.level) {
+        const unlockLevel = this.config.ASSISTANT_CANNON_UNLOCK_LEVEL || 6;
+        if (level < unlockLevel) return 0;
+        if (level >= unlockLevel + 6) return Math.min(this.config.ASSISTANT_CANNON_MAX || 2, 2);
+        return 1;
+    }
+
+    refreshAssistantCannons() {
+        const count = this.getAssistantCannonCountForLevel(this.level);
+        const existingById = new Map((this.assistantCannons || []).map((c) => [c.id, c]));
+        const next = [];
+        for (let i = 0; i < count; i++) {
+            const id = `ac-${i}`;
+            const lane = count === 1 ? 0.5 : ((i + 1) / (count + 1));
+            const x = this.utils.clamp(this.config.WORLD_WIDTH * lane, 7, this.config.WORLD_WIDTH - 7);
+            const existing = existingById.get(id);
+            next.push({
+                id,
+                x,
+                y: this.config.LAUNCHER_Y + 0.8,
+                cooldownRemaining: existing ? Math.max(0, Math.floor(existing.cooldownRemaining || 0)) : 0
+            });
+        }
+        this.assistantCannons = next;
+        this.assistantPendingMissiles = [];
+    }
+
+    selectAssistantTarget() {
+        if (!this.aliens.length) return null;
+        const damageable = this.aliens.filter((a) => this.isAlienDamageable(a));
+        if (!damageable.length) return null;
+        const threatPool = damageable
+            .slice()
+            .sort((a, b) => a.y - b.y)
+            .slice(0, Math.min(4, damageable.length));
+        return threatPool[Math.floor(Math.random() * threatPool.length)] || threatPool[0];
+    }
+
+    planAssistantTargetsForNextCycle() {
+        this.refreshAssistantCannons();
+        if (!this.assistantCannons.length || this.isGameOver || this.isSplashOpen) return;
+        const fireChance = this.config.ASSISTANT_CANNON_FIRE_CHANCE || 0.8;
+        const cooldownMin = this.config.ASSISTANT_CANNON_COOLDOWN_MIN || 1;
+        const cooldownMax = this.config.ASSISTANT_CANNON_COOLDOWN_MAX || cooldownMin;
+        const radiusScale = this.config.ASSISTANT_CANNON_EXPLOSION_RADIUS_SCALE || 0.8;
+        const planned = [];
+
+        for (const cannon of this.assistantCannons) {
+            cannon.cooldownRemaining = Math.max(0, Math.floor(cannon.cooldownRemaining || 0));
+            if (cannon.cooldownRemaining > 0) {
+                cannon.cooldownRemaining -= 1;
+                continue;
+            }
+            if (Math.random() > fireChance) continue;
+            const targetAlien = this.selectAssistantTarget();
+            if (!targetAlien) continue;
+            const spread = targetAlien.radius * 0.6;
+            planned.push({
+                startX: cannon.x,
+                startY: cannon.y,
+                targetX: this.utils.clamp(targetAlien.x + ((Math.random() - 0.5) * spread), 2, this.config.WORLD_WIDTH - 2),
+                targetY: this.utils.clamp(targetAlien.y + ((Math.random() - 0.5) * spread), this.config.LAUNCHER_Y + 8, this.config.WORLD_HEIGHT - 2),
+                lockedAtMs: Date.now(),
+                explosionRadius: this.getCurrentExplosionRadius() * radiusScale,
+                progress: 0,
+                exploded: false,
+                assistant: true
+            });
+            cannon.cooldownRemaining = cooldownMin + Math.floor(Math.random() * ((cooldownMax - cooldownMin) + 1));
+        }
+        this.assistantPendingMissiles = planned;
+    }
+
+    getAssistantPlannedTargets() {
+        return (this.assistantPendingMissiles || []).map((m) => ({
+            startX: m.startX,
+            startY: m.startY,
+            targetX: m.targetX,
+            targetY: m.targetY,
+            radius: m.explosionRadius
+        }));
     }
 
     fastForwardWaveEntry(aliens, waveSpec = null) {
@@ -1396,7 +1491,12 @@ class Game {
             ...missile,
             progress: Math.max(missile.progress || 0, launchStartProgress)
         })));
+        this.missiles.push(...(this.assistantPendingMissiles || []).map((missile) => ({
+            ...missile,
+            progress: Math.max(missile.progress || 0, launchStartProgress)
+        })));
         this.pendingMissiles = [];
+        this.assistantPendingMissiles = [];
         this.missilesLockedThisTurn = 0;
     }
 
@@ -1589,6 +1689,7 @@ class Game {
             this.getMaxEnergy()
         );
         this.missilesLaunchedThisCycle = 0;
+        this.planAssistantTargetsForNextCycle();
 
         if (!this.isGameOver && this.hasInevitableEarthBreach()) {
             this.emitStatusFx('AUTO-CYCLED', 'BREACH INEVITABLE', 60);
@@ -1630,6 +1731,8 @@ class Game {
         this.incomingAliens = [];
         this.spawnWave();
         this.queueIncomingWavePreview(this.level + 1);
+        this.refreshAssistantCannons();
+        this.planAssistantTargetsForNextCycle();
         this.notify();
         return true;
     }
@@ -1684,8 +1787,12 @@ class Game {
         this.enemyDeathFxEvents = [];
         this.waveClearFxEvents = [];
         this.incomingAliens = [];
+        this.assistantCannons = [];
+        this.assistantPendingMissiles = [];
         this.spawnWave();
         this.queueIncomingWavePreview(this.level + 1);
+        this.refreshAssistantCannons();
+        this.planAssistantTargetsForNextCycle();
         this.applyMetaStartBonuses();
         this.notify();
     }
@@ -1772,6 +1879,8 @@ class Game {
             missilesLocked: this.missilesLockedThisTurn,
             missilesPerTurn: this.getMissilesPerTurn(),
             missilesInFlight: this.missiles.length,
+            assistantCannonCount: (this.assistantCannons || []).length,
+            assistantPlannedShots: (this.assistantPendingMissiles || []).length,
             viewZoomTarget: this.viewZoomTarget,
             viewZoomStage: this.viewZoomStage || 0,
             bossesDefeatedThisRun: this.bossesDefeatedThisRun || 0,
@@ -1779,6 +1888,7 @@ class Game {
             isAnimating: this.isAnimating,
             aliens: this.aliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),
             incomingAliens: this.incomingAliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),
+            assistantCannons: (this.assistantCannons || []).map((c) => ({ id: c.id, x: +c.x.toFixed(1), y: +c.y.toFixed(1), cooldown: c.cooldownRemaining || 0 })),
             config: this.config,
             metaProgress: this.metaProgress
         };

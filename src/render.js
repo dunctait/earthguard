@@ -782,6 +782,33 @@ class Renderer {
             }
         }
 
+        // Assistant planned targets (visible so player can plan around ally fire).
+        const assistantTargets = (typeof this.game.getAssistantPlannedTargets === 'function')
+            ? this.game.getAssistantPlannedTargets()
+            : [];
+        for (const plan of assistantTargets) {
+            const start = this.worldToScreen(plan.startX, plan.startY);
+            const target = this.worldToScreen(plan.targetX, plan.targetY);
+            const radius = this.worldToScreenSize(plan.radius || this.game.getCurrentExplosionRadius());
+            ctx.save();
+            ctx.setLineDash([5, 8]);
+            ctx.lineDashOffset = -(this.frameCount * 0.6);
+            ctx.strokeStyle = 'rgba(0, 210, 255, 0.22)';
+            ctx.lineWidth = 2.4;
+            this.setGlow('rgba(0, 200, 255, 0.15)', 8);
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(target.x, target.y);
+            ctx.stroke();
+            this.clearGlow();
+            ctx.strokeStyle = 'rgba(0, 210, 255, 0.28)';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         // Current charging prediction
         const prediction = this.game.getPrediction();
         if (prediction && !this.game.isAnimating) {
@@ -800,6 +827,10 @@ class Renderer {
 
         // Cannon
         this.drawCannon(cannonX, cannonY, angleRad);
+        for (const assistant of (this.game.assistantCannons || [])) {
+            const pos = this.worldToScreen(assistant.x, assistant.y);
+            this.drawAssistantCannon(pos.x, pos.y);
+        }
 
         // Pending (locked) missiles: show only a direction/targeting indicator while time is paused.
         for (const missile of (this.game.pendingMissiles || [])) {
@@ -1211,6 +1242,39 @@ class Renderer {
         ctx.stroke();
 
         ctx.restore();
+        this.clearGlow();
+    }
+
+    drawAssistantCannon(x, y) {
+        const ctx = this.ctx;
+        const c = this.colors;
+        this.setGlow('rgba(0, 200, 255, 0.24)', 8);
+        ctx.fillStyle = 'rgba(0, 22, 14, 0.9)';
+        ctx.strokeStyle = 'rgba(0, 210, 255, 0.55)';
+        ctx.lineWidth = 1.6;
+
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y + 5);
+        ctx.lineTo(x + 8, y + 5);
+        ctx.lineTo(x + 5, y + 1);
+        ctx.lineTo(x - 5, y + 1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x - 2, y + 1);
+        ctx.lineTo(x - 1, y - 8);
+        ctx.lineTo(x + 1, y - 8);
+        ctx.lineTo(x + 2, y + 1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = c.white;
+        ctx.beginPath();
+        ctx.arc(x, y - 5, 1.2, 0, Math.PI * 2);
+        ctx.fill();
         this.clearGlow();
     }
 

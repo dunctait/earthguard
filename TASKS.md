@@ -99,9 +99,9 @@
 - [ ] **T52** - Introduce first alternate enemy type (distinct silhouette + behavior)
 - [ ] **T53** - Boss enemy prototype (very slow, high HP e.g. 8 hearts)
 - [ ] **T54** - Boss health indicator (heart pips / segments)
-- [ ] **T65** - Autonomous assistant cannon prototype (small ally turret)
-- [ ] **T66** - Assistant cannon target-area preview shown to player for tactical play
-- [ ] **T67** - Assistant cannon behavior tuning (random targeting cadence / constraints)
+- [x] **T65** - Autonomous assistant cannon prototype (small ally turret)
+- [x] **T66** - Assistant cannon target-area preview shown to player for tactical play
+- [x] **T67** - Assistant cannon behavior tuning (random targeting cadence / constraints)
 
 ---
 
