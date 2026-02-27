@@ -674,12 +674,16 @@ class Game {
         this.missileEnergy = this.getMaxEnergy();
         this.missilesLaunchedThisCycle = 0;
         this.lastLockedPower = 0;
+        this.killsThisCycle = 0;
 
         // Game state
         this.level = 1;
         this.baseHP = this.config.STARTING_HP;
         this.isAnimating = false;
+        this.isPaused = false;
         this.money = 0;
+        this.score = 0;
+        this.comboStreak = 0;
         this.levelCycles = 0;
         this.totalCycles = 0;
         this.lastWaveClearBonus = 0;
@@ -1313,13 +1317,13 @@ class Game {
 
     // Angle: 0 = up, negative = left, positive = right
     rotateLeft(degrees) {
-        if (this.isGameOver || this.isSplashOpen) return;
+        if (this.isGameOver || this.isSplashOpen || this.isPaused) return;
         this.launcherAngle = this.utils.clamp(this.launcherAngle - degrees, this.config.MIN_ANGLE, this.config.MAX_ANGLE);
         this.notify();
     }
 
     rotateRight(degrees) {
-        if (this.isGameOver || this.isSplashOpen) return;
+        if (this.isGameOver || this.isSplashOpen || this.isPaused) return;
         this.launcherAngle = this.utils.clamp(this.launcherAngle + degrees, this.config.MIN_ANGLE, this.config.MAX_ANGLE);
         this.notify();
     }
@@ -1328,6 +1332,7 @@ class Game {
         return !this.isAnimating &&
                !this.isSplashOpen &&
                !this.isGameOver &&
+               !this.isPaused &&
                !this.isCharging &&
                this.missilesLockedThisTurn < this.getMissilesPerTurn() &&
                this.missileEnergy >= this.config.MISSILE_MIN_ENERGY_COST;
@@ -1389,6 +1394,12 @@ class Game {
     getTargetRangeProgressForPower(power = this.power) {
         const normalizedPower = this.utils.clamp((power || 0) / 100, 0, 1);
         return Math.pow(normalizedPower, this.config.POWER_TO_DISTANCE_EXPONENT || 1);
+    }
+
+    getTargetDistanceForPower(power = this.power) {
+        const progress = this.getTargetRangeProgressForPower(power);
+        const maxDist = this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100;
+        return Math.max(0, progress * maxDist);
     }
 
     getWaveClearSpeedBonus(cycles = this.levelCycles, level = this.level) {
@@ -1599,6 +1610,22 @@ class Game {
         return this.config.ENERGY_PER_KILL * (this.upgradeEffects.energyPerKillMultiplier || 1);
     }
 
+    getKillScoreReward(exactHit = false, isBoss = false) {
+        const levelScale = 1 + ((Math.max(1, this.level) - 1) * 0.08);
+        const comboScale = 1 + (Math.min(10, Math.max(0, this.comboStreak - 1)) * 0.12);
+        const base = 100 * levelScale * comboScale;
+        const exactBonus = exactHit ? 60 : 0;
+        const bossBonus = isBoss ? 320 : 0;
+        return Math.max(1, Math.round(base + exactBonus + bossBonus));
+    }
+
+    getWaveScoreReward(level = this.level, cycles = this.levelCycles, waveMoneyBonus = this.lastWaveClearBonus) {
+        const paceBonus = Math.max(0, 220 - (Math.max(1, cycles) * 12));
+        const economyBonus = Math.max(0, Math.round(waveMoneyBonus * 5));
+        const levelScale = 1 + ((Math.max(1, level) - 1) * 0.06);
+        return Math.max(0, Math.round((paceBonus + economyBonus) * levelScale));
+    }
+
     toggleUpgradeMenu() {
         if (this.isGameOver) return;
         this.isUpgradeMenuOpen = !this.isUpgradeMenuOpen;
@@ -1610,6 +1637,29 @@ class Game {
         if (!this.isUpgradeMenuOpen) return;
         this.isUpgradeMenuOpen = false;
         this.notify();
+    }
+
+    pauseGame() {
+        if (this.isGameOver || this.isSplashOpen || this.isAnimating) return false;
+        if (this.isPaused) return false;
+        this.isPaused = true;
+        if (this.isCharging) {
+            this.isCharging = false;
+            this.power = 0;
+        }
+        this.notify();
+        return true;
+    }
+
+    resumeGame() {
+        if (!this.isPaused) return false;
+        this.isPaused = false;
+        this.notify();
+        return true;
+    }
+
+    togglePause() {
+        return this.isPaused ? this.resumeGame() : this.pauseGame();
     }
 
     toggleAICannonUpgradeMenu() {
@@ -1685,7 +1735,7 @@ class Game {
     }
 
     advance() {
-        if (this.isAnimating || this.isGameOver || this.isSplashOpen) return;
+        if (this.isAnimating || this.isGameOver || this.isSplashOpen || this.isPaused) return;
         this.beginAdvanceCycle();
 
         this.isAnimating = true;
@@ -1779,7 +1829,7 @@ class Game {
     }
 
     advanceImmediate() {
-        if (this.isAnimating || this.isGameOver) return false;
+        if (this.isAnimating || this.isGameOver || this.isPaused) return false;
         this.beginAdvanceCycle();
 
         this.isAnimating = true;
@@ -1793,6 +1843,7 @@ class Game {
 
     beginAdvanceCycle() {
         // Move pending missiles to active at the configured visible launch progress.
+        this.killsThisCycle = 0;
         const launchStartProgress = this.config.MISSILE_LAUNCH_START_PROGRESS || 0;
         const pendingCount = this.pendingMissiles.length;
         this.missilesLaunchedThisCycle = pendingCount;
@@ -2004,6 +2055,7 @@ class Game {
             this.lastWaveClearBonus = this.getWaveClearSpeedBonus(this.levelCycles, this.level);
             this.lastWaveClearEnergyBonus = this.getWaveClearEnergyBonus(this.levelCycles, this.level);
             this.money += this.lastWaveClearBonus;
+            this.score += this.getWaveScoreReward(this.level, this.levelCycles, this.lastWaveClearBonus);
             this.recordBestMoneyForLevel(this.level, this.money);
             this.missileEnergy = this.utils.clamp(
                 this.missileEnergy + this.lastWaveClearEnergyBonus,
@@ -2024,6 +2076,10 @@ class Game {
             if (this.incomingAliens.length === 0) {
                 this.queueIncomingWavePreview(this.level + 1);
             }
+        }
+
+        if (this.killsThisCycle === 0) {
+            this.comboStreak = 0;
         }
 
         // End of cycle state updates
@@ -2052,7 +2108,7 @@ class Game {
     }
 
     idleCycle() {
-        if (this.isAnimating || this.isGameOver || this.isSplashOpen) return false;
+        if (this.isAnimating || this.isGameOver || this.isSplashOpen || this.isPaused) return false;
         if (this.pendingMissiles.length > 0) return false;
         this.advance();
         return true;
@@ -2066,6 +2122,7 @@ class Game {
         this.level = Math.max(1, jump.level);
         this.money = this.getJumpStartMoney(this.level, jump.money || 0);
         this.missileEnergy = this.getJumpStartEnergy(this.level);
+        this.isPaused = false;
         this.isUpgradeMenuOpen = false;
         this.isAICannonUpgradeMenuOpen = false;
         this.aliens = [];
@@ -2096,11 +2153,15 @@ class Game {
         this.baseHP = this.config.STARTING_HP;
         this.launcherAngle = this.config.START_ANGLE;
         this.power = 0;
+        this.isPaused = false;
         this.missilesLockedThisTurn = 0;
         this.missileEnergy = this.getMaxEnergy();
         this.missilesLaunchedThisCycle = 0;
         this.lastLockedPower = 0;
+        this.killsThisCycle = 0;
         this.money = 0;
+        this.score = 0;
+        this.comboStreak = 0;
         this.levelCycles = 0;
         this.totalCycles = 0;
         this.lastWaveClearBonus = 0;
@@ -2158,9 +2219,12 @@ class Game {
                 if (alien.hp <= 0) {
                     const exactHit = dist <= (alien.radius * this.config.EXACT_HIT_RADIUS_FACTOR);
                     this.stats.kills += 1;
+                    this.killsThisCycle += 1;
+                    this.comboStreak += 1;
                     if (exactHit) this.stats.exactHitKills += 1;
                     const reward = this.getMoneyPerKillReward(exactHit);
                     this.money += reward;
+                    this.score += this.getKillScoreReward(exactHit, alien.type === 'boss');
                     this.recordBestMoneyForLevel(this.level, this.money);
                     this.missileEnergy = this.utils.clamp(
                         this.missileEnergy + this.getEnergyPerKillReward(),
@@ -2212,6 +2276,9 @@ class Game {
             power: this.power,
             missileEnergy: this.missileEnergy,
             money: this.money,
+            score: this.score,
+            comboStreak: this.comboStreak,
+            isPaused: this.isPaused,
             isSplashOpen: this.isSplashOpen,
             isMetaUpgradeModalOpen: this.isMetaUpgradeModalOpen,
             isGameOver: this.isGameOver,

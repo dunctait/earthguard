@@ -6,17 +6,14 @@ Completed items are removed from this file to keep it current.
 
 ### Gameplay / Combat
 - [ ] **T1** - Remove target indicator (prediction circle) entirely if still present
-- [ ] **T3** - Change power display from % to distance units (meters/km)
 - [ ] **T10** - Reduce HP model to low-heart style gameplay (e.g. 4 HP / 2 damage aliens)
 - [ ] **T13** - Alien entry animation pass (FTL drop-in feel)
-- [ ] **T17** - Score system (points + accuracy + combo)
 - [ ] **T19** - Additional enemy classes beyond scout/boss (e.g. tanker/swarmer/splitter)
 - [ ] **T20** - Critical-hit visual differentiation and behavior
 - [ ] **T28** - Upgrade for missile speed/range
 - [ ] **T50** - Decide and implement final player HP indicator format (hearts vs numeric)
 
 ### UI / Flow
-- [ ] **T37** - Pause functionality with pause menu
 - [ ] **T39** - First-time tutorial overlay/onboarding
 - [ ] **T64** - Final modal flow unification/polish across splash, game over, meta, and jump
 

@@ -39,6 +39,7 @@ class EarthGuardUI {
             'power-lock-marker',
             'fire-btn',
             'advance-btn',
+            'pause-btn',
             'upgrade-menu-btn',
             'ai-upgrade-menu-btn',
             'upgrade-modal-overlay',
@@ -70,6 +71,11 @@ class EarthGuardUI {
             'meta-upgrade-salvage',
             'meta-upgrade-close-btn',
             'meta-upgrade-list',
+            'pause-overlay',
+            'pause-modal',
+            'pause-title',
+            'pause-resume-btn',
+            'pause-restart-btn',
             'game-over-jump',
             'jump-level-select',
             'jump-highest-btn',
@@ -88,6 +94,7 @@ class EarthGuardUI {
         this.renderPower(game);
         this.renderButtons(game);
         this.renderUpgrades(game);
+        this.renderPauseModal(game);
         this.renderSplash(game);
         this.renderGameOverBattlefieldPrompt(game);
         this.renderGameOver(game);
@@ -313,6 +320,7 @@ class EarthGuardUI {
             `<div class="game-over-stat-row"><span class="hud-label">SHOTS</span><span class="hud-value">${shots}</span></div>`,
             `<div class="game-over-stat-row"><span class="hud-label">HIT RATE</span><span class="hud-value">${hitRate}%</span></div>`,
             `<div class="game-over-stat-row"><span class="hud-label">EXACT</span><span class="hud-value">${exactHits}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">SCORE</span><span class="hud-value">${Math.floor(game.score || 0)}</span></div>`,
             `<div class="game-over-stat-row"><span class="hud-label">BOSSES</span><span class="hud-value">${bossesDefeated}</span></div>`,
             `<div class="game-over-stat-row"><span class="hud-label">$ RUN</span><span class="hud-value">${Math.floor(game.money || 0)}</span></div>`,
             `<div class="game-over-stat-row"><span class="hud-label">SALVAGE</span><span class="hud-value">+${lastRunMetaReward} (${totalMetaCurrency})</span></div>`,
@@ -391,7 +399,7 @@ class EarthGuardUI {
         const phaseMarkup = postBossPhase > 0
             ? `<span class="hud-line hud-phase-line"><span class="hud-label">SECTOR</span><span class="hud-value hud-value-hypo">x${postBossPhase + 1}</span></span>`
             : '';
-        this.el.money.innerHTML = `<span class="hud-line"><span class="hud-label">$</span><span class="hud-value">${this.formatHudNumber(game.money)}</span></span>${phaseMarkup}${this.getHudDeltaMarkup('money')}`;
+        this.el.money.innerHTML = `<span class="hud-line"><span class="hud-label">$</span><span class="hud-value">${this.formatHudNumber(game.money)}</span></span><span class="hud-line"><span class="hud-label">SCORE</span><span class="hud-value">${this.formatHudNumber(game.score || 0)}</span></span>${phaseMarkup}${this.getHudDeltaMarkup('money')}`;
         if (this.el['missiles-status']) {
             this.el['missiles-status'].innerHTML = `MISSILES TARGETED: <span class="hud-inline-value">${game.missilesLockedThisTurn}/${game.getMissilesPerTurn()}</span>`;
         }
@@ -429,9 +437,11 @@ class EarthGuardUI {
         const missilesLeft = game.getMissilesPerTurn() - game.missilesLockedThisTurn;
         const idleCost = game.getMissileEnergyCostForPower(game.config.MISSILE_MIN_ENERGY_COST);
         const currentCost = game.getMissileEnergyCostForPower(game.power || game.config.MISSILE_MIN_ENERGY_COST);
+        const range = Math.floor((typeof game.getTargetDistanceForPower === 'function') ? game.getTargetDistanceForPower(game.power || 0) : 0);
+        const rangeLabel = range >= 100 ? `${(range / 100).toFixed(2)}km` : `${range}m`;
 
         if (game.isCharging) {
-            fireBtn.textContent = `TARGETING | COST ${currentCost}`;
+            fireBtn.textContent = `TARGETING ${rangeLabel} | COST ${currentCost}`;
             fireBtn.className = 'terminal-btn charging';
         } else if (missilesLeft === 0) {
             fireBtn.textContent = 'TARGETS LOCKED';
@@ -441,13 +451,17 @@ class EarthGuardUI {
             fireBtn.className = (!game.isAnimating && missilesLeft > 0) ? 'terminal-btn pulse' : 'terminal-btn';
         }
 
-        const canFire = !game.isGameOver && (game.isCharging || game.canCharge());
+        const canFire = !game.isGameOver && !game.isPaused && (game.isCharging || game.canCharge());
         fireBtn.disabled = !canFire;
 
-        advanceBtn.disabled = game.isAnimating || game.isGameOver;
-        advanceBtn.classList.toggle('is-disabled', game.isAnimating || game.isGameOver);
-        const isIdleCycleState = !game.isAnimating && !game.isGameOver && (game.pendingMissiles?.length || 0) === 0;
-        advanceBtn.textContent = game.isAnimating ? 'CYCLING...' : (isIdleCycleState ? 'IDLE CYCLE' : 'CYCLE');
+        advanceBtn.disabled = game.isAnimating || game.isGameOver || game.isPaused;
+        advanceBtn.classList.toggle('is-disabled', game.isAnimating || game.isGameOver || game.isPaused);
+        const isIdleCycleState = !game.isAnimating && !game.isGameOver && !game.isPaused && (game.pendingMissiles?.length || 0) === 0;
+        advanceBtn.textContent = game.isPaused ? 'PAUSED' : (game.isAnimating ? 'CYCLING...' : (isIdleCycleState ? 'IDLE CYCLE' : 'CYCLE'));
+        if (this.el['pause-btn']) {
+            this.el['pause-btn'].disabled = game.isAnimating || game.isGameOver || game.isSplashOpen;
+            this.el['pause-btn'].textContent = game.isPaused ? 'RESUME' : 'PAUSE';
+        }
     }
 
     renderUpgradeRows(game, upgrades) {
@@ -609,6 +623,10 @@ class EarthGuardUI {
                 </div>
             `;
         }).join('');
+    }
+
+    renderPauseModal(game) {
+        this.renderNamedModal('pause-overlay', 'pause-modal', 'pause-title', !!game.isPaused, 'PAUSED');
     }
     renderCareerSummary(game) {
         const careerEl = this.el['career-stats'];
