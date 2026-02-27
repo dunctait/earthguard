@@ -5,10 +5,16 @@ Completed items are removed from this file to keep it current.
 ## Backlog
 
 ### Gameplay / Combat
-- [ ] **T1** - Remove target indicator (prediction circle) entirely if still present
-- [ ] **T10** - Reduce HP model to low-heart style gameplay (e.g. 4 HP / 2 damage aliens)
-- [ ] **T28** - Upgrade for missile speed/range
-- [ ] **T50** - Decide and implement final player HP indicator format (hearts vs numeric)
+- [ ] **T28** - Upgrade for missile range
+- [ ] **T69** - Add `swarmer` enemy (fast, low HP, group pressure)
+- [ ] **T70** - Add `splitter` enemy (splits into scouts on death)
+- [ ] **T71** - Add mini-boss every 5 levels (lighter than full boss)
+- [ ] **T72** - Add enemy telegraph markers for next move (all types)
+- [ ] **T73** - Add missile range upgrade tree with clear caps/diminishing returns
+- [ ] **T74** - Add overkill bonus for multi-kill explosions
+- [ ] **T75** - Add run modifiers/mutators selectable at run start
+- [ ] **T76** - Add assistant cannon focus mode toggle (nearest/weakest/cluster)
+- [ ] **T77** - Add codex panel with enemy descriptions and counters
 
 ### UI / Flow
 - [ ] **T39** - First-time tutorial overlay/onboarding

@@ -105,6 +105,41 @@ function round2(value) {
     return Math.round(value * 100) / 100;
 }
 
+const EnemyCodexDefinitions = {
+    saucer: {
+        type: 'saucer',
+        name: 'Saucer',
+        summary: 'Standard invasion craft with balanced speed and armor.',
+        threat: 'Medium',
+        hp: '1-2',
+        notes: 'Core target. Appears in most waves and forms front-line pressure.'
+    },
+    scout: {
+        type: 'scout',
+        name: 'Scout',
+        summary: 'Fast zig-zag reconnaissance unit.',
+        threat: 'Medium',
+        hp: '1',
+        notes: 'Low durability but evasive movement. Best intercepted early.'
+    },
+    tanker: {
+        type: 'tanker',
+        name: 'Tanker',
+        summary: 'Heavy armored hauler with reinforced hull.',
+        threat: 'High',
+        hp: '3',
+        notes: 'Slower and larger; can soak blasts and shield nearby swarms by body-blocking.'
+    },
+    boss: {
+        type: 'boss',
+        name: 'Boss Carrier',
+        summary: 'Command vessel with high durability and sector pressure.',
+        threat: 'Critical',
+        hp: '7-8',
+        notes: 'Slow drift movement. Defeat expands sector zoom and escalates later waves.'
+    }
+};
+
 const UpgradeDefinitions = {
     assistantCannonsUnlock: {
         key: 'assistantCannonsUnlock',
@@ -704,6 +739,8 @@ class Game {
         this.isSplashOpen = true;
         this.isGameOver = false;
         this.isGameOverSummaryOpen = false;
+        this.isCodexOpen = false;
+        this.codexEnemyType = 'saucer';
         this.gameOverReason = '';
         this.gameOverAtMs = 0;
         this.gameOverContinueUnlockAtMs = 0;
@@ -1174,7 +1211,8 @@ class Game {
                 id,
                 x,
                 y: this.config.LAUNCHER_Y + 0.8,
-                cooldownRemaining: existing ? Math.max(0, Math.floor(existing.cooldownRemaining || 0)) : 0
+                cooldownRemaining: existing ? Math.max(0, Math.floor(existing.cooldownRemaining || 0)) : 0,
+                enabled: existing ? existing.enabled !== false : true
             });
         }
         this.assistantCannons = next;
@@ -1217,6 +1255,7 @@ class Game {
         const planned = [];
 
         for (const cannon of this.assistantCannons) {
+            if (cannon.enabled === false) continue;
             cannon.cooldownRemaining = Math.max(0, Math.floor(cannon.cooldownRemaining || 0));
             if (cannon.cooldownRemaining > 0) {
                 cannon.cooldownRemaining -= 1;
@@ -1676,6 +1715,42 @@ class Game {
         if (!this.isAICannonUpgradeMenuOpen) return;
         this.isAICannonUpgradeMenuOpen = false;
         this.notify();
+    }
+
+    getCodexEntries() {
+        return Object.values(EnemyCodexDefinitions);
+    }
+
+    getCodexEntry(type = this.codexEnemyType) {
+        return EnemyCodexDefinitions[type] || EnemyCodexDefinitions.saucer;
+    }
+
+    openCodexEntry(type = this.codexEnemyType) {
+        const entry = this.getCodexEntry(type);
+        if (!entry) return false;
+        this.codexEnemyType = entry.type;
+        this.isCodexOpen = true;
+        this.notify();
+        return true;
+    }
+
+    closeCodex() {
+        if (!this.isCodexOpen) return false;
+        this.isCodexOpen = false;
+        this.notify();
+        return true;
+    }
+
+    toggleAssistantCannonEnabled(id) {
+        if (!id) return false;
+        const cannon = (this.assistantCannons || []).find((c) => c.id === id);
+        if (!cannon) return false;
+        cannon.enabled = !cannon.enabled;
+        if (!cannon.enabled) cannon.cooldownRemaining = 0;
+        this.emitStatusFx(cannon.enabled ? 'ALLY CANNON ONLINE' : 'ALLY CANNON OFFLINE', cannon.id.toUpperCase(), 42);
+        this.planAssistantTargetsForNextCycle();
+        this.notify();
+        return true;
     }
 
     canPurchaseUpgrade(key) {
@@ -2165,6 +2240,7 @@ class Game {
         this.money = this.getJumpStartMoney(this.level, jump.money || 0);
         this.missileEnergy = this.getJumpStartEnergy(this.level);
         this.isPaused = false;
+        this.isCodexOpen = false;
         this.isUpgradeMenuOpen = false;
         this.isAICannonUpgradeMenuOpen = false;
         this.aliens = [];
@@ -2211,6 +2287,7 @@ class Game {
         this.viewZoomTarget = this.config.DEFAULT_VIEW_ZOOM || 1;
         this.viewZoomStage = 0;
         this.bossesDefeatedThisRun = 0;
+        this.isCodexOpen = false;
         this.stats = {
             missilesTargeted: 0,
             missilesLaunched: 0,
@@ -2322,6 +2399,8 @@ class Game {
             score: this.score,
             comboStreak: this.comboStreak,
             isPaused: this.isPaused,
+            isCodexOpen: this.isCodexOpen,
+            codexEnemyType: this.codexEnemyType,
             isSplashOpen: this.isSplashOpen,
             isMetaUpgradeModalOpen: this.isMetaUpgradeModalOpen,
             isGameOver: this.isGameOver,
@@ -2347,7 +2426,7 @@ class Game {
             isAnimating: this.isAnimating,
             aliens: this.aliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),
             incomingAliens: this.incomingAliens.map(a => ({ x: +a.x.toFixed(1), y: +a.y.toFixed(1) })),
-            assistantCannons: (this.assistantCannons || []).map((c) => ({ id: c.id, x: +c.x.toFixed(1), y: +c.y.toFixed(1), cooldown: c.cooldownRemaining || 0 })),
+            assistantCannons: (this.assistantCannons || []).map((c) => ({ id: c.id, x: +c.x.toFixed(1), y: +c.y.toFixed(1), cooldown: c.cooldownRemaining || 0, enabled: c.enabled !== false })),
             config: this.config,
             metaProgress: this.metaProgress
         };

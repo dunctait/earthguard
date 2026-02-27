@@ -41,6 +41,7 @@ class EarthGuardUI {
             'advance-btn',
             'upgrade-menu-btn',
             'ai-upgrade-menu-btn',
+            'codex-menu-btn',
             'upgrade-modal-overlay',
             'upgrade-menu',
             'upgrade-menu-title',
@@ -70,6 +71,12 @@ class EarthGuardUI {
             'meta-upgrade-salvage',
             'meta-upgrade-close-btn',
             'meta-upgrade-list',
+            'codex-overlay',
+            'codex-modal',
+            'codex-title',
+            'codex-close-btn',
+            'codex-type-list',
+            'codex-body',
             'game-over-jump',
             'jump-level-select',
             'jump-highest-btn',
@@ -88,6 +95,7 @@ class EarthGuardUI {
         this.renderPower(game);
         this.renderButtons(game);
         this.renderUpgrades(game);
+        this.renderCodex(game);
         this.renderSplash(game);
         this.renderGameOverBattlefieldPrompt(game);
         this.renderGameOver(game);
@@ -449,6 +457,10 @@ class EarthGuardUI {
         advanceBtn.classList.toggle('is-disabled', game.isAnimating || game.isGameOver);
         const isIdleCycleState = !game.isAnimating && !game.isGameOver && (game.pendingMissiles?.length || 0) === 0;
         advanceBtn.textContent = game.isAnimating ? 'CYCLING...' : (isIdleCycleState ? 'IDLE CYCLE' : 'CYCLE');
+        if (this.el['codex-menu-btn']) {
+            this.el['codex-menu-btn'].textContent = game.isCodexOpen ? 'CLOSE CODEX' : 'CODEX';
+            this.el['codex-menu-btn'].classList.toggle('owned', !!game.isCodexOpen);
+        }
     }
 
     renderUpgradeRows(game, upgrades) {
@@ -610,6 +622,38 @@ class EarthGuardUI {
                 </div>
             `;
         }).join('');
+    }
+
+    renderCodex(game) {
+        this.renderNamedModal('codex-overlay', 'codex-modal', 'codex-title', !!game.isCodexOpen, 'ENEMY CODEX');
+        const typeList = this.el['codex-type-list'];
+        const body = this.el['codex-body'];
+        if (!typeList || !body) return;
+        const entries = (typeof game.getCodexEntries === 'function') ? game.getCodexEntries() : [];
+        const selectedType = game.codexEnemyType || entries[0]?.type || 'saucer';
+        typeList.innerHTML = entries.map((entry) => {
+            const active = entry.type === selectedType;
+            return `
+                <div class="terminal-panel upgrade-row">
+                    <div class="upgrade-copy">
+                        <div class="upgrade-name">${entry.name}</div>
+                        <div class="upgrade-meta">${entry.summary}</div>
+                    </div>
+                    <button class="terminal-btn upgrade-btn${active ? ' owned' : ''}" data-codex-type="${entry.type}">${active ? 'VIEWING' : 'VIEW'}</button>
+                </div>
+            `;
+        }).join('');
+        const entry = (typeof game.getCodexEntry === 'function') ? game.getCodexEntry(selectedType) : null;
+        if (!entry) {
+            body.innerHTML = '';
+            return;
+        }
+        body.innerHTML = [
+            `<div class="game-over-stat-row"><span class="hud-label">TYPE</span><span class="hud-value">${entry.name}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">THREAT</span><span class="hud-value">${entry.threat}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">HP</span><span class="hud-value">${entry.hp}</span></div>`,
+            `<div class="game-over-upgrades"><span class="hud-label">NOTES</span><span class="game-over-upgrade-list">${entry.notes}</span></div>`
+        ].join('');
     }
 
     renderCareerSummary(game) {

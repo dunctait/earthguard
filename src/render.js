@@ -26,6 +26,7 @@ class Renderer {
             'splash-clear-data-btn',
             'upgrade-menu-btn',
             'ai-upgrade-menu-btn',
+            'codex-menu-btn',
             'upgrade-modal-overlay',
             'upgrade-menu',
             'upgrade-menu-close-btn',
@@ -40,6 +41,9 @@ class Renderer {
             'open-meta-upgrades-btn',
             'meta-upgrade-overlay',
             'meta-upgrade-close-btn',
+            'codex-overlay',
+            'codex-close-btn',
+            'codex-type-list',
             'play-again-btn',
             'meta-upgrade-list',
             'jump-level-select',
@@ -281,6 +285,9 @@ class Renderer {
         };
 
         this.utils.bindPressHandlers(fireBtn, { onStart: startCharge, onEnd: stopCharge });
+        if (this.canvas) {
+            this.canvas.addEventListener('click', (event) => this.handleCanvasClick(event));
+        }
 
         this.dom['advance-btn'].addEventListener('click', () => this.game.advance());
         if (this.dom['upgrade-menu-btn']) {
@@ -288,6 +295,12 @@ class Renderer {
         }
         if (this.dom['ai-upgrade-menu-btn']) {
             this.dom['ai-upgrade-menu-btn'].addEventListener('click', () => this.game.toggleAICannonUpgradeMenu?.());
+        }
+        if (this.dom['codex-menu-btn']) {
+            this.dom['codex-menu-btn'].addEventListener('click', () => {
+                if (this.game.isCodexOpen) this.game.closeCodex?.();
+                else this.game.openCodexEntry?.();
+            });
         }
         if (this.dom['upgrade-menu-close-btn']) {
             this.dom['upgrade-menu-close-btn'].addEventListener('click', () => this.game.closeUpgradeMenu());
@@ -419,6 +432,23 @@ class Renderer {
                 }
             });
         }
+        if (this.dom['codex-close-btn']) {
+            this.dom['codex-close-btn'].addEventListener('click', () => this.game.closeCodex?.());
+        }
+        if (this.dom['codex-type-list']) {
+            this.dom['codex-type-list'].addEventListener('click', (event) => {
+                const button = event.target.closest('[data-codex-type]');
+                if (!button) return;
+                this.game.openCodexEntry?.(button.dataset.codexType);
+            });
+        }
+        if (this.dom['codex-overlay']) {
+            this.dom['codex-overlay'].addEventListener('click', (event) => {
+                if (event.target === this.dom['codex-overlay']) {
+                    this.game.closeCodex?.();
+                }
+            });
+        }
         window.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape') return;
             if (this.game?.isMetaUpgradeModalOpen) {
@@ -433,7 +463,66 @@ class Renderer {
                 this.game.closeUpgradeMenu?.();
                 return;
             }
+            if (this.game?.isCodexOpen) {
+                this.game.closeCodex?.();
+                return;
+            }
         });
+    }
+
+    getCanvasPointer(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        return {
+            x: (event.clientX - rect.left) * scaleX,
+            y: (event.clientY - rect.top) * scaleY
+        };
+    }
+
+    handleCanvasClick(event) {
+        if (!this.game || this.game.isSplashOpen || this.game.isGameOver || this.game.isAnimating) return;
+        const point = this.getCanvasPointer(event);
+        if (this.tryToggleAssistantAtPoint(point)) return;
+        this.tryOpenCodexAtPoint(point);
+    }
+
+    tryToggleAssistantAtPoint(point) {
+        const cannons = this.game.assistantCannons || [];
+        if (!cannons.length) return false;
+        let best = null;
+        let bestDist = Number.POSITIVE_INFINITY;
+        for (const cannon of cannons) {
+            const pos = this.worldToScreen(cannon.x, cannon.y);
+            const d = this.utils.distance(point.x - pos.x, point.y - pos.y);
+            if (d < bestDist) {
+                bestDist = d;
+                best = cannon;
+            }
+        }
+        if (!best || bestDist > 18) return false;
+        this.game.toggleAssistantCannonEnabled?.(best.id);
+        return true;
+    }
+
+    tryOpenCodexAtPoint(point) {
+        const aliens = [...(this.game.aliens || []), ...(this.game.incomingAliens || [])];
+        if (!aliens.length) return false;
+        let best = null;
+        let bestDist = Number.POSITIVE_INFINITY;
+        for (const alien of aliens) {
+            const displayY = alien.y + (alien.entryVisualOffsetY || 0);
+            const pos = this.worldToScreen(alien.x, displayY);
+            const radiusPx = Math.max(9, this.worldToScreenSize(alien.radius || this.game.config.ALIEN_RADIUS) * 0.9);
+            const d = this.utils.distance(point.x - pos.x, point.y - pos.y);
+            if (d <= radiusPx && d < bestDist) {
+                bestDist = d;
+                best = alien;
+            }
+        }
+        if (!best) return false;
+        this.game.openCodexEntry?.(best.type || 'saucer');
+        return true;
     }
 
     animate() {
@@ -869,7 +958,7 @@ class Renderer {
         this.drawCannon(cannonX, cannonY, angleRad);
         for (const assistant of (this.game.assistantCannons || [])) {
             const pos = this.worldToScreen(assistant.x, assistant.y);
-            this.drawAssistantCannon(pos.x, pos.y);
+            this.drawAssistantCannon(pos.x, pos.y, assistant.enabled !== false);
         }
 
         // Pending (locked) missiles: show only a direction/targeting indicator while time is paused.
@@ -1307,12 +1396,12 @@ class Renderer {
         this.clearGlow();
     }
 
-    drawAssistantCannon(x, y) {
+    drawAssistantCannon(x, y, enabled = true) {
         const ctx = this.ctx;
         const c = this.colors;
-        this.setGlow('rgba(70, 150, 255, 0.24)', 8);
+        this.setGlow(enabled ? 'rgba(70, 150, 255, 0.24)' : 'rgba(120, 120, 140, 0.12)', 8);
         ctx.fillStyle = 'rgba(0, 22, 14, 0.9)';
-        ctx.strokeStyle = 'rgba(70, 150, 255, 0.7)';
+        ctx.strokeStyle = enabled ? 'rgba(70, 150, 255, 0.7)' : 'rgba(100, 120, 140, 0.58)';
         ctx.lineWidth = 1.6;
 
         ctx.beginPath();
@@ -1333,10 +1422,18 @@ class Renderer {
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = c.white;
+        ctx.fillStyle = enabled ? c.white : 'rgba(140, 150, 165, 0.8)';
         ctx.beginPath();
         ctx.arc(x, y - 5, 1.2, 0, Math.PI * 2);
         ctx.fill();
+        if (!enabled) {
+            ctx.strokeStyle = 'rgba(255, 90, 90, 0.75)';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(x - 7, y - 9);
+            ctx.lineTo(x + 7, y + 5);
+            ctx.stroke();
+        }
         this.clearGlow();
     }
 
