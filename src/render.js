@@ -50,10 +50,7 @@ class Renderer {
             'rot-right-small',
             'rot-right-big',
             'fire-btn',
-            'advance-btn',
-            'pause-btn',
-            'pause-resume-btn',
-            'pause-restart-btn'
+            'advance-btn'
         ]);
         this.canvas = this.dom['game-canvas'];
         this.ctx = this.canvas.getContext('2d');
@@ -286,15 +283,6 @@ class Renderer {
         this.utils.bindPressHandlers(fireBtn, { onStart: startCharge, onEnd: stopCharge });
 
         this.dom['advance-btn'].addEventListener('click', () => this.game.advance());
-        if (this.dom['pause-btn']) {
-            this.dom['pause-btn'].addEventListener('click', () => this.game.togglePause?.());
-        }
-        if (this.dom['pause-resume-btn']) {
-            this.dom['pause-resume-btn'].addEventListener('click', () => this.game.resumeGame?.());
-        }
-        if (this.dom['pause-restart-btn']) {
-            this.dom['pause-restart-btn'].addEventListener('click', () => this.game.reset?.());
-        }
         if (this.dom['upgrade-menu-btn']) {
             this.dom['upgrade-menu-btn'].addEventListener('click', () => this.game.toggleUpgradeMenu());
         }
@@ -445,11 +433,6 @@ class Renderer {
                 this.game.closeUpgradeMenu?.();
                 return;
             }
-            if (this.game?.isPaused) {
-                this.game.resumeGame?.();
-                return;
-            }
-            this.game?.pauseGame?.();
         });
     }
 

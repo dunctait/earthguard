@@ -39,7 +39,6 @@ class EarthGuardUI {
             'power-lock-marker',
             'fire-btn',
             'advance-btn',
-            'pause-btn',
             'upgrade-menu-btn',
             'ai-upgrade-menu-btn',
             'upgrade-modal-overlay',
@@ -71,11 +70,6 @@ class EarthGuardUI {
             'meta-upgrade-salvage',
             'meta-upgrade-close-btn',
             'meta-upgrade-list',
-            'pause-overlay',
-            'pause-modal',
-            'pause-title',
-            'pause-resume-btn',
-            'pause-restart-btn',
             'game-over-jump',
             'jump-level-select',
             'jump-highest-btn',
@@ -94,7 +88,6 @@ class EarthGuardUI {
         this.renderPower(game);
         this.renderButtons(game);
         this.renderUpgrades(game);
-        this.renderPauseModal(game);
         this.renderSplash(game);
         this.renderGameOverBattlefieldPrompt(game);
         this.renderGameOver(game);
@@ -451,17 +444,13 @@ class EarthGuardUI {
             fireBtn.className = (!game.isAnimating && missilesLeft > 0) ? 'terminal-btn pulse' : 'terminal-btn';
         }
 
-        const canFire = !game.isGameOver && !game.isPaused && (game.isCharging || game.canCharge());
+        const canFire = !game.isGameOver && (game.isCharging || game.canCharge());
         fireBtn.disabled = !canFire;
 
-        advanceBtn.disabled = game.isAnimating || game.isGameOver || game.isPaused;
-        advanceBtn.classList.toggle('is-disabled', game.isAnimating || game.isGameOver || game.isPaused);
-        const isIdleCycleState = !game.isAnimating && !game.isGameOver && !game.isPaused && (game.pendingMissiles?.length || 0) === 0;
-        advanceBtn.textContent = game.isPaused ? 'PAUSED' : (game.isAnimating ? 'CYCLING...' : (isIdleCycleState ? 'IDLE CYCLE' : 'CYCLE'));
-        if (this.el['pause-btn']) {
-            this.el['pause-btn'].disabled = game.isAnimating || game.isGameOver || game.isSplashOpen;
-            this.el['pause-btn'].textContent = game.isPaused ? 'RESUME' : 'PAUSE';
-        }
+        advanceBtn.disabled = game.isAnimating || game.isGameOver;
+        advanceBtn.classList.toggle('is-disabled', game.isAnimating || game.isGameOver);
+        const isIdleCycleState = !game.isAnimating && !game.isGameOver && (game.pendingMissiles?.length || 0) === 0;
+        advanceBtn.textContent = game.isAnimating ? 'CYCLING...' : (isIdleCycleState ? 'IDLE CYCLE' : 'CYCLE');
     }
 
     renderUpgradeRows(game, upgrades) {
@@ -625,9 +614,6 @@ class EarthGuardUI {
         }).join('');
     }
 
-    renderPauseModal(game) {
-        this.renderNamedModal('pause-overlay', 'pause-modal', 'pause-title', !!game.isPaused, 'PAUSED');
-    }
     renderCareerSummary(game) {
         const careerEl = this.el['career-stats'];
         const recentRunsEl = this.el['recent-runs'];
