@@ -550,7 +550,7 @@ class EarthGuardUI {
                 ? game.getOrderedMetaUpgradeState()
                 : (typeof game.getMetaUpgradeState === 'function' ? game.getMetaUpgradeState() : []);
             const affordableCount = metaUpgradesForCount.filter((u) => (u.level < u.maxLevel) && typeof game.canPurchaseMetaUpgrade === 'function' && game.canPurchaseMetaUpgrade(u.key)).length;
-            this.el['meta-upgrade-salvage'].textContent = `SALVAGE ${salvage} • ${affordableCount} AVAILABLE`;
+            this.el['meta-upgrade-salvage'].textContent = `SALVAGE ${salvage} • ${affordableCount} UPGRADES AVAILABLE`;
         }
         if (!metaList) return;
         const metaUpgrades = typeof game.getOrderedMetaUpgradeState === 'function'

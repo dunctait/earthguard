@@ -990,8 +990,8 @@ class Renderer {
             for (const alien of incomingAliens) {
                 const displayY = alien.y + (alien.entryVisualOffsetY || 0);
                 const pos = this.worldToScreen(alien.x, displayY);
-                // Keep previews in upper staging area to avoid overlap clutter.
-                if (pos.y > h * 0.38 || pos.y < -40) continue;
+                // Keep previews from dropping into the lower battlefield, but do not hide them too early.
+                if (pos.y > h * 0.72 || pos.y < -40) continue;
                 const size = this.worldToScreenSize(alien.radius) * 0.75;
                 const distanceAlpha = Math.max(0.3, this.getDepthBrightness(pos.y) * 0.45);
                 if (alien.type === 'scout') {
