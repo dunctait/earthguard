@@ -430,11 +430,9 @@ class EarthGuardUI {
         const missilesLeft = game.getMissilesPerTurn() - game.missilesLockedThisTurn;
         const idleCost = game.getMissileEnergyCostForPower(game.config.MISSILE_MIN_ENERGY_COST);
         const currentCost = game.getMissileEnergyCostForPower(game.power || game.config.MISSILE_MIN_ENERGY_COST);
-        const range = Math.floor((typeof game.getTargetDistanceForPower === 'function') ? game.getTargetDistanceForPower(game.power || 0) : 0);
-        const rangeLabel = range >= 100 ? `${(range / 100).toFixed(2)}km` : `${range}m`;
 
         if (game.isCharging) {
-            fireBtn.textContent = `TARGETING ${rangeLabel} | COST ${currentCost}`;
+            fireBtn.textContent = `TARGETING | COST ${currentCost}`;
             fireBtn.className = 'terminal-btn charging';
         } else if (missilesLeft === 0) {
             fireBtn.textContent = 'TARGETS LOCKED';
