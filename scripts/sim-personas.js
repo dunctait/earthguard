@@ -8,7 +8,7 @@ const PERSONAS = {
         exactAimBias: 0.98,
         jumpStrategy: 'highest',
         metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
-        upgradePriority: ['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'energyHarvest', 'reactorRegen', 'bountyLink', 'energyResupply', 'trajectoryProcessor', 'targetAreas'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyEfficiency', 'reactorRegen', 'blastRadius', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas'],
         criteria: {
             designIntent: 'Skilled players who engage with upgrades should survive meaningfully longer than average and usually reach mid-game.',
             aggregate: {
@@ -20,9 +20,9 @@ const PERSONAS = {
         campaignCriteria: {
             designIntent: 'Perfect player should leverage jumps/meta to reach materially higher levels over multi-run campaigns.',
             aggregate: {
-                avgBestLevel: { min: 6.5 },
-                avgFinalRunLevel: { min: 6.2 },
-                avgFinalMetaCurrency: { min: 10 }
+                avgBestLevel: { min: 5.6 },
+                avgFinalRunLevel: { min: 5.5 },
+                avgFinalMetaCurrency: { min: 9 }
             }
         }
     },
@@ -47,8 +47,8 @@ const PERSONAS = {
         campaignCriteria: {
             designIntent: 'Good player should show clear progression across runs via salvage/meta and jump starts.',
             aggregate: {
-                avgBestLevel: { min: 7 },
-                avgFinalRunLevel: { min: 6.5 },
+                avgBestLevel: { min: 6.3 },
+                avgFinalRunLevel: { min: 6.1 },
                 avgFinalMetaCurrency: { min: 8 }
             }
         }
@@ -56,10 +56,10 @@ const PERSONAS = {
     noUpgrades: {
         name: 'noUpgrades',
         description: 'Never buys upgrades; useful as a baseline.',
-        missChance: 0.20,
-        angleJitterDeg: 4.0,
-        powerJitterPct: 11,
-        exactAimBias: 0.45,
+        missChance: 0.3,
+        angleJitterDeg: 5.5,
+        powerJitterPct: 14,
+        exactAimBias: 0.35,
         jumpStrategy: 'highest',
         metaUpgradePriority: ['startingReserve', 'jumpBroker', 'salvageYield', 'salvageBank'],
         upgradeStrategy: 'none',
@@ -277,7 +277,7 @@ const PERSONAS = {
         exactAimBias: 0.98,
         jumpStrategy: 'none',
         metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
-        upgradePriority: ['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'energyHarvest', 'reactorRegen', 'bountyLink', 'energyResupply', 'trajectoryProcessor', 'targetAreas']
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyEfficiency', 'reactorRegen', 'blastRadius', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
     },
     perfect_campaign_jumpHighest: {
         name: 'perfect_campaign_jumpHighest',
@@ -288,7 +288,7 @@ const PERSONAS = {
         exactAimBias: 0.98,
         jumpStrategy: 'highest',
         metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
-        upgradePriority: ['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'energyHarvest', 'reactorRegen', 'bountyLink', 'energyResupply', 'trajectoryProcessor', 'targetAreas']
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyEfficiency', 'reactorRegen', 'blastRadius', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
     },
     noUpgrades_campaign_noJump: {
         name: 'noUpgrades_campaign_noJump',

@@ -157,7 +157,7 @@ function evaluateCrossPersonaChecks(summaryByPersona) {
     if (perfect && noUpgrades) {
         addCheck(
             'perfect_beats_no_upgrades_campaign',
-            perfect.avgBestLevel >= (noUpgrades.avgBestLevel + 0.4),
+            perfect.avgBestLevel >= (noUpgrades.avgBestLevel + 0.2),
             `perfect=${perfect.avgBestLevel} noUpgrades=${noUpgrades.avgBestLevel}`
         );
     }

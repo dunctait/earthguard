@@ -81,7 +81,18 @@ const GameConfig = {
     ASSISTANT_CANNON_FIRE_CHANCE: 0.8,
     ASSISTANT_CANNON_COOLDOWN_MIN: 1,
     ASSISTANT_CANNON_COOLDOWN_MAX: 2,
-    ASSISTANT_CANNON_EXPLOSION_RADIUS_SCALE: 0.8
+    ASSISTANT_CANNON_EXPLOSION_RADIUS_SCALE: 0.8,
+
+    // Jump-start balancing (intended as convenience, not power gain)
+    JUMP_START_BASE_MONEY_RETENTION: 0.72,
+    JUMP_START_MIN_MONEY_RETENTION: 0.5,
+    JUMP_START_MONEY_RETENTION_LEVEL_STEP: 0.01,
+    JUMP_START_BASE_ENERGY_RETENTION: 0.88,
+    JUMP_START_MIN_ENERGY_RETENTION: 0.72,
+    JUMP_START_ENERGY_RETENTION_LEVEL_STEP: 0.006,
+    JUMP_START_ENTRY_SHIFT_BASE: 2.5,
+    JUMP_START_ENTRY_SHIFT_LEVEL_STEP: 0.35,
+    JUMP_START_ENTRY_SHIFT_MAX: 7
 };
 
 function buildProgressionTiers(levels, factory) {
@@ -436,7 +447,7 @@ const MetaUpgradeDefinitions = {
         name: 'Jump Broker',
         description: 'Increase cash retained when using jump start.',
         tiers: buildMetaTiers(10, (i) => {
-            const jumpMoneyMultiplier = round2(1 + ((i + 1) * 0.08));
+            const jumpMoneyMultiplier = round2(1 + ((i + 1) * 0.1));
             return {
                 cost: Math.floor(14 * Math.pow(1.5, i)),
                 jumpMoneyMultiplier,
@@ -663,7 +674,7 @@ class Game {
         return {
             level: numericLevel,
             money: Math.floor(this.getJumpStartMoney(numericLevel, jump.money || 0)),
-            energy: this.getMaxEnergy(),
+            energy: this.getJumpStartEnergy(numericLevel),
             enemyCount: Math.floor(waveSpec.alienCount || 0),
             enemySpeed: +(waveSpec.speed || 0).toFixed(1),
             startBonusMoney: Math.floor(startBonuses.money || 0),
@@ -671,12 +682,51 @@ class Game {
         };
     }
 
+    getJumpMoneyRetention(level) {
+        const numericLevel = Math.max(1, Math.floor(level || 1));
+        const baseRetention = this.config.JUMP_START_BASE_MONEY_RETENTION || 0.72;
+        const step = this.config.JUMP_START_MONEY_RETENTION_LEVEL_STEP || 0.01;
+        const minRetention = this.config.JUMP_START_MIN_MONEY_RETENTION || 0.5;
+        return Math.max(minRetention, baseRetention - ((numericLevel - 1) * step));
+    }
+
     getJumpStartMoney(level, recordedMoney) {
         const baseMoney = Math.max(0, Math.floor(recordedMoney || 0));
+        const retention = this.getJumpMoneyRetention(level);
         const jumpBrokerTierLevel = this.getMetaUpgradeLevel('jumpBroker');
         const jumpBrokerTier = MetaUpgradeDefinitions.jumpBroker.tiers[Math.max(0, jumpBrokerTierLevel - 1)];
         const jumpMoneyMultiplier = jumpBrokerTier?.jumpMoneyMultiplier || 1;
-        return Math.floor(baseMoney * jumpMoneyMultiplier);
+        return Math.floor(baseMoney * retention * jumpMoneyMultiplier);
+    }
+
+    getJumpStartEnergy(level) {
+        const numericLevel = Math.max(1, Math.floor(level || 1));
+        const baseRetention = this.config.JUMP_START_BASE_ENERGY_RETENTION || 0.88;
+        const step = this.config.JUMP_START_ENERGY_RETENTION_LEVEL_STEP || 0.006;
+        const minRetention = this.config.JUMP_START_MIN_ENERGY_RETENTION || 0.72;
+        const retention = Math.max(minRetention, baseRetention - ((numericLevel - 1) * step));
+        return Math.max(0, Math.floor(this.getMaxEnergy() * retention));
+    }
+
+    applyJumpStartThreatOffset(level = this.level) {
+        if (!Array.isArray(this.aliens) || this.aliens.length === 0) return;
+        const numericLevel = Math.max(1, Math.floor(level || 1));
+        const shiftBase = this.config.JUMP_START_ENTRY_SHIFT_BASE || 0;
+        const shiftStep = this.config.JUMP_START_ENTRY_SHIFT_LEVEL_STEP || 0;
+        const shiftMax = this.config.JUMP_START_ENTRY_SHIFT_MAX || 0;
+        const requestedShift = this.utils.clamp(shiftBase + ((numericLevel - 1) * shiftStep), 0, shiftMax);
+        if (requestedShift <= 0) return;
+
+        const lowestAlienY = Math.min(...this.aliens.map((alien) => alien.y - (alien.radius || 0)));
+        const minBreachBuffer = (this.config.LAUNCHER_Y || 0) + 16;
+        const maxSafeShift = Math.max(0, lowestAlienY - minBreachBuffer);
+        const appliedShift = Math.min(requestedShift, maxSafeShift);
+        if (appliedShift <= 0) return;
+
+        for (const alien of this.aliens) {
+            alien.y -= appliedShift;
+            alien.entryVisualOffsetY = Math.max(alien.entryVisualOffsetY || 0, appliedShift);
+        }
     }
 
     getMetaUpgradeLevel(key) {
@@ -1719,7 +1769,7 @@ class Game {
         this.isSplashOpen = false;
         this.level = Math.max(1, jump.level);
         this.money = this.getJumpStartMoney(this.level, jump.money || 0);
-        this.missileEnergy = this.getMaxEnergy();
+        this.missileEnergy = this.getJumpStartEnergy(this.level);
         this.isUpgradeMenuOpen = false;
         this.aliens = [];
         this.missiles = [];
@@ -1730,6 +1780,7 @@ class Game {
         this.waveClearFxEvents = [];
         this.incomingAliens = [];
         this.spawnWave();
+        this.applyJumpStartThreatOffset(this.level);
         this.queueIncomingWavePreview(this.level + 1);
         this.refreshAssistantCannons();
         this.planAssistantTargetsForNextCycle();
