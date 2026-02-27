@@ -75,6 +75,7 @@ function getMetaPurchaseOrder(persona) {
 }
 
 function purchaseMetaUpgrades(game, persona) {
+    if (persona.metaPurchaseStrategy === 'none') return [];
     const purchased = [];
     let guard = 0;
     while (guard++ < 100) {
@@ -121,6 +122,46 @@ function evaluateCampaignCriteria(persona, summary) {
         designIntent: criteria.designIntent || '',
         checks
     };
+}
+
+function evaluateCrossPersonaChecks(summaryByPersona) {
+    const checks = [];
+    const addCheck = (label, pass, details) => checks.push({ label, pass, details });
+
+    const goodNoJump = summaryByPersona['good_campaign_noJump'];
+    const goodJump = summaryByPersona['good_campaign_jumpHighest'];
+    if (goodNoJump && goodJump) {
+        addCheck(
+            'good.jump_not_stronger_than_full_run',
+            goodJump.avgBestLevel <= (goodNoJump.avgBestLevel + 0.2),
+            `jump=${goodJump.avgBestLevel} noJump=${goodNoJump.avgBestLevel}`
+        );
+    }
+
+    const perfectNoJump = summaryByPersona['perfect_campaign_noJump'];
+    const perfectJump = summaryByPersona['perfect_campaign_jumpHighest'];
+    if (perfectNoJump && perfectJump) {
+        addCheck(
+            'perfect.jump_not_stronger_than_full_run',
+            perfectJump.avgBestLevel <= (perfectNoJump.avgBestLevel + 0.2),
+            `jump=${perfectJump.avgBestLevel} noJump=${perfectNoJump.avgBestLevel}`
+        );
+    }
+
+    const perfect = summaryByPersona['perfect_campaign_noJump']
+        || summaryByPersona['perfect_campaign_jumpHighest']
+        || summaryByPersona['perfect'];
+    const noUpgrades = summaryByPersona['noUpgrades_campaign_noJump']
+        || summaryByPersona['noUpgrades_campaign_jumpHighest']
+        || summaryByPersona['noUpgrades'];
+    if (perfect && noUpgrades) {
+        addCheck(
+            'perfect_beats_no_upgrades_campaign',
+            perfect.avgBestLevel >= (noUpgrades.avgBestLevel + 0.4),
+            `perfect=${perfect.avgBestLevel} noUpgrades=${noUpgrades.avgBestLevel}`
+        );
+    }
+    return checks;
 }
 
 function runCampaign(persona, campaignSeed, args) {
@@ -194,6 +235,7 @@ function main() {
 
     ensureDir(args.outDir);
     const aggregate = [];
+    const summaryByPersona = {};
     const criteriaRows = [];
     const campaignRows = [];
 
@@ -221,6 +263,7 @@ function main() {
         }
 
         const summary = summarizeCampaigns(personaName, campaigns);
+        summaryByPersona[personaName] = summary;
         const criteria = evaluateCampaignCriteria(persona, summary);
         aggregate.push(summary);
         criteriaRows.push({
@@ -235,12 +278,27 @@ function main() {
         }
     }
 
+    const crossChecks = evaluateCrossPersonaChecks(summaryByPersona);
+    if (crossChecks.length) {
+        console.log('\n[campaign cross-persona checks]');
+        for (const check of crossChecks) {
+            console.log(`- ${check.pass ? 'PASS' : 'FAIL'} ${check.label} (${check.details})`);
+        }
+        criteriaRows.push({
+            persona: '__cross_persona__',
+            pass: crossChecks.every((c) => c.pass),
+            designIntent: 'Jump starts should fast-forward, not outperform full-run progression.',
+            failedChecks: crossChecks.filter((c) => !c.pass).map((c) => c.label).join('|')
+        });
+    }
+
     const manifest = {
         generatedAt: new Date().toISOString(),
         mode: 'campaign-batch',
         config: args,
         aggregate,
         criteria: criteriaRows,
+        crossChecks,
         campaigns: campaignRows
     };
 

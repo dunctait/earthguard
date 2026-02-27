@@ -245,6 +245,96 @@ const PERSONAS = {
                 avgFinalEnergy: { min: 25 }
             }
         }
+    },
+    good_campaign_noJump: {
+        name: 'good_campaign_noJump',
+        description: 'Good player campaign baseline with meta upgrades but no jump starts.',
+        missChance: 0.22,
+        angleJitterDeg: 3.5,
+        powerJitterPct: 10,
+        exactAimBias: 0.55,
+        jumpStrategy: 'none',
+        metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
+    },
+    good_campaign_jumpHighest: {
+        name: 'good_campaign_jumpHighest',
+        description: 'Good player campaign with highest jump usage plus meta upgrades.',
+        missChance: 0.22,
+        angleJitterDeg: 3.5,
+        powerJitterPct: 10,
+        exactAimBias: 0.55,
+        jumpStrategy: 'highest',
+        metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
+    },
+    perfect_campaign_noJump: {
+        name: 'perfect_campaign_noJump',
+        description: 'Perfect player campaign baseline with no jump starts.',
+        missChance: 0.02,
+        angleJitterDeg: 0.7,
+        powerJitterPct: 2.5,
+        exactAimBias: 0.98,
+        jumpStrategy: 'none',
+        metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'energyHarvest', 'reactorRegen', 'bountyLink', 'energyResupply', 'trajectoryProcessor', 'targetAreas']
+    },
+    perfect_campaign_jumpHighest: {
+        name: 'perfect_campaign_jumpHighest',
+        description: 'Perfect player campaign with highest jump usage plus meta upgrades.',
+        missChance: 0.02,
+        angleJitterDeg: 0.7,
+        powerJitterPct: 2.5,
+        exactAimBias: 0.98,
+        jumpStrategy: 'highest',
+        metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'energyHarvest', 'reactorRegen', 'bountyLink', 'energyResupply', 'trajectoryProcessor', 'targetAreas']
+    },
+    noUpgrades_campaign_noJump: {
+        name: 'noUpgrades_campaign_noJump',
+        description: 'No-upgrade campaign baseline without jump starts.',
+        missChance: 0.20,
+        angleJitterDeg: 4.0,
+        powerJitterPct: 11,
+        exactAimBias: 0.45,
+        jumpStrategy: 'none',
+        metaUpgradePriority: ['startingReserve', 'jumpBroker', 'salvageYield', 'salvageBank'],
+        upgradeStrategy: 'none',
+        upgradePriority: []
+    },
+    noUpgrades_campaign_jumpHighest: {
+        name: 'noUpgrades_campaign_jumpHighest',
+        description: 'No-upgrade campaign with highest jump usage.',
+        missChance: 0.20,
+        angleJitterDeg: 4.0,
+        powerJitterPct: 11,
+        exactAimBias: 0.45,
+        jumpStrategy: 'highest',
+        metaUpgradePriority: ['startingReserve', 'jumpBroker', 'salvageYield', 'salvageBank'],
+        upgradeStrategy: 'none',
+        upgradePriority: []
+    },
+    missesTwoThirds_campaign_jumpHighest: {
+        name: 'missesTwoThirds_campaign_jumpHighest',
+        description: 'Low-skill campaign persona with jumps and simple meta buys.',
+        missChance: 0.66,
+        angleJitterDeg: 7.5,
+        powerJitterPct: 18,
+        exactAimBias: 0.15,
+        jumpStrategy: 'highest',
+        metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'salvageYield'],
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'reactorRegen', 'trajectoryProcessor', 'blastRadius']
+    },
+    metaHoarder_campaign: {
+        name: 'metaHoarder_campaign',
+        description: 'Campaign persona that intentionally hoards salvage and avoids buying meta upgrades.',
+        missChance: 0.22,
+        angleJitterDeg: 3.5,
+        powerJitterPct: 10,
+        exactAimBias: 0.55,
+        jumpStrategy: 'highest',
+        metaPurchaseStrategy: 'none',
+        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
     }
 };
 

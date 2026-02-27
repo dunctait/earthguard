@@ -9,7 +9,7 @@
     "sim:batch:default": "node scripts/sim-batch.js --personas=good,perfect,noUpgrades,missesTwoThirds --runs=10",
     "sim:batch:ci": "node scripts/sim-batch.js --personas=good,perfect,noUpgrades,perfectNoUpgrades,missesTwoThirds,75acc_cheapestCombatUpgrade_1xBanked,75acc_cheapestCombatUpgrade_2xBanked,90acc_cheapestCombatUpgrade_1xBanked,90acc_cheapestCombatUpgrade_2xBanked --runs=50 --max-turns=120 --strict",
     "sim:campaign": "node scripts/sim-campaign.js",
-    "sim:campaign:ci": "node scripts/sim-campaign.js --personas=good,perfect,noUpgrades --campaigns=8 --runs-per-campaign=6 --max-turns=120 --strict",
+    "sim:campaign:ci": "node scripts/sim-campaign.js --personas=good,perfect,noUpgrades,good_campaign_noJump,good_campaign_jumpHighest,perfect_campaign_noJump,perfect_campaign_jumpHighest,noUpgrades_campaign_noJump,noUpgrades_campaign_jumpHighest,missesTwoThirds_campaign_jumpHighest,metaHoarder_campaign --campaigns=8 --runs-per-campaign=6 --max-turns=120 --strict",
     "sim:ci": "npm run sim:batch:ci && npm run sim:campaign:ci",
     "sim:sweep:missile-cost": "node scripts/sim-sweep-missile-cost.js",
     "sim": "node scripts/playwright-simulate-game.js",
