@@ -266,6 +266,109 @@ class EarthGuardUI {
         return `BUY [<span class="upgrade-cost-token${missing ? ' missing' : ''}">SALVAGE ${Math.floor(cost || 0)}</span>]`;
     }
 
+    getMetaProgress(game) {
+        return game.metaProgress || {};
+    }
+
+    getBestMoneyEntries(metaProgress, limit = 5) {
+        return Object.entries(metaProgress.bestMoneyByLevel || {})
+            .map(([level, money]) => ({ level: Math.floor(Number(level)), money: Math.floor(Number(money) || 0) }))
+            .filter((e) => Number.isFinite(e.level) && e.level >= 1)
+            .sort((a, b) => b.level - a.level)
+            .slice(0, limit);
+    }
+
+    formatBestMoneyEntries(entries, fallback = 'NONE') {
+        return entries.length ? entries.map((e) => `L${e.level}:$${e.money}`).join(' • ') : fallback;
+    }
+
+    buildRunSummaryMarkup(game) {
+        const stats = game.stats || {};
+        const boughtUpgrades = Object.values(game.upgrades || {}).filter((u) => (u?.level || 0) > 0);
+        const boughtSummary = boughtUpgrades.length
+            ? boughtUpgrades
+                .slice()
+                .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                .map((u) => `${u.name} L${u.level}`)
+                .join(' • ')
+            : 'NONE';
+        const metaProgress = this.getMetaProgress(game);
+        const lastRunMetaReward = Math.floor(metaProgress.lastRun?.metaReward || 0);
+        const totalMetaCurrency = Math.floor(metaProgress.metaCurrency || 0);
+        const shots = Math.max(0, Math.floor(stats.missilesLaunched || 0));
+        const kills = Math.max(0, Math.floor(stats.kills || 0));
+        const exactHits = Math.max(0, Math.floor(stats.exactHitKills || 0));
+        const hitRate = shots > 0 ? Math.floor((kills / shots) * 100) : 0;
+        const bossesDefeated = Math.max(0, Math.floor(game.bossesDefeatedThisRun || 0));
+        return [
+            `<div class="game-over-stat-row"><span class="hud-label">LEVEL</span><span class="hud-value">${Math.floor(game.level || 1)}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">CYCLES</span><span class="hud-value">${Math.floor(game.totalCycles || 0)}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">KILLS</span><span class="hud-value">${kills}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">SHOTS</span><span class="hud-value">${shots}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">HIT RATE</span><span class="hud-value">${hitRate}%</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">EXACT</span><span class="hud-value">${exactHits}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">BOSSES</span><span class="hud-value">${bossesDefeated}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">$ RUN</span><span class="hud-value">${Math.floor(game.money || 0)}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">SALVAGE</span><span class="hud-value">+${lastRunMetaReward} (${totalMetaCurrency})</span></div>`,
+            `<div class="game-over-upgrades"><span class="hud-label">UPGRADES</span><span class="game-over-upgrade-list">${boughtSummary}</span></div>`
+        ].join('');
+    }
+
+    buildSplashStatsMarkup(game) {
+        const metaProgress = this.getMetaProgress(game);
+        const best = metaProgress.careerBest || {};
+        const bestMoneyEntries = this.getBestMoneyEntries(metaProgress, 3);
+        const history = Array.isArray(metaProgress.runHistory) ? metaProgress.runHistory.slice(0, 2) : [];
+        const recentRuns = history.length
+            ? history.map((r) => `L${Math.floor(r.level || 0)}/$${Math.floor(r.money || 0)}`).join(' • ')
+            : 'NONE';
+        return [
+            `<div class="game-over-stat-row"><span class="hud-label">RUNS</span><span class="hud-value">${Math.floor(metaProgress.totalRuns || 0)}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">BEST LV</span><span class="hud-value">${Math.floor(metaProgress.bestLevelReached || 0)}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">SALVAGE</span><span class="hud-value">${Math.floor(metaProgress.metaCurrency || 0)}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">BEST KILLS</span><span class="hud-value">${Math.floor(best.maxKills || 0)}</span></div>`,
+            `<div class="game-over-upgrades"><span class="hud-label">BEST $</span><span class="game-over-upgrade-list">${this.formatBestMoneyEntries(bestMoneyEntries)}</span></div>`,
+            `<div class="game-over-upgrades"><span class="hud-label">RECENT</span><span class="game-over-upgrade-list">${recentRuns}</span></div>`
+        ].join('');
+    }
+
+    buildCareerSummaryMarkup(game) {
+        const metaProgress = this.getMetaProgress(game);
+        const totalRuns = Math.floor(metaProgress.totalRuns || 0);
+        const bestLevelReached = Math.floor(metaProgress.bestLevelReached || 0);
+        const careerBest = (metaProgress.careerBest && typeof metaProgress.careerBest === 'object') ? metaProgress.careerBest : {};
+        const preferredJump = (typeof game.getPreferredJumpStartLevel === 'function')
+            ? game.getPreferredJumpStartLevel()
+            : null;
+        const currentLevel = Math.floor(game.level || 1);
+        const bestCurrentLevelMoney = Math.floor(metaProgress.bestMoneyByLevel?.[String(currentLevel)] || 0);
+        const bestMoneyEntries = this.getBestMoneyEntries(metaProgress, 5);
+        const bestMoneyMarkup = this.formatBestMoneyEntries(bestMoneyEntries);
+        return [
+            `<div class="game-over-stat-row"><span class="hud-label">RUNS</span><span class="hud-value">${totalRuns}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">BEST LV</span><span class="hud-value">${bestLevelReached}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">BEST KILLS</span><span class="hud-value">${Math.floor(careerBest.maxKills || 0)}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">BEST SALVAGE</span><span class="hud-value">${Math.floor(careerBest.maxSalvageReward || 0)}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">BEST $ @ L${currentLevel}</span><span class="hud-value">${bestCurrentLevelMoney}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">JUMP PREF</span><span class="hud-value">${preferredJump ? `L${preferredJump}` : 'NONE'}</span></div>`,
+            `<div class="game-over-upgrades"><span class="hud-label">BEST $ BY LV</span><span class="game-over-upgrade-list">${bestMoneyMarkup}</span></div>`
+        ].join('');
+    }
+
+    buildRecentRunsMarkup(game) {
+        const metaProgress = this.getMetaProgress(game);
+        const history = Array.isArray(metaProgress.runHistory) ? metaProgress.runHistory.slice(0, 5) : [];
+        if (!history.length) {
+            return '<div class="recent-run-empty">NO PRIOR RUNS</div>';
+        }
+        return history.map((run, idx) => `
+                    <div class="recent-run-row">
+                        <span class="hud-label">#${idx + 1}</span>
+                        <span class="recent-run-summary">L${Math.floor(run.level || 0)} • C${Math.floor(run.cycles || 0)} • K${Math.floor(run.kills || 0)} • $${Math.floor(run.money || 0)} • +S${Math.floor(run.salvage || 0)}</span>
+                    </div>
+                `).join('');
+    }
+
     renderHud(game) {
         // HUD shows the upcoming decision cycle (the cycle the player is about to spend).
         const displayedCycle = Math.max(1, (game.levelCycles || 0) + 1);
@@ -391,35 +494,7 @@ class EarthGuardUI {
         }
         const statsEl = this.el['game-over-stats'];
         if (statsEl) {
-            const stats = game.stats || {};
-            const boughtUpgrades = Object.values(game.upgrades || {}).filter((u) => (u?.level || 0) > 0);
-            const boughtSummary = boughtUpgrades.length
-                ? boughtUpgrades
-                    .slice()
-                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                    .map((u) => `${u.name} L${u.level}`)
-                    .join(' • ')
-                : 'NONE';
-            const metaProgress = game.metaProgress || {};
-            const lastRunMetaReward = Math.floor(metaProgress.lastRun?.metaReward || 0);
-            const totalMetaCurrency = Math.floor(metaProgress.metaCurrency || 0);
-            const shots = Math.max(0, Math.floor(stats.missilesLaunched || 0));
-            const kills = Math.max(0, Math.floor(stats.kills || 0));
-            const exactHits = Math.max(0, Math.floor(stats.exactHitKills || 0));
-            const hitRate = shots > 0 ? Math.floor((kills / shots) * 100) : 0;
-            const bossesDefeated = Math.max(0, Math.floor(game.bossesDefeatedThisRun || 0));
-            statsEl.innerHTML = [
-                `<div class="game-over-stat-row"><span class="hud-label">LEVEL</span><span class="hud-value">${Math.floor(game.level || 1)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">CYCLES</span><span class="hud-value">${Math.floor(game.totalCycles || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">KILLS</span><span class="hud-value">${kills}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">SHOTS</span><span class="hud-value">${shots}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">HIT RATE</span><span class="hud-value">${hitRate}%</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">EXACT</span><span class="hud-value">${exactHits}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">BOSSES</span><span class="hud-value">${bossesDefeated}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">$ RUN</span><span class="hud-value">${Math.floor(game.money || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">SALVAGE</span><span class="hud-value">+${lastRunMetaReward} (${totalMetaCurrency})</span></div>`,
-                `<div class="game-over-upgrades"><span class="hud-label">UPGRADES</span><span class="game-over-upgrade-list">${boughtSummary}</span></div>`
-            ].join('');
+            statsEl.innerHTML = this.buildRunSummaryMarkup(game);
         }
         this.renderCareerSummary(game);
 
@@ -450,25 +525,9 @@ class EarthGuardUI {
             previewEl: this.el['splash-jump-preview'],
             compactPreview: true
         });
-
         const splashStats = this.el['splash-stats'];
         if (splashStats) {
-            const m = game.metaProgress || {};
-            const best = m.careerBest || {};
-            const bestMoneyEntries = Object.entries(m.bestMoneyByLevel || {})
-                .map(([level, money]) => ({ level: Math.floor(Number(level)), money: Math.floor(Number(money) || 0) }))
-                .filter((e) => Number.isFinite(e.level) && e.level >= 1)
-                .sort((a, b) => b.level - a.level)
-                .slice(0, 3);
-            const history = Array.isArray(m.runHistory) ? m.runHistory.slice(0, 2) : [];
-            splashStats.innerHTML = [
-                `<div class="game-over-stat-row"><span class="hud-label">RUNS</span><span class="hud-value">${Math.floor(m.totalRuns || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">BEST LV</span><span class="hud-value">${Math.floor(m.bestLevelReached || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">SALVAGE</span><span class="hud-value">${Math.floor(m.metaCurrency || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">BEST KILLS</span><span class="hud-value">${Math.floor(best.maxKills || 0)}</span></div>`,
-                `<div class="game-over-upgrades"><span class="hud-label">BEST $</span><span class="game-over-upgrade-list">${bestMoneyEntries.length ? bestMoneyEntries.map((e) => `L${e.level}:$${e.money}`).join(' • ') : 'NONE'}</span></div>`,
-                `<div class="game-over-upgrades"><span class="hud-label">RECENT</span><span class="game-over-upgrade-list">${history.length ? history.map((r) => `L${Math.floor(r.level || 0)}/$${Math.floor(r.money || 0)}`).join(' • ') : 'NONE'}</span></div>`
-            ].join('');
+            splashStats.innerHTML = this.buildSplashStatsMarkup(game);
         }
         const clearBtn = this.el['splash-clear-data-btn'];
         if (clearBtn) {
@@ -515,53 +574,13 @@ class EarthGuardUI {
             `;
         }).join('');
     }
-
     renderCareerSummary(game) {
         const careerEl = this.el['career-stats'];
         const recentRunsEl = this.el['recent-runs'];
         if (!careerEl && !recentRunsEl) return;
 
-        const metaProgress = game.metaProgress || {};
-        const totalRuns = Math.floor(metaProgress.totalRuns || 0);
-        const bestLevelReached = Math.floor(metaProgress.bestLevelReached || 0);
-        const careerBest = (metaProgress.careerBest && typeof metaProgress.careerBest === 'object') ? metaProgress.careerBest : {};
-        const preferredJump = (typeof game.getPreferredJumpStartLevel === 'function')
-            ? game.getPreferredJumpStartLevel()
-            : null;
-        const currentLevel = Math.floor(game.level || 1);
-        const bestCurrentLevelMoney = Math.floor(metaProgress.bestMoneyByLevel?.[String(currentLevel)] || 0);
-
-        if (careerEl) {
-            const bestMoneyEntries = Object.entries(metaProgress.bestMoneyByLevel || {})
-                .map(([level, money]) => ({ level: Math.floor(Number(level)), money: Math.floor(Number(money) || 0) }))
-                .filter((e) => Number.isFinite(e.level) && e.level >= 1)
-                .sort((a, b) => b.level - a.level)
-                .slice(0, 5);
-            const bestMoneyMarkup = bestMoneyEntries.length
-                ? bestMoneyEntries.map((e) => `L${e.level}:$${e.money}`).join(' • ')
-                : 'NONE';
-            careerEl.innerHTML = [
-                `<div class="game-over-stat-row"><span class="hud-label">RUNS</span><span class="hud-value">${totalRuns}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">BEST LV</span><span class="hud-value">${bestLevelReached}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">BEST KILLS</span><span class="hud-value">${Math.floor(careerBest.maxKills || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">BEST SALVAGE</span><span class="hud-value">${Math.floor(careerBest.maxSalvageReward || 0)}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">BEST $ @ L${currentLevel}</span><span class="hud-value">${bestCurrentLevelMoney}</span></div>`,
-                `<div class="game-over-stat-row"><span class="hud-label">JUMP PREF</span><span class="hud-value">${preferredJump ? `L${preferredJump}` : 'NONE'}</span></div>`,
-                `<div class="game-over-upgrades"><span class="hud-label">BEST $ BY LV</span><span class="game-over-upgrade-list">${bestMoneyMarkup}</span></div>`
-            ].join('');
-        }
-
-        if (recentRunsEl) {
-            const history = Array.isArray(metaProgress.runHistory) ? metaProgress.runHistory.slice(0, 5) : [];
-            recentRunsEl.innerHTML = history.length
-                ? history.map((run, idx) => `
-                    <div class="recent-run-row">
-                        <span class="hud-label">#${idx + 1}</span>
-                        <span class="recent-run-summary">L${Math.floor(run.level || 0)} • C${Math.floor(run.cycles || 0)} • K${Math.floor(run.kills || 0)} • $${Math.floor(run.money || 0)} • +S${Math.floor(run.salvage || 0)}</span>
-                    </div>
-                `).join('')
-                : '<div class="recent-run-empty">NO PRIOR RUNS</div>';
-        }
+        if (careerEl) careerEl.innerHTML = this.buildCareerSummaryMarkup(game);
+        if (recentRunsEl) recentRunsEl.innerHTML = this.buildRecentRunsMarkup(game);
     }
 
     renderGameOverBattlefieldPrompt(game) {

@@ -304,49 +304,32 @@ const UpgradeDefinitions = {
     }
 };
 
-const LevelDefinitions = {
-    1: {
-        enemies: [
-            { type: 'saucer', sizeMultiplier: 2.0 },
-            { type: 'saucer', sizeMultiplier: 2.0 }
-        ]
-    },
-    2: {
-        enemies: [
-            { type: 'saucer', sizeMultiplier: 1.5 },
-            { type: 'saucer', sizeMultiplier: 1.5 }
-        ]
-    },
-    3: {
-        enemies: [
-            { type: 'saucer', sizeMultiplier: 1.2 },
-            { type: 'saucer', sizeMultiplier: 1.2 },
-            { type: 'saucer', sizeMultiplier: 1.2 }
-        ]
-    },
-    10: {
-        enemies: [
-            { type: 'boss', sizeMultiplier: 2.3, hp: 7, speedMultiplier: 0.42, yBand: 0 },
-            { type: 'saucer', sizeMultiplier: 0.72, yBand: 1 },
-            { type: 'saucer', sizeMultiplier: 0.72, yBand: 1 },
-            { type: 'scout', sizeMultiplier: 0.65, yBand: 2 },
-            { type: 'scout', sizeMultiplier: 0.65, yBand: 2 },
-            { type: 'scout', sizeMultiplier: 0.65, yBand: 1 },
-            { type: 'saucer', sizeMultiplier: 0.7, yBand: 2 }
-        ]
-    },
-    12: {
-        enemies: [
-            { type: 'boss', sizeMultiplier: 2.8, hp: 8, speedMultiplier: 0.45, yBand: 0 },
-            { type: 'saucer', sizeMultiplier: 0.78, yBand: 1 },
-            { type: 'saucer', sizeMultiplier: 0.76, yBand: 2 },
-            { type: 'scout', sizeMultiplier: 0.72, yBand: 2 },
-            { type: 'scout', sizeMultiplier: 0.72, yBand: 1 },
-            { type: 'scout', sizeMultiplier: 0.72, yBand: 2 },
-            { type: 'saucer', sizeMultiplier: 0.74, yBand: 1 }
-        ]
+const WaveFactory = (() => {
+    if (typeof window !== 'undefined' && window.EarthGuardWaveFactory) {
+        return window.EarthGuardWaveFactory;
     }
-};
+    if (typeof module !== 'undefined' && module.exports) {
+        try {
+            return require('./wave-factory.js');
+        } catch {}
+    }
+    return {
+        LevelDefinitions: {},
+        getLevelDefinition: () => null,
+        getWaveEnemyTemplates: () => [],
+        getAlienSpeedForLevel: () => 0,
+        getWaveSpec: ({ level, config }) => ({
+            level,
+            levelDef: null,
+            enemies: [],
+            alienCount: 0,
+            speed: 0,
+            activeTopY: config.ALIEN_ACTIVE_SPAWN_TOP_Y || (config.WORLD_HEIGHT - 5),
+            maxSizeMultiplier: 1
+        })
+    };
+})();
+const LevelDefinitions = WaveFactory.LevelDefinitions;
 
 function buildMetaTiers(levels, factory) {
     return Array.from({ length: levels }, (_, i) => factory(i));
@@ -875,88 +858,26 @@ class Game {
     }
 
     getWaveSpec(level) {
-        const levelDef = this.getLevelDefinition(level);
-        const enemyTemplates = this.getWaveEnemyTemplates(level);
-        const maxSizeMultiplier = enemyTemplates.reduce((max, enemy) => Math.max(max, enemy.sizeMultiplier || 1), 1);
-        return {
+        return WaveFactory.getWaveSpec({
             level,
-            levelDef,
-            enemies: enemyTemplates,
-            alienCount: enemyTemplates.length,
-            speed: this.getAlienSpeedForLevel(level),
-            activeTopY: level === 1 ? 78 : (this.config.ALIEN_ACTIVE_SPAWN_TOP_Y || (this.config.WORLD_HEIGHT - 5)),
-            maxSizeMultiplier
-        };
+            config: this.config,
+            viewZoomStage: this.viewZoomStage || 0
+        });
     }
 
     getLevelDefinition(level) {
-        return LevelDefinitions[level] || null;
+        return WaveFactory.getLevelDefinition(level);
     }
 
     getWaveEnemyTemplates(level) {
-        const levelDef = this.getLevelDefinition(level);
-        if (levelDef && Array.isArray(levelDef.enemies) && levelDef.enemies.length > 0) {
-            return levelDef.enemies.map((enemy) => ({
-                type: enemy.type || 'saucer',
-                sizeMultiplier: enemy.sizeMultiplier || 1,
-                yBand: enemy.yBand || 0,
-                hp: enemy.hp || undefined,
-                speedMultiplier: enemy.speedMultiplier || 1
-            }));
-        }
-
-        let alienCount = Math.min(Math.max(2, level), 10);
-        if (level >= 5) {
-            alienCount += Math.floor((level - 4) / 2);
-        }
-        if (level >= 6) {
-            alienCount += 1;
-        }
-        if (level >= 9) {
-            alienCount += 1;
-        }
-        alienCount = Math.min(alienCount, 14);
-        let sizeMultiplier = level <= 4 ? 1 : Math.max(0.8, 1.1 - ((level - 4) * 0.03));
-        if (level >= 8) {
-            sizeMultiplier = Math.max(0.55, 0.9 - ((level - 8) * 0.05));
-        }
-        const postBossStage = this.viewZoomStage || 0;
-        if (postBossStage > 0 && level > 12) {
-            alienCount = Math.min(18, alienCount + postBossStage);
-            sizeMultiplier = Math.max(0.45, sizeMultiplier - (postBossStage * 0.04));
-        }
-
-        const useBandedRows = level >= 4;
-        if (level >= 8) {
-            // Flatter formations with small banded Y offsets make later waves feel more "swarm / bullet hell".
-            const bandCount = Math.min(3, Math.max(2, Math.ceil(alienCount / 4)));
-            return Array.from({ length: alienCount }, (_, i) => ({
-                type: (level >= 9 && (i % 6) === 0) ? 'scout' : 'saucer',
-                sizeMultiplier,
-                yBand: i % bandCount
-            }));
-        }
-
-        return Array.from({ length: alienCount }, () => ({
-            type: 'saucer',
-            sizeMultiplier,
-            yBand: 0
-        })).map((enemy, i) => ({
-            ...enemy,
-            yBand: useBandedRows ? (i % Math.min(3, Math.max(2, Math.ceil(alienCount / 4)))) : 0
-        }));
+        return WaveFactory.getWaveEnemyTemplates({
+            level,
+            viewZoomStage: this.viewZoomStage || 0
+        });
     }
 
     getAlienSpeedForLevel(level) {
-        const base = this.config.BASE_ALIEN_SPEED + (level * this.config.ALIEN_SPEED_PER_LEVEL);
-        const midStart = this.config.ALIEN_SPEED_MIDGAME_BONUS_START_LEVEL || 5;
-        const lateStart = this.config.ALIEN_SPEED_LATEGAME_BONUS_START_LEVEL || 8;
-        const midBonus = Math.max(0, level - midStart + 1) * (this.config.ALIEN_SPEED_MIDGAME_BONUS_PER_LEVEL || 0);
-        const lateBonus = Math.max(0, level - lateStart + 1) * (this.config.ALIEN_SPEED_LATEGAME_BONUS_PER_LEVEL || 0);
-        const postBossSpeedBonus = ((this.viewZoomStage || 0) > 0 && level > 12)
-            ? ((this.viewZoomStage || 0) * 0.5)
-            : 0;
-        return base + midBonus + lateBonus + postBossSpeedBonus;
+        return WaveFactory.getAlienSpeedForLevel(this.config, level, this.viewZoomStage || 0);
     }
 
     createAliensFromWaveSpec(spec, incoming = false) {
@@ -1555,32 +1476,10 @@ class Game {
         }
 
         for (const alien of this.aliens) {
-            alien.y -= alien.speed / totalFrames;
-            if (alien.type === 'scout') {
-                this.advanceScoutZigZag(alien, totalFrames, 1);
-            } else if (alien.type === 'boss') {
-                alien.bossPhase = (alien.bossPhase || 0) + (alien.bossDriftSpeed || 0.05);
-                const centerX = this.config.WORLD_WIDTH / 2;
-                alien.x = this.utils.clamp(
-                    centerX + Math.sin(alien.bossPhase) * (alien.bossDriftAmplitude || 6),
-                    8 + (alien.radius || 0),
-                    this.config.WORLD_WIDTH - 8 - (alien.radius || 0)
-                );
-            }
+            this.advanceAlien(alien, totalFrames, 1);
         }
         for (const alien of this.incomingAliens) {
-            alien.y -= (alien.speed * 0.55) / totalFrames;
-            if (alien.type === 'scout') {
-                this.advanceScoutZigZag(alien, totalFrames, 0.65);
-            } else if (alien.type === 'boss') {
-                alien.bossPhase = (alien.bossPhase || 0) + ((alien.bossDriftSpeed || 0.05) * 0.55);
-                const centerX = this.config.WORLD_WIDTH / 2;
-                alien.x = this.utils.clamp(
-                    centerX + Math.sin(alien.bossPhase) * (alien.bossDriftAmplitude || 6),
-                    8 + (alien.radius || 0),
-                    this.config.WORLD_WIDTH - 8 - (alien.radius || 0)
-                );
-            }
+            this.advanceAlien(alien, totalFrames, 0.55);
         }
 
         for (const explosion of this.explosions) {
@@ -1607,6 +1506,26 @@ class Game {
             alien.zigzagDir = -1;
             alien.zigzagRunRemaining = 2 + (Math.random() * 3);
         }
+    }
+
+    advanceBossDrift(alien, speedScale = 1) {
+        alien.bossPhase = (alien.bossPhase || 0) + ((alien.bossDriftSpeed || 0.05) * speedScale);
+        const centerX = this.config.WORLD_WIDTH / 2;
+        alien.x = this.utils.clamp(
+            centerX + Math.sin(alien.bossPhase) * (alien.bossDriftAmplitude || 6),
+            8 + (alien.radius || 0),
+            this.config.WORLD_WIDTH - 8 - (alien.radius || 0)
+        );
+    }
+
+    advanceAlien(alien, totalFrames, movementScale = 1) {
+        alien.y -= (alien.speed * movementScale) / totalFrames;
+        const handlers = {
+            scout: () => this.advanceScoutZigZag(alien, totalFrames, movementScale >= 1 ? 1 : 0.65),
+            boss: () => this.advanceBossDrift(alien, movementScale)
+        };
+        const handler = handlers[alien.type];
+        if (handler) handler();
     }
 
     advanceImmediate() {
