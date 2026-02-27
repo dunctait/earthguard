@@ -1,8 +1,8 @@
-# EarthGuard Project Instructions
+﻿# EarthGuard Project Instructions
 
 ## Project Overview
 
-EarthGuard is a five minute, portrait mode, continuous space, turn-based missile defence game with bounded uncertainty and exponential scaling.
+EarthGuard is a turn-based missile defense game with a pause-and-decide cycle loop, scaling waves, and persistent meta progression.
 
 ## Documentation
 
@@ -14,7 +14,7 @@ EarthGuard is a five minute, portrait mode, continuous space, turn-based missile
 
 - Vanilla HTML/CSS/JavaScript (no build step)
 - GitHub Pages for hosting
-- Mobile-first, portrait orientation
+- Mobile-first, portrait-priority layout (landscape supported)
 - Touch controls primary, mouse secondary
 
 ## Agent Testing Notes
@@ -23,41 +23,63 @@ EarthGuard is a five minute, portrait mode, continuous space, turn-based missile
   - `npm run smoke`
   - `npm run smoke:headed`
   - `npm run smoke:layout`
-- This supports scripted clicks/holds, screenshots, and layout checks (including headed Chromium runs).
+  - `npm run smoke:gameover`
+  - `npm run smoke:meta`
+- This supports scripted clicks/holds, screenshots, and layout checks.
 - Codex does **not** use Claude's native `/chrome` integration here.
-- Claude can use its native `/chrome` integration when available; Codex uses the Playwright scripts instead.
 
 ## Key Constraints
 
 - **No build tools** - must work directly from GitHub Pages
-- **Portrait mode only** - design for phone screens first
+- **Portrait-first UX** - must remain playable in landscape
 - **Touch-first** - all interactions must work with touch
-- **Turn-based** - player aims, charges, then advances to animate
+- **Turn-based** - player targets, then cycles time to resolve actions
+
+## Architecture Notes
+
+- `src/game.js` is the orchestration layer:
+  - turn/cycle state machine
+  - upgrades/meta integration
+  - event emission for renderer/UI
+- `src/wave-factory.js` owns wave composition and level speed/size progression.
+- `src/enemy-factory.js` owns enemy spawn/formation construction and anti-overlap relaxation.
+- `src/meta-progression.js` owns persistent meta state defaults, load/save normalization, run-result application, and jump-level bookkeeping.
+- `src/render.js` is visual-only (canvas draw + animation framing); gameplay rules stay out of renderer.
+- `src/ui.js` is DOM-only (HUD/modals/buttons/summary formatting).
+
+Boundary rules:
+- no direct DOM updates from `game.js`
+- no gameplay mutation from `render.js`
+- factory modules should remain data-oriented and reusable
 
 ## File Structure
 
-```
+```text
 earthguard/
-├── index.html          # Entry point (GitHub Pages)
-├── CLAUDE.md           # This file
-├── DEVELOPMENT.md      # Dev workflow
-├── GAME_DESIGN.md      # Current design
+├── index.html
+├── CLAUDE.md
+├── DEVELOPMENT.md
+├── GAME_DESIGN.md
 ├── docs/
-│   └── DESIGN.md       # Original design document
+│   └── DESIGN.md
 └── src/
-    ├── game.js         # Core game logic
-    ├── render.js       # Canvas rendering
-    └── style.css       # Styles
+    ├── game.js
+    ├── wave-factory.js
+    ├── enemy-factory.js
+    ├── meta-progression.js
+    ├── render.js
+    ├── ui.js
+    └── style.css
 ```
 
 ## Current State
 
-MVP prototype with:
-- Rotatable launcher (1° and 10° increments)
-- Hold-to-charge power mechanic
-- Predicted explosion area preview
-- Turn-based advance button
-- Basic alien waves with scaling difficulty
+Current playable state includes:
+- Turn-based targeting/cycle loop with energy economy
+- Multiple enemy types (including scout zig-zag and boss waves)
+- In-run upgrades and persistent meta progression
+- Splash/game-over/meta modal flows with jump-start support
+- Playwright smoke coverage for main, game-over, and meta flows
 
 ## Git Workflow
 

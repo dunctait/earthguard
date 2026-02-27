@@ -329,6 +329,52 @@ const WaveFactory = (() => {
         })
     };
 })();
+const EnemyFactory = (() => {
+    if (typeof window !== 'undefined' && window.EarthGuardEnemyFactory) {
+        return window.EarthGuardEnemyFactory;
+    }
+    if (typeof module !== 'undefined' && module.exports) {
+        try {
+            return require('./enemy-factory.js');
+        } catch {}
+    }
+    return {
+        createAliensFromWaveSpec: () => []
+    };
+})();
+const MetaProgression = (() => {
+    if (typeof window !== 'undefined' && window.EarthGuardMetaProgression) {
+        return window.EarthGuardMetaProgression;
+    }
+    if (typeof module !== 'undefined' && module.exports) {
+        try {
+            return require('./meta-progression.js');
+        } catch {}
+    }
+    return {
+        getStorageKey: () => 'earthguard.meta.v1',
+        getDefaultMetaProgress: () => ({
+            schemaVersion: 1,
+            totalRuns: 0,
+            bestLevelReached: 0,
+            metaCurrency: 0,
+            metaUpgrades: {},
+            bestMoneyByLevel: {},
+            preferredJumpStartLevel: null,
+            lastRun: null,
+            runHistory: [],
+            careerBest: { maxRunMoney: 0, maxKills: 0, maxCycles: 0, maxSalvageReward: 0 }
+        }),
+        loadMetaProgress: () => ({}),
+        saveMetaProgress: () => false,
+        shouldShowSplashOnBoot: () => false,
+        applyRunResult: (_, runResult) => runResult,
+        recordBestMoney: (metaProgress) => ({ changed: false, metaProgress }),
+        getAvailableJumpStartLevels: () => [],
+        getPreferredJumpStartLevel: () => null,
+        setPreferredJumpStartLevel: (metaProgress) => metaProgress
+    };
+})();
 const LevelDefinitions = WaveFactory.LevelDefinitions;
 
 function buildMetaTiers(levels, factory) {
@@ -499,127 +545,48 @@ class Game {
     get WORLD_WIDTH() { return this.config.WORLD_WIDTH; }
 
     getMetaStorageKey() {
-        return 'earthguard.meta.v1';
+        return MetaProgression.getStorageKey();
     }
 
     getDefaultMetaProgress() {
-        return {
-            schemaVersion: 1,
-            totalRuns: 0,
-            bestLevelReached: 0,
-            metaCurrency: 0,
-            metaUpgrades: {},
-            bestMoneyByLevel: {},
-            preferredJumpStartLevel: null,
-            lastRun: null,
-            runHistory: [],
-            careerBest: {
-                maxRunMoney: 0,
-                maxKills: 0,
-                maxCycles: 0,
-                maxSalvageReward: 0
-            }
-        };
+        return MetaProgression.getDefaultMetaProgress();
     }
 
     loadMetaProgress() {
-        const fallback = this.getDefaultMetaProgress();
-        try {
-            const storage = this.root?.localStorage;
-            if (!storage) return fallback;
-            const raw = storage.getItem(this.getMetaStorageKey());
-            if (!raw) return fallback;
-            const parsed = JSON.parse(raw);
-            if (!parsed || parsed.schemaVersion !== 1) return fallback;
-            return {
-                ...fallback,
-                ...parsed,
-                metaUpgrades: (parsed.metaUpgrades && typeof parsed.metaUpgrades === 'object') ? parsed.metaUpgrades : {},
-                bestMoneyByLevel: (parsed.bestMoneyByLevel && typeof parsed.bestMoneyByLevel === 'object') ? parsed.bestMoneyByLevel : {},
-                runHistory: Array.isArray(parsed.runHistory) ? parsed.runHistory.slice(0, 5) : [],
-                careerBest: (parsed.careerBest && typeof parsed.careerBest === 'object')
-                    ? {
-                        maxRunMoney: Math.floor(parsed.careerBest.maxRunMoney || 0),
-                        maxKills: Math.floor(parsed.careerBest.maxKills || 0),
-                        maxCycles: Math.floor(parsed.careerBest.maxCycles || 0),
-                        maxSalvageReward: Math.floor(parsed.careerBest.maxSalvageReward || 0)
-                    }
-                    : fallback.careerBest
-            };
-        } catch {
-            return fallback;
-        }
+        return MetaProgression.loadMetaProgress(this.root);
     }
 
     shouldShowSplashOnBoot() {
-        const meta = this.metaProgress || {};
-        const totalRuns = Math.floor(meta.totalRuns || 0);
-        return totalRuns > 0;
+        return MetaProgression.shouldShowSplashOnBoot(this.metaProgress);
     }
 
     saveMetaProgress() {
-        try {
-            const storage = this.root?.localStorage;
-            if (!storage) return false;
-            storage.setItem(this.getMetaStorageKey(), JSON.stringify(this.metaProgress));
-            return true;
-        } catch {
-            return false;
-        }
+        return MetaProgression.saveMetaProgress(this.root, this.metaProgress);
     }
 
     updateMetaProgressFromRun() {
-        if (!this.metaProgress) this.metaProgress = this.getDefaultMetaProgress();
         const runMetaReward = this.getRunMetaCurrencyReward();
-        this.metaProgress.totalRuns = (this.metaProgress.totalRuns || 0) + 1;
-        this.metaProgress.bestLevelReached = Math.max(this.metaProgress.bestLevelReached || 0, this.level || 0);
-        this.metaProgress.metaCurrency = Math.max(0, Math.floor(this.metaProgress.metaCurrency || 0)) + runMetaReward;
-        this.metaProgress.lastRun = {
-            level: Math.floor(this.level || 0),
-            totalCycles: Math.floor(this.totalCycles || 0),
-            money: Math.floor(this.money || 0),
-            kills: Math.floor(this.stats?.kills || 0),
+        this.metaProgress = MetaProgression.applyRunResult(this.metaProgress, {
+            level: this.level || 0,
+            totalCycles: this.totalCycles || 0,
+            money: this.money || 0,
+            kills: this.stats?.kills || 0,
             reason: this.gameOverReason || '',
             metaReward: runMetaReward
-        };
-        const historyEntry = {
-            level: Math.floor(this.level || 0),
-            cycles: Math.floor(this.totalCycles || 0),
-            kills: Math.floor(this.stats?.kills || 0),
-            money: Math.floor(this.money || 0),
-            salvage: Math.floor(runMetaReward || 0),
-            reason: this.gameOverReason || ''
-        };
-        const careerBest = (this.metaProgress.careerBest && typeof this.metaProgress.careerBest === 'object')
-            ? this.metaProgress.careerBest
-            : (this.metaProgress.careerBest = { maxRunMoney: 0, maxKills: 0, maxCycles: 0, maxSalvageReward: 0 });
-        careerBest.maxRunMoney = Math.max(Math.floor(careerBest.maxRunMoney || 0), historyEntry.money);
-        careerBest.maxKills = Math.max(Math.floor(careerBest.maxKills || 0), historyEntry.kills);
-        careerBest.maxCycles = Math.max(Math.floor(careerBest.maxCycles || 0), historyEntry.cycles);
-        careerBest.maxSalvageReward = Math.max(Math.floor(careerBest.maxSalvageReward || 0), historyEntry.salvage);
-        const history = Array.isArray(this.metaProgress.runHistory) ? this.metaProgress.runHistory : [];
-        this.metaProgress.runHistory = [historyEntry, ...history].slice(0, 5);
+        });
         this.saveMetaProgress();
     }
 
     recordBestMoneyForLevel(level = this.level, money = this.money) {
-        if (!this.metaProgress) this.metaProgress = this.getDefaultMetaProgress();
-        const numericLevel = Math.max(1, Math.floor(level || 0));
-        const levelKey = String(numericLevel);
-        const moneyValue = Math.max(0, Math.floor(money || 0));
-        const previous = Math.floor(this.metaProgress.bestMoneyByLevel?.[levelKey] || 0);
-        if (moneyValue <= previous) return false;
-        this.metaProgress.bestMoneyByLevel[levelKey] = moneyValue;
+        const result = MetaProgression.recordBestMoney(this.metaProgress, level, money);
+        this.metaProgress = result.metaProgress;
+        if (!result.changed) return false;
         this.saveMetaProgress();
         return true;
     }
 
     getAvailableJumpStartLevels() {
-        const entries = Object.entries(this.metaProgress?.bestMoneyByLevel || {})
-            .map(([level, money]) => ({ level: Math.floor(Number(level)), money: Math.floor(Number(money) || 0) }))
-            .filter((entry) => Number.isFinite(entry.level) && entry.level >= 2 && entry.money >= 0)
-            .sort((a, b) => a.level - b.level);
-        return entries;
+        return MetaProgression.getAvailableJumpStartLevels(this.metaProgress);
     }
 
     getHighestJumpStartLevel() {
@@ -666,16 +633,13 @@ class Game {
     }
 
     getPreferredJumpStartLevel() {
-        const value = Math.floor(Number(this.metaProgress?.preferredJumpStartLevel) || 0);
-        return value >= 2 ? value : null;
+        return MetaProgression.getPreferredJumpStartLevel(this.metaProgress);
     }
 
     setPreferredJumpStartLevel(level) {
-        if (!this.metaProgress) this.metaProgress = this.getDefaultMetaProgress();
-        const numericLevel = Math.floor(Number(level) || 0);
-        this.metaProgress.preferredJumpStartLevel = numericLevel >= 2 ? numericLevel : null;
+        this.metaProgress = MetaProgression.setPreferredJumpStartLevel(this.metaProgress, level);
         this.saveMetaProgress();
-        return this.metaProgress.preferredJumpStartLevel;
+        return MetaProgression.getPreferredJumpStartLevel(this.metaProgress);
     }
 
     getJumpStartPreview(level) {
@@ -881,129 +845,10 @@ class Game {
     }
 
     createAliensFromWaveSpec(spec, incoming = false) {
-        const aliens = [];
-        const minSpacing = this.config.ALIEN_WAVE_VERTICAL_SPACING || 8;
-        const spacing = Math.max(minSpacing, (this.config.ALIEN_RADIUS * (spec.maxSizeMultiplier || 1) * 2.6));
-        const activeTopY = spec.activeTopY ?? this.config.ALIEN_ACTIVE_SPAWN_TOP_Y ?? (this.config.WORLD_HEIGHT - 5);
-        const isSwarm = spec.level >= 8;
-        const bandStep = isSwarm ? Math.max(2.2, spacing * 0.38) : spacing;
-        const bandJitter = isSwarm ? Math.max(0.4, bandStep * 0.18) : 0;
-
-        const maxBandIndex = spec.enemies.reduce((max, e) => Math.max(max, e.yBand || 0), 0);
-        const formationHeight = (maxBandIndex * bandStep) + (bandJitter * 2);
-
-        // Ensure incoming wave never vertically overlaps the highest possible active-wave enemy:
-        // incoming lowest enemy sits above activeTopY by a fixed gap.
-        const incomingLowestY = activeTopY + (this.config.ALIEN_INCOMING_WAVE_GAP || 4);
-        const incomingStartY = incomingLowestY + formationHeight;
-        const startY = incoming ? incomingStartY : activeTopY;
-
-        const clusterCount = isSwarm ? Math.min(4, Math.max(2, Math.round(spec.alienCount / 3.5))) : 0;
-        const clusterCenters = isSwarm
-            ? Array.from({ length: clusterCount }, (_, i) => {
-                const lane = (i + 1) / (clusterCount + 1);
-                const laneJitter = (Math.random() - 0.5) * 6;
-                return this.utils.clamp((lane * this.config.WORLD_WIDTH) + laneJitter, 8, this.config.WORLD_WIDTH - 8);
-            })
-            : null;
-        for (let i = 0; i < spec.alienCount; i++) {
-            const enemyTemplate = spec.enemies[i] || { type: 'saucer', sizeMultiplier: 1 };
-            const sizeMultiplier = enemyTemplate.sizeMultiplier || 1;
-            const bandOffset = (enemyTemplate.yBand || 0) * bandStep;
-            const enemyType = enemyTemplate.type || 'saucer';
-            const isScout = enemyType === 'scout';
-            const isBoss = enemyType === 'boss';
-            const radius = this.config.ALIEN_RADIUS * sizeMultiplier * (isScout ? 0.62 : 1);
-            let x = 10 + Math.random() * (this.config.WORLD_WIDTH - 20);
-            let y = startY - bandOffset;
-            if (isSwarm && clusterCenters) {
-                const center = clusterCenters[i % clusterCenters.length];
-                const spreadX = this.config.ALIEN_SWARM_CLUSTER_SPREAD_X || 14;
-                const minSepFactor = this.config.ALIEN_SWARM_MIN_SEPARATION_FACTOR || 1.9;
-                let placed = false;
-                for (let attempt = 0; attempt < 16; attempt++) {
-                    const candidateX = this.utils.clamp(center + ((Math.random() - 0.5) * spreadX * 2), 6, this.config.WORLD_WIDTH - 6);
-                    const candidateY = (startY - bandOffset) - ((Math.random() - 0.5) * bandJitter * 2);
-                    const overlaps = aliens.some((other) => {
-                        const minDist = ((other.radius || this.config.ALIEN_RADIUS) + radius) * minSepFactor;
-                        return this.utils.distance(candidateX - other.x, candidateY - other.y) < minDist;
-                    });
-                    if (!overlaps) {
-                        x = candidateX;
-                        y = candidateY;
-                        placed = true;
-                        break;
-                    }
-                }
-                if (!placed) {
-                    x = this.utils.clamp(center + ((Math.random() - 0.5) * (spreadX + 8) * 2), 6, this.config.WORLD_WIDTH - 6);
-                    y = (startY - bandOffset) - ((Math.random() - 0.5) * bandJitter * 3);
-                }
-            } else {
-                const jitterY = isSwarm ? ((Math.random() - 0.5) * bandJitter * 2) : 0;
-                y = startY - bandOffset - jitterY;
-            }
-            aliens.push({
-                x,
-                y,
-                speed: spec.speed * (enemyTemplate.speedMultiplier || 1),
-                hp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1),
-                maxHp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1),
-                damage: this.config.ALIEN_DAMAGE,
-                radius,
-                type: enemyType,
-                sizeMultiplier,
-                waveLevel: spec.level,
-                incoming,
-                zigzagDir: isScout ? (Math.random() > 0.5 ? 1 : -1) : 0,
-                zigzagSpeedX: isScout ? (4.2 + (Math.random() * 2.2)) : 0,
-                zigzagRunRemaining: isScout ? (2.6 + (Math.random() * 4.2)) : 0,
-                bossPhase: isBoss ? (Math.random() * Math.PI * 2) : 0,
-                bossDriftAmplitude: isBoss ? (6 + (Math.random() * 2)) : 0,
-                bossDriftSpeed: isBoss ? (0.045 + (Math.random() * 0.02)) : 0
-            });
-        }
-        if (aliens.length > 1) {
-            this.relaxAlienFormation(aliens, {
-                minSepFactor: isSwarm ? (this.config.ALIEN_SWARM_MIN_SEPARATION_FACTOR || 1.9) : 1.38,
-                horizontalBias: isSwarm ? 0.42 : 0.32,
-                verticalBias: isSwarm ? 0.10 : 0.14
-            });
-        }
-        return aliens;
-    }
-
-    relaxAlienFormation(aliens, options = {}) {
-        const minSepFactor = options.minSepFactor || 1.2;
-        const horizontalBias = options.horizontalBias || 0.28;
-        const verticalBias = options.verticalBias || 0.18;
-        const worldMinX = 6;
-        const worldMaxX = this.config.WORLD_WIDTH - 6;
-        for (let iter = 0; iter < 28; iter++) {
-            let moved = false;
-            for (let i = 0; i < aliens.length; i++) {
-                for (let j = i + 1; j < aliens.length; j++) {
-                    const a = aliens[i];
-                    const b = aliens[j];
-                    const dx = b.x - a.x;
-                    const dy = b.y - a.y;
-                    const dist = Math.max(0.001, Math.hypot(dx, dy));
-                    const minDist = ((a.radius || this.config.ALIEN_RADIUS) + (b.radius || this.config.ALIEN_RADIUS)) * minSepFactor;
-                    if (dist >= minDist) continue;
-                    const overlap = minDist - dist;
-                    const nx = dx / dist;
-                    const ny = dy / dist;
-                    const pushX = (nx === 0 ? (Math.random() > 0.5 ? 1 : -1) : nx) * overlap * horizontalBias;
-                    const pushY = (ny === 0 ? 0 : ny) * overlap * verticalBias;
-                    a.x = this.utils.clamp(a.x - pushX, worldMinX, worldMaxX);
-                    b.x = this.utils.clamp(b.x + pushX, worldMinX, worldMaxX);
-                    a.y -= pushY;
-                    b.y += pushY;
-                    moved = true;
-                }
-            }
-            if (!moved) break;
-        }
+        return EnemyFactory.createAliensFromWaveSpec(spec, incoming, {
+            config: this.config,
+            utils: this.utils
+        });
     }
 
     startWave(level = this.level) {
