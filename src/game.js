@@ -1872,6 +1872,10 @@ class Game {
     }
 
     createExplosion(x, y, radius = this.getCurrentExplosionRadius()) {
+        return this.createExplosionWithOptions(x, y, radius, {});
+    }
+
+    createExplosionWithOptions(x, y, radius = this.getCurrentExplosionRadius(), options = {}) {
         this.explosions.push({
             id: this.nextFxEventId++,
             x: x,
@@ -1879,9 +1883,21 @@ class Game {
             radius: radius,
             age: 0,
             maxAge: 30,
-            damageApplied: false
+            damageApplied: false,
+            critSecondary: !!options.critSecondary,
+            tint: options.tint || null
         });
         this.addScreenShake(0.06 + ((radius || 0) * 0.01));
+    }
+
+    triggerCriticalHitBlast(explosion, alien, exactHit) {
+        if (!exactHit || !alien || explosion?.critSecondary) return;
+        const secondaryRadius = Math.max(1.5, (explosion.radius || this.getCurrentExplosionRadius()) * 0.58);
+        this.createExplosionWithOptions(alien.x, alien.y, secondaryRadius, {
+            critSecondary: true,
+            tint: 'amber'
+        });
+        this.emitStatusFx('CRITICAL HIT', '+OVERPRESSURE', 48);
     }
 
     addScreenShake(amount = 0.1) {
@@ -2238,6 +2254,7 @@ class Game {
                         this.handleBossDefeat(alien, exactHit);
                     }
                     this.queueEnemyDeathFx(alien, exactHit);
+                    this.triggerCriticalHitBlast(explosion, alien, exactHit);
                 }
             }
         }

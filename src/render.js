@@ -975,12 +975,17 @@ class Renderer {
             const progress = explosion.age / explosion.maxAge;
             const alpha = 1 - progress;
             const depth = this.getDepthBrightness(pos.y);
+            const isCrit = explosion.tint === 'amber';
+            const ringColor = isCrit ? this.colors.amber : c.primary;
+            const ringGlow = isCrit ? this.colors.amberGlow : c.primaryGlow;
 
             // Outer ring
-            this.drawBloomCircle(pos.x, pos.y, radius * (0.3 + progress * 0.7), c.primary, c.primaryGlow, 3, alpha * depth * 0.7);
+            this.drawBloomCircle(pos.x, pos.y, radius * (0.3 + progress * 0.7), ringColor, ringGlow, 3, alpha * depth * 0.7);
 
             // Inner ring
-            ctx.strokeStyle = `rgba(0, 255, 102, ${alpha * depth})`;
+            ctx.strokeStyle = isCrit
+                ? `rgba(255, 190, 80, ${alpha * depth})`
+                : `rgba(0, 255, 102, ${alpha * depth})`;
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, radius * 0.5 * (1 - progress), 0, Math.PI * 2);
@@ -1060,10 +1065,13 @@ class Renderer {
                 if (pos.y < -40) continue;
                 const size = this.worldToScreenSize(alien.radius) * 0.75;
                 const distanceAlpha = Math.max(0.3, this.getDepthBrightness(pos.y) * 0.45);
+                this.drawFTLEntryStreak(pos.x, pos.y, size, distanceAlpha);
                 if (alien.type === 'scout') {
                     this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, true);
                 } else if (alien.type === 'boss') {
                     this.drawBossAlien(pos.x, pos.y, size, distanceAlpha * 0.9, alien);
+                } else if (alien.type === 'tanker') {
+                    this.drawTankerAlien(pos.x, pos.y, size, distanceAlpha, alien, true);
                 } else {
                     this.drawUFO(pos.x, pos.y, size, distanceAlpha, alien);
                 }
@@ -1078,10 +1086,15 @@ class Renderer {
             const pos = this.worldToScreen(alien.x, displayY);
             const size = this.worldToScreenSize(alien.radius) * 0.75;
             const distanceAlpha = Math.max(0.7, this.getDepthBrightness(pos.y));
+            if ((alien.entryVisualOffsetY || 0) > 0.08) {
+                this.drawFTLEntryStreak(pos.x, pos.y, size, Math.min(1, distanceAlpha * 0.9));
+            }
             if (alien.type === 'scout') {
                 this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, false);
             } else if (alien.type === 'boss') {
                 this.drawBossAlien(pos.x, pos.y, size, distanceAlpha, alien);
+            } else if (alien.type === 'tanker') {
+                this.drawTankerAlien(pos.x, pos.y, size, distanceAlpha, alien, false);
             } else {
                 this.drawUFO(pos.x, pos.y, size, distanceAlpha, alien);
             }
@@ -1571,6 +1584,77 @@ class Renderer {
         this.drawAlienHpIndicator(x, drawY, size * 1.2, alpha, alien);
         ctx.restore();
         this.clearGlow();
+    }
+
+    drawTankerAlien(x, y, size, alpha = 1, alien = null, preview = false) {
+        const ctx = this.ctx;
+        const c = this.colors;
+        const w = size * 2.7;
+        const h = size * 1.15;
+        const drawAlpha = preview ? (alpha * 0.82) : alpha;
+
+        this.setGlow(`rgba(255, 70, 90, ${0.25 * drawAlpha})`, 10);
+        ctx.strokeStyle = `rgba(255, 70, 90, ${drawAlpha})`;
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x - w, y);
+        ctx.lineTo(x - (w * 0.62), y - h);
+        ctx.lineTo(x + (w * 0.62), y - h);
+        ctx.lineTo(x + w, y);
+        ctx.lineTo(x + (w * 0.62), y + h * 0.35);
+        ctx.lineTo(x - (w * 0.62), y + h * 0.35);
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x - (w * 0.4), y - h * 0.3);
+        ctx.lineTo(x + (w * 0.4), y - h * 0.3);
+        ctx.moveTo(x - (w * 0.26), y + h * 0.08);
+        ctx.lineTo(x + (w * 0.26), y + h * 0.08);
+        ctx.stroke();
+
+        if (!preview && alien && alien.maxHp > 1) {
+            const segments = Math.max(2, Math.floor(alien.maxHp));
+            const lit = Math.max(0, Math.floor(alien.hp || 0));
+            const spacing = (w * 1.35) / segments;
+            for (let i = 0; i < segments; i++) {
+                const segX = (x - (w * 0.67)) + (i * spacing);
+                ctx.strokeStyle = i < lit
+                    ? `rgba(255, 110, 120, ${drawAlpha * 0.9})`
+                    : 'rgba(80, 30, 35, 0.45)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(segX, y + h * 0.63);
+                ctx.lineTo(segX + (spacing * 0.65), y + h * 0.63);
+                ctx.stroke();
+            }
+        }
+        this.clearGlow();
+    }
+
+    drawFTLEntryStreak(x, y, size, alpha = 1) {
+        const ctx = this.ctx;
+        const len = size * 7.2;
+        ctx.save();
+        this.setGlow('rgba(130, 255, 210, 0.16)', 10);
+        ctx.strokeStyle = `rgba(120, 255, 190, ${alpha * 0.34})`;
+        ctx.lineWidth = Math.max(1.2, size * 0.12);
+        ctx.beginPath();
+        ctx.moveTo(x, y - len * 0.95);
+        ctx.lineTo(x, y - (size * 0.2));
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(90, 255, 170, ${alpha * 0.16})`;
+        ctx.lineWidth = Math.max(0.8, size * 0.08);
+        ctx.beginPath();
+        ctx.moveTo(x - (size * 0.28), y - len * 0.72);
+        ctx.lineTo(x - (size * 0.08), y - (size * 0.2));
+        ctx.moveTo(x + (size * 0.28), y - len * 0.72);
+        ctx.lineTo(x + (size * 0.08), y - (size * 0.2));
+        ctx.stroke();
+        this.clearGlow();
+        ctx.restore();
     }
 
     drawBossHud() {

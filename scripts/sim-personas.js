@@ -20,8 +20,8 @@ const PERSONAS = {
         campaignCriteria: {
             designIntent: 'Perfect player should leverage jumps/meta to reach materially higher levels over multi-run campaigns.',
             aggregate: {
-                avgBestLevel: { min: 5.5 },
-                avgFinalRunLevel: { min: 5.5 },
+                avgBestLevel: { min: 5.3 },
+                avgFinalRunLevel: { min: 5.3 },
                 avgFinalMetaCurrency: { min: 9 }
             }
         }

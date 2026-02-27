@@ -26,6 +26,7 @@
         10: {
             enemies: [
                 { type: 'boss', sizeMultiplier: 2.3, hp: 7, speedMultiplier: 0.42, yBand: 0 },
+                { type: 'tanker', sizeMultiplier: 0.92, hp: 3, speedMultiplier: 0.72, yBand: 1 },
                 { type: 'saucer', sizeMultiplier: 0.72, yBand: 1 },
                 { type: 'saucer', sizeMultiplier: 0.72, yBand: 1 },
                 { type: 'scout', sizeMultiplier: 0.65, yBand: 2 },
@@ -37,6 +38,7 @@
         12: {
             enemies: [
                 { type: 'boss', sizeMultiplier: 2.8, hp: 8, speedMultiplier: 0.45, yBand: 0 },
+                { type: 'tanker', sizeMultiplier: 0.95, hp: 3, speedMultiplier: 0.68, yBand: 1 },
                 { type: 'saucer', sizeMultiplier: 0.78, yBand: 1 },
                 { type: 'saucer', sizeMultiplier: 0.76, yBand: 2 },
                 { type: 'scout', sizeMultiplier: 0.72, yBand: 2 },
@@ -94,7 +96,9 @@
         if (level >= 8) {
             const bandCount = Math.min(3, Math.max(2, Math.ceil(alienCount / 4)));
             return Array.from({ length: alienCount }, (_, i) => ({
-                type: (level >= 9 && (i % 6) === 0) ? 'scout' : 'saucer',
+                type: (level >= 11 && (i % 7) === 2)
+                    ? 'tanker'
+                    : ((level >= 9 && (i % 6) === 0) ? 'scout' : 'saucer'),
                 sizeMultiplier,
                 yBand: i % bandCount
             }));

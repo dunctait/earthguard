@@ -68,7 +68,8 @@
             const enemyType = enemyTemplate.type || 'saucer';
             const isScout = enemyType === 'scout';
             const isBoss = enemyType === 'boss';
-            const radius = config.ALIEN_RADIUS * sizeMultiplier * (isScout ? 0.62 : 1);
+            const isTanker = enemyType === 'tanker';
+            const radius = config.ALIEN_RADIUS * sizeMultiplier * (isScout ? 0.62 : (isTanker ? 1.18 : 1));
             let x = 10 + Math.random() * (config.WORLD_WIDTH - 20);
             let y = startY - bandOffset;
             if (isSwarm && clusterCenters) {
@@ -102,8 +103,8 @@
                 x,
                 y,
                 speed: spec.speed * (enemyTemplate.speedMultiplier || 1),
-                hp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1),
-                maxHp: enemyTemplate.hp ?? ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1),
+                hp: enemyTemplate.hp ?? (isTanker ? 3 : ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1)),
+                maxHp: enemyTemplate.hp ?? (isTanker ? 3 : ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1)),
                 damage: config.ALIEN_DAMAGE,
                 radius,
                 type: enemyType,

@@ -7,9 +7,6 @@ Completed items are removed from this file to keep it current.
 ### Gameplay / Combat
 - [ ] **T1** - Remove target indicator (prediction circle) entirely if still present
 - [ ] **T10** - Reduce HP model to low-heart style gameplay (e.g. 4 HP / 2 damage aliens)
-- [ ] **T13** - Alien entry animation pass (FTL drop-in feel)
-- [ ] **T19** - Additional enemy classes beyond scout/boss (e.g. tanker/swarmer/splitter)
-- [ ] **T20** - Critical-hit visual differentiation and behavior
 - [ ] **T28** - Upgrade for missile speed/range
 - [ ] **T50** - Decide and implement final player HP indicator format (hearts vs numeric)
 
