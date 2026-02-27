@@ -25,9 +25,13 @@ class Renderer {
             'splash-jump-start-btn',
             'splash-clear-data-btn',
             'upgrade-menu-btn',
+            'ai-upgrade-menu-btn',
             'upgrade-modal-overlay',
             'upgrade-menu',
             'upgrade-menu-close-btn',
+            'ai-upgrade-modal-overlay',
+            'ai-upgrade-menu',
+            'ai-upgrade-menu-close-btn',
             'game-over-battle-overlay',
             'game-over-battle-title',
             'game-over-battle-subtitle',
@@ -96,6 +100,7 @@ class Renderer {
         // Animation state
         this.frameCount = 0;
         this.stars = [];
+        this.terrainProfile = null;
         this.terrainPoints = null;
         this.lastMissileCount = 0;
         this.lastExplosionCount = 0;
@@ -213,29 +218,40 @@ class Renderer {
     }
 
     generateTerrain() {
-        const w = this.canvas.width;
-        const baseY = this.canvas.height - 25;
-        const points = [];
-        const segments = 50;
-
+        const segments = 280;
+        const profile = [];
         for (let i = 0; i <= segments; i++) {
-            const x = (i / segments) * w;
-            const normalizedX = i / segments;
-
-            // Central hill
-            const distFromCenter = Math.abs(normalizedX - 0.5);
-            const hillHeight = Math.exp(-distFromCenter * distFromCenter * 18) * 30;
-
-            // Noise layers
-            const noise1 = Math.sin(i * 1.3) * 4;
-            const noise2 = Math.sin(i * 3.1) * 2;
-            const noise3 = Math.sin(i * 7.3) * 1;
-
-            points.push({ x, y: baseY - hillHeight - noise1 - noise2 - noise3 });
+            const u = i / segments;
+            const centered = (u - 0.5) * 2.6;
+            const hillHeightNorm = Math.exp(-(centered * centered) * 2.1) * 0.26;
+            const lowFreq = Math.sin(u * Math.PI * 9.3) * 0.016;
+            const midFreq = Math.sin(u * Math.PI * 23.1) * 0.009;
+            const highFreq = Math.sin(u * Math.PI * 57.7) * 0.004;
+            profile.push({ u, h: hillHeightNorm + lowFreq + midFreq + highFreq });
         }
+        this.terrainProfile = profile;
+    }
 
-        this.terrainPoints = points;
-        this.hillTopY = baseY - 30;
+    getTerrainPointsForZoom(zoom = 1) {
+        if (!Array.isArray(this.terrainProfile) || this.terrainProfile.length === 0) return [];
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const baseY = h - 25;
+        const maxTerrainHeightPx = Math.min(60, h * 0.22);
+        const normalizedZoom = this.utils.clamp((zoom - 0.72) / (1 - 0.72), 0, 1);
+        const visibleFraction = this.utils.lerp(1, 0.62, normalizedZoom);
+        const startU = (1 - visibleFraction) * 0.5;
+        const endU = 1 - startU;
+        const points = [];
+
+        for (const point of this.terrainProfile) {
+            if (point.u < startU || point.u > endU) continue;
+            const t = (point.u - startU) / Math.max(0.0001, (endU - startU));
+            const x = t * w;
+            const y = baseY - (point.h * maxTerrainHeightPx);
+            points.push({ x, y });
+        }
+        return points;
     }
 
     setupInput() {
@@ -270,8 +286,14 @@ class Renderer {
         if (this.dom['upgrade-menu-btn']) {
             this.dom['upgrade-menu-btn'].addEventListener('click', () => this.game.toggleUpgradeMenu());
         }
+        if (this.dom['ai-upgrade-menu-btn']) {
+            this.dom['ai-upgrade-menu-btn'].addEventListener('click', () => this.game.toggleAICannonUpgradeMenu?.());
+        }
         if (this.dom['upgrade-menu-close-btn']) {
             this.dom['upgrade-menu-close-btn'].addEventListener('click', () => this.game.closeUpgradeMenu());
+        }
+        if (this.dom['ai-upgrade-menu-close-btn']) {
+            this.dom['ai-upgrade-menu-close-btn'].addEventListener('click', () => this.game.closeAICannonUpgradeMenu?.());
         }
         if (this.dom['upgrade-menu']) {
             this.dom['upgrade-menu'].addEventListener('click', (event) => {
@@ -284,6 +306,20 @@ class Renderer {
             this.dom['upgrade-modal-overlay'].addEventListener('click', (event) => {
                 if (event.target === this.dom['upgrade-modal-overlay']) {
                     this.game.closeUpgradeMenu();
+                }
+            });
+        }
+        if (this.dom['ai-upgrade-menu']) {
+            this.dom['ai-upgrade-menu'].addEventListener('click', (event) => {
+                const button = event.target.closest('[data-upgrade-key]');
+                if (!button) return;
+                this.game.purchaseUpgrade(button.dataset.upgradeKey);
+            });
+        }
+        if (this.dom['ai-upgrade-modal-overlay']) {
+            this.dom['ai-upgrade-modal-overlay'].addEventListener('click', (event) => {
+                if (event.target === this.dom['ai-upgrade-modal-overlay']) {
+                    this.game.closeAICannonUpgradeMenu?.();
                 }
             });
         }
@@ -387,6 +423,14 @@ class Renderer {
             if (event.key !== 'Escape') return;
             if (this.game?.isMetaUpgradeModalOpen) {
                 this.game.closeMetaUpgradeModal?.();
+                return;
+            }
+            if (this.game?.isAICannonUpgradeMenuOpen) {
+                this.game.closeAICannonUpgradeMenu?.();
+                return;
+            }
+            if (this.game?.isUpgradeMenuOpen) {
+                this.game.closeUpgradeMenu?.();
             }
         });
     }
@@ -724,18 +768,14 @@ class Renderer {
         const cannonTip = this.getCannonTipPosition(cannonX, cannonY, angleRad);
 
         // Terrain with glow
-        if (this.terrainPoints && this.terrainPoints.length > 0) {
-            const zoom = this.viewZoom || 1;
-            const terrainOverscan = zoom < 0.999
-                ? ((w * ((1 / zoom) - 1)) * 0.5) + 6
-                : 0;
+        this.terrainPoints = this.getTerrainPointsForZoom(this.viewZoom || 1);
+        if (this.terrainPoints && this.terrainPoints.length > 1) {
             const drawTerrainPath = () => {
                 ctx.beginPath();
-                ctx.moveTo(this.terrainPoints[0].x - terrainOverscan, this.terrainPoints[0].y);
+                ctx.moveTo(this.terrainPoints[0].x, this.terrainPoints[0].y);
                 for (let i = 1; i < this.terrainPoints.length; i++) {
                     ctx.lineTo(this.terrainPoints[i].x, this.terrainPoints[i].y);
                 }
-                ctx.lineTo(this.terrainPoints[this.terrainPoints.length - 1].x + terrainOverscan, this.terrainPoints[this.terrainPoints.length - 1].y);
             };
 
             // Under-shadow line for lit terrain edge
@@ -762,11 +802,7 @@ class Renderer {
         // Ground reflection glow
         ctx.fillStyle = 'rgba(0, 170, 68, 0.06)';
         {
-            const zoom = this.viewZoom || 1;
-            const overscan = zoom < 0.999
-                ? ((w * ((1 / zoom) - 1)) * 0.5) + 8
-                : 0;
-            ctx.fillRect(-overscan, h - 40, w + (overscan * 2), 40);
+            ctx.fillRect(0, h - 40, w, 40);
         }
 
         // Locked missiles predictions
@@ -793,15 +829,15 @@ class Renderer {
             ctx.save();
             ctx.setLineDash([5, 8]);
             ctx.lineDashOffset = -(this.frameCount * 0.6);
-            ctx.strokeStyle = 'rgba(0, 210, 255, 0.22)';
+            ctx.strokeStyle = 'rgba(70, 150, 255, 0.28)';
             ctx.lineWidth = 2.4;
-            this.setGlow('rgba(0, 200, 255, 0.15)', 8);
+            this.setGlow('rgba(70, 150, 255, 0.2)', 8);
             ctx.beginPath();
             ctx.moveTo(start.x, start.y);
             ctx.lineTo(target.x, target.y);
             ctx.stroke();
             this.clearGlow();
-            ctx.strokeStyle = 'rgba(0, 210, 255, 0.28)';
+            ctx.strokeStyle = 'rgba(70, 150, 255, 0.34)';
             ctx.lineWidth = 1.4;
             ctx.beginPath();
             ctx.arc(target.x, target.y, radius, 0, Math.PI * 2);
@@ -1247,9 +1283,9 @@ class Renderer {
     drawAssistantCannon(x, y) {
         const ctx = this.ctx;
         const c = this.colors;
-        this.setGlow('rgba(0, 200, 255, 0.24)', 8);
+        this.setGlow('rgba(70, 150, 255, 0.24)', 8);
         ctx.fillStyle = 'rgba(0, 22, 14, 0.9)';
-        ctx.strokeStyle = 'rgba(0, 210, 255, 0.55)';
+        ctx.strokeStyle = 'rgba(70, 150, 255, 0.7)';
         ctx.lineWidth = 1.6;
 
         ctx.beginPath();

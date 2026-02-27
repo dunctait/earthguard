@@ -56,6 +56,7 @@
         <div id="controls" class="terminal-panel">
             <div id="upgrade-controls">
                 <button id="upgrade-menu-btn" class="terminal-btn upgrade-btn" data-testid="upgrade-menu-btn">UPGRADES</button>
+                <button id="ai-upgrade-menu-btn" class="terminal-btn upgrade-btn is-hidden" data-testid="ai-upgrade-menu-btn">AI CANNON UPGRADES</button>
             </div>
             <div id="rotation-controls">
                 <div class="rotation-group">
@@ -86,6 +87,15 @@
                     <button id="upgrade-menu-close-btn" class="terminal-btn ui-modal-close" type="button" aria-label="Close upgrades" data-testid="upgrade-menu-close-btn">X</button>
                 </div>
                 <div id="upgrade-list" class="ui-modal-body upgrade-list"></div>
+            </div>
+        </div>
+        <div id="ai-upgrade-modal-overlay" class="modal-overlay is-hidden" aria-hidden="true">
+            <div id="ai-upgrade-menu" class="terminal-panel ui-modal upgrade-menu">
+                <div class="ui-modal-header">
+                    <div id="ai-upgrade-menu-title" class="ui-modal-title">AI CANNON UPGRADES</div>
+                    <button id="ai-upgrade-menu-close-btn" class="terminal-btn ui-modal-close" type="button" aria-label="Close AI cannon upgrades">X</button>
+                </div>
+                <div id="ai-upgrade-list" class="ui-modal-body upgrade-list"></div>
             </div>
         </div>
         <div id="game-over-battle-overlay" class="game-over-battle-overlay is-hidden" aria-hidden="true">
@@ -119,7 +129,7 @@
                             <button id="jump-start-btn" class="terminal-btn upgrade-btn" type="button" data-testid="jump-start-btn">JUMP</button>
                         </div>
                         <div id="jump-start-preview" class="game-over-jump-preview" aria-live="polite"></div>
-                        <div id="jump-start-hint" class="game-over-jump-hint">Start at a prior level with full EN, no upgrades, and your best recorded $ for that level.</div>
+                        <div id="jump-start-hint" class="game-over-jump-hint">Start at a prior level with retained EN/$, no upgrades, and your best recorded money for that level.</div>
                     </div>
                     <div class="game-over-actions">
                         <button id="open-meta-upgrades-btn" class="terminal-btn upgrade-btn" type="button">META UPGRADES</button>

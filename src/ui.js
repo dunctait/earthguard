@@ -40,15 +40,21 @@ class EarthGuardUI {
             'fire-btn',
             'advance-btn',
             'upgrade-menu-btn',
+            'ai-upgrade-menu-btn',
             'upgrade-modal-overlay',
             'upgrade-menu',
             'upgrade-menu-title',
             'upgrade-menu-close-btn',
+            'ai-upgrade-modal-overlay',
+            'ai-upgrade-menu',
+            'ai-upgrade-menu-title',
+            'ai-upgrade-menu-close-btn',
             'game-over-battle-overlay',
             'game-over-battle-title',
             'game-over-battle-subtitle',
             'game-over-continue-btn',
             'upgrade-list',
+            'ai-upgrade-list',
             'game-over-overlay',
             'game-over-modal',
             'game-over-title',
@@ -166,7 +172,7 @@ class EarthGuardUI {
             startBtnEl.textContent = selected ? `JUMP L${Math.floor(selected.level)}` : 'JUMP';
         }
         if (hintEl && selected) {
-            hintEl.textContent = `Start at level ${Math.floor(selected.level)} with $${Math.floor(selected.money)}, full EN, and no upgrades.`;
+            hintEl.textContent = `Start at level ${Math.floor(selected.level)} with retained $/EN and no upgrades.`;
         }
         if (previewEl && selected && typeof game.getJumpStartPreview === 'function') {
             const preview = game.getJumpStartPreview(selected.level);
@@ -440,23 +446,8 @@ class EarthGuardUI {
         advanceBtn.textContent = game.isAnimating ? 'CYCLING...' : (isIdleCycleState ? 'IDLE CYCLE' : 'CYCLE');
     }
 
-    renderUpgrades(game) {
-        const money = this.el['money'];
-        const menuBtn = this.el['upgrade-menu-btn'];
-        const overlay = this.el['upgrade-modal-overlay'];
-        const menu = this.el['upgrade-menu'];
-        const list = this.el['upgrade-list'];
-        if (!money || !menuBtn || !menu || !list || !overlay) return;
-
-        const availableUpgradeCount = game.getAvailableUpgradeCount();
-
-        this.renderNamedModal('upgrade-modal-overlay', 'upgrade-menu', 'upgrade-menu-title', game.isUpgradeMenuOpen && !game.isGameOver, 'UPGRADES');
-        menuBtn.className = game.isUpgradeMenuOpen ? 'terminal-btn upgrade-btn owned' : 'terminal-btn upgrade-btn';
-        menuBtn.textContent = game.isUpgradeMenuOpen
-            ? `CLOSE UPGRADES (${availableUpgradeCount})`
-            : `UPGRADES (${availableUpgradeCount})`;
-
-        list.innerHTML = game.getOrderedUpgrades().map((upgrade) => {
+    renderUpgradeRows(game, upgrades) {
+        return upgrades.map((upgrade) => {
             const nextTier = game.getNextUpgradeTier(upgrade.key);
             const isOwnedOut = (upgrade.maxLevel !== null) && (upgrade.level >= upgrade.maxLevel);
             const canBuy = game.canPurchaseUpgrade(upgrade.key);
@@ -482,6 +473,47 @@ class EarthGuardUI {
                 </div>
             `;
         }).join('');
+    }
+
+    renderUpgrades(game) {
+        const money = this.el['money'];
+        const menuBtn = this.el['upgrade-menu-btn'];
+        const aiMenuBtn = this.el['ai-upgrade-menu-btn'];
+        const overlay = this.el['upgrade-modal-overlay'];
+        const menu = this.el['upgrade-menu'];
+        const list = this.el['upgrade-list'];
+        const aiOverlay = this.el['ai-upgrade-modal-overlay'];
+        const aiMenu = this.el['ai-upgrade-menu'];
+        const aiList = this.el['ai-upgrade-list'];
+        if (!money || !menuBtn || !menu || !list || !overlay) return;
+
+        const availableUpgradeCount = game.getAvailableUpgradeCount('core');
+        const availableAIUpgradeCount = game.getAvailableUpgradeCount('assistant');
+        const aiUnlocked = typeof game.hasAssistantCannonsUnlocked === 'function'
+            ? game.hasAssistantCannonsUnlocked()
+            : false;
+
+        this.renderNamedModal('upgrade-modal-overlay', 'upgrade-menu', 'upgrade-menu-title', game.isUpgradeMenuOpen && !game.isGameOver, 'UPGRADES');
+        menuBtn.className = game.isUpgradeMenuOpen ? 'terminal-btn upgrade-btn owned' : 'terminal-btn upgrade-btn';
+        menuBtn.textContent = game.isUpgradeMenuOpen
+            ? `CLOSE UPGRADES (${availableUpgradeCount})`
+            : `UPGRADES (${availableUpgradeCount})`;
+        list.innerHTML = this.renderUpgradeRows(game, game.getOrderedUpgrades('core'));
+
+        if (aiMenuBtn) {
+            aiMenuBtn.classList.toggle('is-hidden', !aiUnlocked);
+            aiMenuBtn.classList.add('terminal-btn', 'upgrade-btn');
+            aiMenuBtn.classList.toggle('owned', !!game.isAICannonUpgradeMenuOpen);
+            aiMenuBtn.textContent = game.isAICannonUpgradeMenuOpen
+                ? `CLOSE AI CANNON UPGRADES (${availableAIUpgradeCount})`
+                : `AI CANNON UPGRADES (${availableAIUpgradeCount})`;
+        }
+        if (aiOverlay && aiMenu && aiList) {
+            this.renderNamedModal('ai-upgrade-modal-overlay', 'ai-upgrade-menu', 'ai-upgrade-menu-title', aiUnlocked && game.isAICannonUpgradeMenuOpen && !game.isGameOver, 'AI CANNON UPGRADES');
+            aiList.innerHTML = aiUnlocked
+                ? this.renderUpgradeRows(game, game.getOrderedUpgrades('assistant'))
+                : '';
+        }
     }
 
     renderGameOver(game) {

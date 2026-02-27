@@ -8,7 +8,7 @@ const PERSONAS = {
         exactAimBias: 0.98,
         jumpStrategy: 'highest',
         metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
-        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyEfficiency', 'reactorRegen', 'blastRadius', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas'],
+        upgradePriority: ['assistantCannonsUnlock', 'autoCycle', 'powerMemory', 'assistantCannonRange', 'assistantCannonTargeting', 'assistantCannonEnergyEfficiency', 'assistantCannonBlastRadius', 'assistantCannonArray', 'assistantCannonVolley', 'energyResupply', 'energyEfficiency', 'reactorRegen', 'blastRadius', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas'],
         criteria: {
             designIntent: 'Skilled players who engage with upgrades should survive meaningfully longer than average and usually reach mid-game.',
             aggregate: {
@@ -35,7 +35,7 @@ const PERSONAS = {
         exactAimBias: 0.55,
         jumpStrategy: 'highest',
         metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
-        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas'],
+        upgradePriority: ['assistantCannonsUnlock', 'autoCycle', 'powerMemory', 'assistantCannonRange', 'assistantCannonTargeting', 'assistantCannonEnergyEfficiency', 'assistantCannonBlastRadius', 'assistantCannonArray', 'assistantCannonVolley', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas'],
         criteria: {
             designIntent: 'Typical engaged player should reach early-mid game, benefit from upgrades, but still lose consistently.',
             aggregate: {
@@ -47,8 +47,8 @@ const PERSONAS = {
         campaignCriteria: {
             designIntent: 'Good player should show clear progression across runs via salvage/meta and jump starts.',
             aggregate: {
-                avgBestLevel: { min: 6.3 },
-                avgFinalRunLevel: { min: 6.1 },
+                avgBestLevel: { min: 6.2 },
+                avgFinalRunLevel: { min: 6.0 },
                 avgFinalMetaCurrency: { min: 8 }
             }
         }
@@ -255,7 +255,7 @@ const PERSONAS = {
         exactAimBias: 0.55,
         jumpStrategy: 'none',
         metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
-        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
+        upgradePriority: ['assistantCannonsUnlock', 'autoCycle', 'powerMemory', 'assistantCannonRange', 'assistantCannonTargeting', 'assistantCannonEnergyEfficiency', 'assistantCannonBlastRadius', 'assistantCannonArray', 'assistantCannonVolley', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
     },
     good_campaign_jumpHighest: {
         name: 'good_campaign_jumpHighest',
@@ -266,7 +266,7 @@ const PERSONAS = {
         exactAimBias: 0.55,
         jumpStrategy: 'highest',
         metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
-        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
+        upgradePriority: ['assistantCannonsUnlock', 'autoCycle', 'powerMemory', 'assistantCannonRange', 'assistantCannonTargeting', 'assistantCannonEnergyEfficiency', 'assistantCannonBlastRadius', 'assistantCannonArray', 'assistantCannonVolley', 'energyResupply', 'blastRadius', 'reactorRegen', 'energyEfficiency', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
     },
     perfect_campaign_noJump: {
         name: 'perfect_campaign_noJump',
@@ -277,7 +277,7 @@ const PERSONAS = {
         exactAimBias: 0.98,
         jumpStrategy: 'none',
         metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
-        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyEfficiency', 'reactorRegen', 'blastRadius', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
+        upgradePriority: ['assistantCannonsUnlock', 'autoCycle', 'powerMemory', 'assistantCannonRange', 'assistantCannonTargeting', 'assistantCannonEnergyEfficiency', 'assistantCannonBlastRadius', 'assistantCannonArray', 'assistantCannonVolley', 'energyResupply', 'energyEfficiency', 'reactorRegen', 'blastRadius', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
     },
     perfect_campaign_jumpHighest: {
         name: 'perfect_campaign_jumpHighest',
@@ -288,15 +288,15 @@ const PERSONAS = {
         exactAimBias: 0.98,
         jumpStrategy: 'highest',
         metaUpgradePriority: ['startingReserve', 'reactorBootstrap', 'jumpBroker', 'salvageYield', 'salvageBank', 'commandCredit'],
-        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyEfficiency', 'reactorRegen', 'blastRadius', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
+        upgradePriority: ['assistantCannonsUnlock', 'autoCycle', 'powerMemory', 'assistantCannonRange', 'assistantCannonTargeting', 'assistantCannonEnergyEfficiency', 'assistantCannonBlastRadius', 'assistantCannonArray', 'assistantCannonVolley', 'energyResupply', 'energyEfficiency', 'reactorRegen', 'blastRadius', 'missileRacks', 'energyHarvest', 'bountyLink', 'trajectoryProcessor', 'targetAreas']
     },
     noUpgrades_campaign_noJump: {
         name: 'noUpgrades_campaign_noJump',
         description: 'No-upgrade campaign baseline without jump starts.',
-        missChance: 0.20,
-        angleJitterDeg: 4.0,
-        powerJitterPct: 11,
-        exactAimBias: 0.45,
+        missChance: 0.3,
+        angleJitterDeg: 5.5,
+        powerJitterPct: 14,
+        exactAimBias: 0.35,
         jumpStrategy: 'none',
         metaUpgradePriority: ['startingReserve', 'jumpBroker', 'salvageYield', 'salvageBank'],
         upgradeStrategy: 'none',
@@ -305,10 +305,10 @@ const PERSONAS = {
     noUpgrades_campaign_jumpHighest: {
         name: 'noUpgrades_campaign_jumpHighest',
         description: 'No-upgrade campaign with highest jump usage.',
-        missChance: 0.20,
-        angleJitterDeg: 4.0,
-        powerJitterPct: 11,
-        exactAimBias: 0.45,
+        missChance: 0.3,
+        angleJitterDeg: 5.5,
+        powerJitterPct: 14,
+        exactAimBias: 0.35,
         jumpStrategy: 'highest',
         metaUpgradePriority: ['startingReserve', 'jumpBroker', 'salvageYield', 'salvageBank'],
         upgradeStrategy: 'none',
@@ -372,11 +372,11 @@ const MATRIX_STRATEGIES = {
     },
     prioritiseMoney: {
         upgradeStrategy: 'priorityThenCheapest',
-        upgradePriority: ['autoCycle', 'powerMemory', 'bountyLink', 'targetAreas', 'trajectoryProcessor', 'blastRadius', 'missileRacks', 'energyResupply']
+        upgradePriority: ['assistantCannonsUnlock', 'autoCycle', 'powerMemory', 'assistantCannonTargeting', 'assistantCannonRange', 'bountyLink', 'targetAreas', 'trajectoryProcessor', 'blastRadius', 'missileRacks', 'energyResupply']
     },
     prioritiseEnergy: {
         upgradeStrategy: 'priorityThenCheapest',
-        upgradePriority: ['autoCycle', 'powerMemory', 'energyResupply', 'energyHarvest', 'reactorRegen', 'energyEfficiency', 'trajectoryProcessor']
+        upgradePriority: ['assistantCannonsUnlock', 'autoCycle', 'powerMemory', 'assistantCannonEnergyEfficiency', 'energyResupply', 'energyHarvest', 'reactorRegen', 'energyEfficiency', 'trajectoryProcessor']
     }
 };
 

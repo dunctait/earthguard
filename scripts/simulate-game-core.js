@@ -50,15 +50,34 @@ function snapshotUpgrades(game) {
 
 function getUpgradePurchaseOrder(game, persona) {
     const strategy = persona.upgradeStrategy || 'priority';
-    const combatFirstKeys = new Set(['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'reactorRegen', 'energyHarvest', 'targetAreas']);
+    const combatFirstKeys = new Set([
+        'assistantCannonsUnlock',
+        'autoCycle',
+        'powerMemory',
+        'blastRadius',
+        'missileRacks',
+        'energyEfficiency',
+        'reactorRegen',
+        'energyHarvest',
+        'targetAreas',
+        'assistantCannonArray',
+        'assistantCannonTargeting',
+        'assistantCannonRange',
+        'assistantCannonBlastRadius',
+        'assistantCannonEnergyEfficiency',
+        'assistantCannonVolley'
+    ]);
+    const orderedUpgrades = [
+        ...game.getOrderedUpgrades('core'),
+        ...game.getOrderedUpgrades('assistant')
+    ].map((u) => u.key);
     if (strategy === 'none') return [];
     if (strategy === 'cheapest') {
-        return game.getOrderedUpgrades().map((u) => u.key);
+        return orderedUpgrades;
     }
     if (strategy === 'cheapestCombat') {
-        const ordered = game.getOrderedUpgrades().map((u) => u.key);
-        const combat = ordered.filter((k) => combatFirstKeys.has(k));
-        const rest = ordered.filter((k) => !combatFirstKeys.has(k));
+        const combat = orderedUpgrades.filter((k) => combatFirstKeys.has(k));
+        const rest = orderedUpgrades.filter((k) => !combatFirstKeys.has(k));
         return [...combat, ...rest];
     }
     if (strategy === 'priority') {
@@ -66,8 +85,7 @@ function getUpgradePurchaseOrder(game, persona) {
     }
     if (strategy === 'priorityThenCheapest') {
         const priority = Array.isArray(persona.upgradePriority) ? persona.upgradePriority : [];
-        const ordered = game.getOrderedUpgrades().map((u) => u.key);
-        return [...new Set([...priority, ...ordered])];
+        return [...new Set([...priority, ...orderedUpgrades])];
     }
     return Array.isArray(persona.upgradePriority) ? persona.upgradePriority : [];
 }

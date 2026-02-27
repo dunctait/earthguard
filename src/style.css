@@ -244,6 +244,10 @@ html, body {
     margin-bottom: 6px;
 }
 
+.is-hidden {
+    display: none !important;
+}
+
 .modal-overlay {
     position: absolute;
     inset: 0;

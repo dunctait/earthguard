@@ -102,17 +102,33 @@ async function runSingleSimulation(page, personaConfig, options) {
                 const purchaseKeys = await page.evaluate((personaCfg) => {
                     const g = window.game;
                     const strategy = personaCfg.upgradeStrategy || 'priority';
-                    const combatFirstKeys = new Set(['autoCycle', 'powerMemory', 'blastRadius', 'missileRacks', 'energyEfficiency', 'reactorRegen', 'energyHarvest', 'targetAreas']);
+                    const orderedUpgrades = [...g.getOrderedUpgrades('core'), ...g.getOrderedUpgrades('assistant')].map((u) => u.key);
+                    const combatFirstKeys = new Set([
+                        'assistantCannonsUnlock',
+                        'autoCycle',
+                        'powerMemory',
+                        'blastRadius',
+                        'missileRacks',
+                        'energyEfficiency',
+                        'reactorRegen',
+                        'energyHarvest',
+                        'targetAreas',
+                        'assistantCannonArray',
+                        'assistantCannonTargeting',
+                        'assistantCannonRange',
+                        'assistantCannonBlastRadius',
+                        'assistantCannonEnergyEfficiency',
+                        'assistantCannonVolley'
+                    ]);
                     if (strategy === 'none') return [];
-                    if (strategy === 'cheapest') return g.getOrderedUpgrades().map((u) => u.key);
+                    if (strategy === 'cheapest') return orderedUpgrades;
                     if (strategy === 'cheapestCombat') {
-                        const ordered = g.getOrderedUpgrades().map((u) => u.key);
-                        const combat = ordered.filter((k) => combatFirstKeys.has(k));
-                        const rest = ordered.filter((k) => !combatFirstKeys.has(k));
+                        const combat = orderedUpgrades.filter((k) => combatFirstKeys.has(k));
+                        const rest = orderedUpgrades.filter((k) => !combatFirstKeys.has(k));
                         return [...combat, ...rest];
                     }
                     if (strategy === 'priorityThenCheapest') {
-                    return [...new Set([...(personaCfg.upgradePriority || []), ...g.getOrderedUpgrades().map((u) => u.key)])];
+                    return [...new Set([...(personaCfg.upgradePriority || []), ...orderedUpgrades])];
                 }
                 return personaCfg.upgradePriority || [];
             }, personaConfig);

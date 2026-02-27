@@ -76,23 +76,25 @@ const GameConfig = {
     POST_BOSS_ZOOM_MIN: 0.72,
 
     // Autonomous assistant cannons
-    ASSISTANT_CANNON_UNLOCK_LEVEL: 6,
-    ASSISTANT_CANNON_MAX: 2,
-    ASSISTANT_CANNON_FIRE_CHANCE: 0.8,
+    ASSISTANT_CANNON_MAX: 4,
+    ASSISTANT_CANNON_BASE_FIRE_CHANCE: 0.72,
     ASSISTANT_CANNON_COOLDOWN_MIN: 1,
     ASSISTANT_CANNON_COOLDOWN_MAX: 2,
-    ASSISTANT_CANNON_EXPLOSION_RADIUS_SCALE: 0.8,
+    ASSISTANT_CANNON_BASE_ENERGY_COST: 12,
+    ASSISTANT_CANNON_BASE_RANGE_PCT: 52,
+    ASSISTANT_CANNON_BASE_EXPLOSION_RADIUS_SCALE: 0.7,
+    ASSISTANT_CANNON_BASE_TARGETING_QUALITY: 0.22,
 
     // Jump-start balancing (intended as convenience, not power gain)
-    JUMP_START_BASE_MONEY_RETENTION: 0.72,
-    JUMP_START_MIN_MONEY_RETENTION: 0.5,
-    JUMP_START_MONEY_RETENTION_LEVEL_STEP: 0.01,
-    JUMP_START_BASE_ENERGY_RETENTION: 0.88,
-    JUMP_START_MIN_ENERGY_RETENTION: 0.72,
-    JUMP_START_ENERGY_RETENTION_LEVEL_STEP: 0.006,
-    JUMP_START_ENTRY_SHIFT_BASE: 2.5,
-    JUMP_START_ENTRY_SHIFT_LEVEL_STEP: 0.35,
-    JUMP_START_ENTRY_SHIFT_MAX: 7
+    JUMP_START_BASE_MONEY_RETENTION: 0.66,
+    JUMP_START_MIN_MONEY_RETENTION: 0.42,
+    JUMP_START_MONEY_RETENTION_LEVEL_STEP: 0.012,
+    JUMP_START_BASE_ENERGY_RETENTION: 0.8,
+    JUMP_START_MIN_ENERGY_RETENTION: 0.62,
+    JUMP_START_ENERGY_RETENTION_LEVEL_STEP: 0.008,
+    JUMP_START_ENTRY_SHIFT_BASE: 5.5,
+    JUMP_START_ENTRY_SHIFT_LEVEL_STEP: 0.6,
+    JUMP_START_ENTRY_SHIFT_MAX: 12
 };
 
 function buildProgressionTiers(levels, factory) {
@@ -104,8 +106,24 @@ function round2(value) {
 }
 
 const UpgradeDefinitions = {
+    assistantCannonsUnlock: {
+        key: 'assistantCannonsUnlock',
+        group: 'core',
+        name: 'Unlock Autonomous Cannons',
+        description: 'Unlocks 1 allied AI cannon and its dedicated upgrade menu.',
+        stackingMode: 'unlock',
+        tiers: [
+            { moneyCost: 18, energyCost: 2, label: 'Deploy AI cannon control' }
+        ],
+        uiLabelForTier: (tier) => tier.label || 'UNLOCK',
+        apply: ({ effects }) => {
+            effects.assistantCannonsUnlocked = true;
+            effects.assistantCannonCount = Math.max(1, effects.assistantCannonCount || 0);
+        }
+    },
     targetAreas: {
         key: 'targetAreas',
+        group: 'core',
         name: 'Target Area Preview',
         description: 'Shows predicted impact circles for locked missiles.',
         stackingMode: 'unlock',
@@ -119,6 +137,7 @@ const UpgradeDefinitions = {
     },
     autoCycle: {
         key: 'autoCycle',
+        group: 'core',
         name: 'Auto Cycle',
         description: 'Automatically cycles when all targets are locked.',
         stackingMode: 'unlock',
@@ -132,6 +151,7 @@ const UpgradeDefinitions = {
     },
     blastRadius: {
         key: 'blastRadius',
+        group: 'core',
         name: 'Blast Radius',
         description: 'Increase explosion radius for all missiles.',
         stackingMode: 'replace',
@@ -151,6 +171,7 @@ const UpgradeDefinitions = {
     },
     missileRacks: {
         key: 'missileRacks',
+        group: 'core',
         name: 'Missile Racks',
         description: 'Adds one missile slot per cycle per level.',
         stackingMode: 'replace',
@@ -170,6 +191,7 @@ const UpgradeDefinitions = {
     },
     bountyLink: {
         key: 'bountyLink',
+        group: 'core',
         name: 'Bounty Link',
         description: 'Multiply cash paid per enemy kill.',
         stackingMode: 'replace',
@@ -189,6 +211,7 @@ const UpgradeDefinitions = {
     },
     energyHarvest: {
         key: 'energyHarvest',
+        group: 'core',
         name: 'Energy Harvest',
         description: 'Multiply energy restored per enemy kill.',
         stackingMode: 'replace',
@@ -208,6 +231,7 @@ const UpgradeDefinitions = {
     },
     energyEfficiency: {
         key: 'energyEfficiency',
+        group: 'core',
         name: 'Energy Efficiency',
         description: 'Reduce missile energy cost by 10% per level.',
         stackingMode: 'replace',
@@ -227,6 +251,7 @@ const UpgradeDefinitions = {
     },
     reactorRegen: {
         key: 'reactorRegen',
+        group: 'core',
         name: 'Reactor Regen',
         description: 'Restore more energy after each cycle.',
         stackingMode: 'replace',
@@ -246,6 +271,7 @@ const UpgradeDefinitions = {
     },
     trajectoryProcessor: {
         key: 'trajectoryProcessor',
+        group: 'core',
         name: 'Trajectory Processor',
         description: 'Extends aiming guide visibility by reducing fade falloff.',
         stackingMode: 'replace',
@@ -265,6 +291,7 @@ const UpgradeDefinitions = {
     },
     powerMemory: {
         key: 'powerMemory',
+        group: 'core',
         name: 'Power Memory',
         description: 'Shows a marker for the previous target power on the charge bar.',
         stackingMode: 'unlock',
@@ -278,6 +305,7 @@ const UpgradeDefinitions = {
     },
     capacitorBank: {
         key: 'capacitorBank',
+        group: 'core',
         name: 'Capacitor Bank',
         description: 'Increase maximum energy storage.',
         stackingMode: 'replace',
@@ -297,6 +325,7 @@ const UpgradeDefinitions = {
     },
     energyResupply: {
         key: 'energyResupply',
+        group: 'core',
         name: 'Energy Resupply',
         description: 'Buy an emergency reactor charge. Price spikes each purchase.',
         stackingMode: 'repeat',
@@ -319,6 +348,126 @@ const UpgradeDefinitions = {
                 0,
                 game.getMaxEnergy()
             );
+        }
+    },
+    assistantCannonArray: {
+        key: 'assistantCannonArray',
+        group: 'assistant',
+        name: 'Cannon Array',
+        description: 'Adds one allied AI cannon. Max 4 total.',
+        stackingMode: 'replace',
+        tiers: buildProgressionTiers(3, (i) => {
+            const cannonCount = 2 + i;
+            return {
+                moneyCost: Math.floor(70 * Math.pow(1.95, i)),
+                energyCost: Math.max(4, Math.floor(8 * Math.pow(1.6, i))),
+                cannonCount,
+                label: `${cannonCount} cannons`
+            };
+        }),
+        uiLabelForTier: (tier) => tier.label || `${tier.cannonCount || 1} cannons`,
+        apply: ({ effects, tier }) => {
+            effects.assistantCannonCount = Math.max(effects.assistantCannonCount || 1, Math.min(4, tier.cannonCount || 1));
+        }
+    },
+    assistantCannonEnergyEfficiency: {
+        key: 'assistantCannonEnergyEfficiency',
+        group: 'assistant',
+        name: 'Cannon Efficiency',
+        description: 'Reduce AI cannon energy cost per shot.',
+        stackingMode: 'replace',
+        tiers: buildProgressionTiers(10, (i) => {
+            const reductionPct = Math.min(70, 8 + ((i + 1) * 6));
+            return {
+                moneyCost: Math.floor(34 * Math.pow(1.5, i)),
+                energyCost: Math.max(2, Math.floor(3 + (i * 0.9))),
+                reductionPct,
+                label: `-${reductionPct}% AI shot cost`
+            };
+        }),
+        uiLabelForTier: (tier) => tier.label || `-${tier.reductionPct || 0}%`,
+        apply: ({ effects, tier }) => {
+            effects.assistantCannonEnergyCostMultiplier = Math.max(0.25, 1 - ((tier.reductionPct || 0) / 100));
+        }
+    },
+    assistantCannonVolley: {
+        key: 'assistantCannonVolley',
+        group: 'assistant',
+        name: 'Volley Controller',
+        description: 'Increase missiles launched per cannon each cycle.',
+        stackingMode: 'replace',
+        tiers: buildProgressionTiers(4, (i) => {
+            const missilesPerCannon = 2 + i;
+            return {
+                moneyCost: Math.floor(50 * Math.pow(1.72, i)),
+                energyCost: Math.max(4, Math.floor(6 + (i * 1.4))),
+                missilesPerCannon,
+                label: `${missilesPerCannon} missiles/cannon`
+            };
+        }),
+        uiLabelForTier: (tier) => tier.label || `${tier.missilesPerCannon || 1}/cannon`,
+        apply: ({ effects, tier }) => {
+            effects.assistantCannonMissilesPerCycle = Math.max(1, tier.missilesPerCannon || 1);
+        }
+    },
+    assistantCannonTargeting: {
+        key: 'assistantCannonTargeting',
+        group: 'assistant',
+        name: 'Targeting Heuristics',
+        description: 'Improves AI cannon threat selection and precision.',
+        stackingMode: 'replace',
+        tiers: buildProgressionTiers(10, (i) => {
+            const targetingQuality = round2(Math.min(0.95, 0.28 + ((i + 1) * 0.07)));
+            return {
+                moneyCost: Math.floor(38 * Math.pow(1.52, i)),
+                energyCost: Math.max(2, Math.floor(3 + (i * 0.8))),
+                targetingQuality,
+                label: `Targeting ${(targetingQuality * 100).toFixed(0)}%`
+            };
+        }),
+        uiLabelForTier: (tier) => tier.label || `Targeting ${(tier.targetingQuality || 0) * 100}%`,
+        apply: ({ effects, tier }) => {
+            effects.assistantCannonTargetingQuality = tier.targetingQuality || 0.22;
+        }
+    },
+    assistantCannonBlastRadius: {
+        key: 'assistantCannonBlastRadius',
+        group: 'assistant',
+        name: 'Cannon Blast Radius',
+        description: 'Increase AI cannon explosion radius.',
+        stackingMode: 'replace',
+        tiers: buildProgressionTiers(10, (i) => {
+            const radiusScale = round2(0.75 + ((i + 1) * 0.09));
+            return {
+                moneyCost: Math.floor(36 * Math.pow(1.54, i)),
+                energyCost: Math.max(2, Math.floor(3 + (i * 0.8))),
+                radiusScale,
+                label: `${radiusScale.toFixed(2)}x AI radius`
+            };
+        }),
+        uiLabelForTier: (tier) => tier.label || `${tier.radiusScale || 1}x`,
+        apply: ({ effects, tier }) => {
+            effects.assistantCannonExplosionRadiusScale = tier.radiusScale || 0.7;
+        }
+    },
+    assistantCannonRange: {
+        key: 'assistantCannonRange',
+        group: 'assistant',
+        name: 'Range Extender',
+        description: 'Extends allied cannon targeting range.',
+        stackingMode: 'replace',
+        tiers: buildProgressionTiers(10, (i) => {
+            const rangePct = Math.min(100, 58 + ((i + 1) * 5));
+            return {
+                moneyCost: Math.floor(30 * Math.pow(1.48, i)),
+                energyCost: Math.max(1, Math.floor(2 + (i * 0.7))),
+                rangePct,
+                label: `Range ${rangePct}%`
+            };
+        }),
+        uiLabelForTier: (tier) => tier.label || `Range ${tier.rangePct || 0}%`,
+        apply: ({ effects, tier }) => {
+            effects.assistantCannonRangePct = tier.rangePct || 52;
         }
     }
 };
@@ -525,6 +674,7 @@ class Game {
             exactHitKills: 0
         };
         this.isUpgradeMenuOpen = false;
+        this.isAICannonUpgradeMenuOpen = false;
         this.isMetaUpgradeModalOpen = false;
         this.isSplashOpen = true;
         this.isGameOver = false;
@@ -684,9 +834,9 @@ class Game {
 
     getJumpMoneyRetention(level) {
         const numericLevel = Math.max(1, Math.floor(level || 1));
-        const baseRetention = this.config.JUMP_START_BASE_MONEY_RETENTION || 0.72;
-        const step = this.config.JUMP_START_MONEY_RETENTION_LEVEL_STEP || 0.01;
-        const minRetention = this.config.JUMP_START_MIN_MONEY_RETENTION || 0.5;
+        const baseRetention = this.config.JUMP_START_BASE_MONEY_RETENTION || 0.66;
+        const step = this.config.JUMP_START_MONEY_RETENTION_LEVEL_STEP || 0.012;
+        const minRetention = this.config.JUMP_START_MIN_MONEY_RETENTION || 0.42;
         return Math.max(minRetention, baseRetention - ((numericLevel - 1) * step));
     }
 
@@ -701,9 +851,9 @@ class Game {
 
     getJumpStartEnergy(level) {
         const numericLevel = Math.max(1, Math.floor(level || 1));
-        const baseRetention = this.config.JUMP_START_BASE_ENERGY_RETENTION || 0.88;
-        const step = this.config.JUMP_START_ENERGY_RETENTION_LEVEL_STEP || 0.006;
-        const minRetention = this.config.JUMP_START_MIN_ENERGY_RETENTION || 0.72;
+        const baseRetention = this.config.JUMP_START_BASE_ENERGY_RETENTION || 0.8;
+        const step = this.config.JUMP_START_ENERGY_RETENTION_LEVEL_STEP || 0.008;
+        const minRetention = this.config.JUMP_START_MIN_ENERGY_RETENTION || 0.62;
         const retention = Math.max(minRetention, baseRetention - ((numericLevel - 1) * step));
         return Math.max(0, Math.floor(this.getMaxEnergy() * retention));
     }
@@ -854,7 +1004,15 @@ class Game {
             energyRegenBonus: 0,
             maxEnergyBonus: 0,
             trajectoryFadeStrengthMultiplier: 1,
-            powerMemoryEnabled: false
+            powerMemoryEnabled: false,
+            assistantCannonsUnlocked: false,
+            assistantCannonCount: 0,
+            assistantCannonEnergyCostMultiplier: 1,
+            assistantCannonMissilesPerCycle: 1,
+            assistantCannonTargetingQuality: this.config.ASSISTANT_CANNON_BASE_TARGETING_QUALITY || 0.22,
+            assistantCannonExplosionRadiusScale: this.config.ASSISTANT_CANNON_BASE_EXPLOSION_RADIUS_SCALE || 0.7,
+            assistantCannonRangePct: this.config.ASSISTANT_CANNON_BASE_RANGE_PCT || 52,
+            assistantCannonFireChanceMultiplier: 1
         };
     }
 
@@ -937,15 +1095,47 @@ class Game {
         return true;
     }
 
-    getAssistantCannonCountForLevel(level = this.level) {
-        const unlockLevel = this.config.ASSISTANT_CANNON_UNLOCK_LEVEL || 6;
-        if (level < unlockLevel) return 0;
-        if (level >= unlockLevel + 6) return Math.min(this.config.ASSISTANT_CANNON_MAX || 2, 2);
-        return 1;
+    hasAssistantCannonsUnlocked() {
+        return !!this.upgradeEffects.assistantCannonsUnlocked;
+    }
+
+    getAssistantCannonCount() {
+        if (!this.hasAssistantCannonsUnlocked()) return 0;
+        const configured = Math.floor(this.upgradeEffects.assistantCannonCount || 1);
+        return this.utils.clamp(configured, 1, this.config.ASSISTANT_CANNON_MAX || 4);
+    }
+
+    getAssistantCannonEnergyCostPerShot() {
+        const base = this.config.ASSISTANT_CANNON_BASE_ENERGY_COST || 12;
+        const multiplier = this.upgradeEffects.assistantCannonEnergyCostMultiplier || 1;
+        return Math.max(1, Math.ceil(base * multiplier));
+    }
+
+    getAssistantCannonRangeWorld() {
+        const rangePct = this.upgradeEffects.assistantCannonRangePct || this.config.ASSISTANT_CANNON_BASE_RANGE_PCT || 52;
+        return (this.config.WORLD_HEIGHT || 100) * (rangePct / 100);
+    }
+
+    getAssistantCannonMissilesPerCycle() {
+        return Math.max(1, Math.floor(this.upgradeEffects.assistantCannonMissilesPerCycle || 1));
+    }
+
+    getAssistantCannonTargetingQuality() {
+        return this.utils.clamp(
+            this.upgradeEffects.assistantCannonTargetingQuality ?? this.config.ASSISTANT_CANNON_BASE_TARGETING_QUALITY ?? 0.22,
+            0,
+            1
+        );
+    }
+
+    getAssistantCannonFireChance() {
+        const baseChance = this.config.ASSISTANT_CANNON_BASE_FIRE_CHANCE || 0.72;
+        const multiplier = this.upgradeEffects.assistantCannonFireChanceMultiplier || 1;
+        return this.utils.clamp(baseChance * multiplier, 0.1, 1);
     }
 
     refreshAssistantCannons() {
-        const count = this.getAssistantCannonCountForLevel(this.level);
+        const count = this.getAssistantCannonCount();
         const existingById = new Map((this.assistantCannons || []).map((c) => [c.id, c]));
         const next = [];
         for (let i = 0; i < count; i++) {
@@ -964,24 +1154,39 @@ class Game {
         this.assistantPendingMissiles = [];
     }
 
-    selectAssistantTarget() {
+    selectAssistantTarget(cannon) {
         if (!this.aliens.length) return null;
+        if (!cannon) return null;
         const damageable = this.aliens.filter((a) => this.isAlienDamageable(a));
         if (!damageable.length) return null;
-        const threatPool = damageable
+        const maxRange = this.getAssistantCannonRangeWorld();
+        const inRange = damageable.filter((alien) => {
+            const dx = alien.x - cannon.x;
+            const dy = alien.y - cannon.y;
+            return this.utils.distance(dx, dy) <= maxRange;
+        });
+        if (!inRange.length) return null;
+
+        const quality = this.getAssistantCannonTargetingQuality();
+        const poolSize = Math.max(2, Math.round(2 + (quality * 5)));
+        const threatPool = inRange
             .slice()
             .sort((a, b) => a.y - b.y)
-            .slice(0, Math.min(4, damageable.length));
+            .slice(0, Math.min(poolSize, inRange.length));
         return threatPool[Math.floor(Math.random() * threatPool.length)] || threatPool[0];
     }
 
     planAssistantTargetsForNextCycle() {
         this.refreshAssistantCannons();
-        if (!this.assistantCannons.length || this.isGameOver || this.isSplashOpen) return;
-        const fireChance = this.config.ASSISTANT_CANNON_FIRE_CHANCE || 0.8;
+        if (!this.assistantCannons.length || this.isGameOver || this.isSplashOpen || this.isAnimating) return;
+        const fireChance = this.getAssistantCannonFireChance();
         const cooldownMin = this.config.ASSISTANT_CANNON_COOLDOWN_MIN || 1;
         const cooldownMax = this.config.ASSISTANT_CANNON_COOLDOWN_MAX || cooldownMin;
-        const radiusScale = this.config.ASSISTANT_CANNON_EXPLOSION_RADIUS_SCALE || 0.8;
+        const radiusScale = this.upgradeEffects.assistantCannonExplosionRadiusScale || this.config.ASSISTANT_CANNON_BASE_EXPLOSION_RADIUS_SCALE || 0.7;
+        const quality = this.getAssistantCannonTargetingQuality();
+        const spreadScale = this.utils.clamp(1 - (quality * 0.75), 0.2, 1);
+        const missilesPerCannon = this.getAssistantCannonMissilesPerCycle();
+        const shotEnergyCost = this.getAssistantCannonEnergyCostPerShot();
         const planned = [];
 
         for (const cannon of this.assistantCannons) {
@@ -991,20 +1196,24 @@ class Game {
                 continue;
             }
             if (Math.random() > fireChance) continue;
-            const targetAlien = this.selectAssistantTarget();
-            if (!targetAlien) continue;
-            const spread = targetAlien.radius * 0.6;
-            planned.push({
-                startX: cannon.x,
-                startY: cannon.y,
-                targetX: this.utils.clamp(targetAlien.x + ((Math.random() - 0.5) * spread), 2, this.config.WORLD_WIDTH - 2),
-                targetY: this.utils.clamp(targetAlien.y + ((Math.random() - 0.5) * spread), this.config.LAUNCHER_Y + 8, this.config.WORLD_HEIGHT - 2),
-                lockedAtMs: Date.now(),
-                explosionRadius: this.getCurrentExplosionRadius() * radiusScale,
-                progress: 0,
-                exploded: false,
-                assistant: true
-            });
+
+            for (let volley = 0; volley < missilesPerCannon; volley++) {
+                const targetAlien = this.selectAssistantTarget(cannon);
+                if (!targetAlien) break;
+                const spread = targetAlien.radius * 0.8 * spreadScale;
+                planned.push({
+                    startX: cannon.x,
+                    startY: cannon.y,
+                    targetX: this.utils.clamp(targetAlien.x + ((Math.random() - 0.5) * spread), 2, this.config.WORLD_WIDTH - 2),
+                    targetY: this.utils.clamp(targetAlien.y + ((Math.random() - 0.5) * spread), this.config.LAUNCHER_Y + 8, this.config.WORLD_HEIGHT - 2),
+                    lockedAtMs: Date.now(),
+                    explosionRadius: this.getCurrentExplosionRadius() * radiusScale,
+                    progress: 0,
+                    exploded: false,
+                    assistant: true,
+                    energyCost: shotEnergyCost
+                });
+            }
             cannon.cooldownRemaining = cooldownMin + Math.floor(Math.random() * ((cooldownMax - cooldownMin) + 1));
         }
         this.assistantPendingMissiles = planned;
@@ -1280,9 +1489,12 @@ class Game {
         return upgrade.tiers[upgrade.level] || null;
     }
 
-    getAvailableUpgradeCount() {
+    getAvailableUpgradeCount(group = 'core') {
         let count = 0;
         for (const key of Object.keys(this.upgrades)) {
+            const upgrade = this.upgrades[key];
+            const upgradeGroup = upgrade?.group || 'core';
+            if (upgradeGroup !== group) continue;
             if (this.canPurchaseUpgrade(key)) count++;
         }
         return count;
@@ -1297,8 +1509,14 @@ class Game {
         return (firstTier.moneyCost || 0) + (firstTier.energyCost || 0);
     }
 
-    getOrderedUpgrades() {
-        return Object.values(this.upgrades).sort((a, b) => {
+    getOrderedUpgrades(group = 'core') {
+        return Object.values(this.upgrades)
+            .filter((upgrade) => (upgrade.group || 'core') === group)
+            .sort((a, b) => {
+            if (group === 'core') {
+                if (a.key === 'assistantCannonsUnlock' && b.key !== 'assistantCannonsUnlock') return -1;
+                if (b.key === 'assistantCannonsUnlock' && a.key !== 'assistantCannonsUnlock') return 1;
+            }
             if (a.key === 'energyResupply' && b.key !== 'energyResupply') return -1;
             if (b.key === 'energyResupply' && a.key !== 'energyResupply') return 1;
             return this.getUpgradeInitialCostScore(a) - this.getUpgradeInitialCostScore(b);
@@ -1361,6 +1579,7 @@ class Game {
     toggleUpgradeMenu() {
         if (this.isGameOver) return;
         this.isUpgradeMenuOpen = !this.isUpgradeMenuOpen;
+        if (this.isUpgradeMenuOpen) this.isAICannonUpgradeMenuOpen = false;
         this.notify();
     }
 
@@ -1370,9 +1589,23 @@ class Game {
         this.notify();
     }
 
+    toggleAICannonUpgradeMenu() {
+        if (this.isGameOver || !this.hasAssistantCannonsUnlocked()) return;
+        this.isAICannonUpgradeMenuOpen = !this.isAICannonUpgradeMenuOpen;
+        if (this.isAICannonUpgradeMenuOpen) this.isUpgradeMenuOpen = false;
+        this.notify();
+    }
+
+    closeAICannonUpgradeMenu() {
+        if (!this.isAICannonUpgradeMenuOpen) return;
+        this.isAICannonUpgradeMenuOpen = false;
+        this.notify();
+    }
+
     canPurchaseUpgrade(key) {
         const upgrade = this.upgrades[key];
         if (!upgrade) return false;
+        if ((upgrade.group || 'core') === 'assistant' && !this.hasAssistantCannonsUnlocked()) return false;
         if (upgrade.maxLevel !== null && upgrade.level >= upgrade.maxLevel) return false;
         const nextTier = this.getNextUpgradeTier(key);
         if (!nextTier) return false;
@@ -1420,6 +1653,10 @@ class Game {
             upgrade.onPurchase({ game: this, upgrade, tier: nextTier, level: upgrade.level });
         }
         this.rebuildUpgradeEffects();
+        if (key === 'assistantCannonsUnlock' || key.startsWith('assistantCannon')) {
+            this.refreshAssistantCannons();
+            this.planAssistantTargetsForNextCycle();
+        }
         this.notify();
         return true;
     }
@@ -1541,10 +1778,17 @@ class Game {
             ...missile,
             progress: Math.max(missile.progress || 0, launchStartProgress)
         })));
-        this.missiles.push(...(this.assistantPendingMissiles || []).map((missile) => ({
-            ...missile,
-            progress: Math.max(missile.progress || 0, launchStartProgress)
-        })));
+        const assistantReadyMissiles = [];
+        for (const missile of (this.assistantPendingMissiles || [])) {
+            const energyCost = Math.max(0, Math.floor(missile.energyCost || 0));
+            if (energyCost > this.missileEnergy) continue;
+            this.missileEnergy = this.utils.clamp(this.missileEnergy - energyCost, 0, this.getMaxEnergy());
+            assistantReadyMissiles.push({
+                ...missile,
+                progress: Math.max(missile.progress || 0, launchStartProgress)
+            });
+        }
+        this.missiles.push(...assistantReadyMissiles);
         this.pendingMissiles = [];
         this.assistantPendingMissiles = [];
         this.missilesLockedThisTurn = 0;
@@ -1654,6 +1898,7 @@ class Game {
         this.isCharging = false;
         this.power = 0;
         this.isUpgradeMenuOpen = false;
+        this.isAICannonUpgradeMenuOpen = false;
         this.isGameOver = true;
         this.isGameOverSummaryOpen = false;
         this.gameOverReason = reason;
@@ -1771,6 +2016,7 @@ class Game {
         this.money = this.getJumpStartMoney(this.level, jump.money || 0);
         this.missileEnergy = this.getJumpStartEnergy(this.level);
         this.isUpgradeMenuOpen = false;
+        this.isAICannonUpgradeMenuOpen = false;
         this.aliens = [];
         this.missiles = [];
         this.pendingMissiles = [];
@@ -1818,6 +2064,7 @@ class Game {
             exactHitKills: 0
         };
         this.isUpgradeMenuOpen = false;
+        this.isAICannonUpgradeMenuOpen = false;
         this.isMetaUpgradeModalOpen = false;
         this.isSplashOpen = false;
         this.isGameOver = false;
