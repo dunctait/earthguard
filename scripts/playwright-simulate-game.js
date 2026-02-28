@@ -186,7 +186,7 @@ async function runSingleSimulation(page, personaConfig, options) {
                 const dx = alien.x - launcher.x;
                 const dy = alien.y - launcher.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const maxDist = g.config.WORLD_HEIGHT * g.config.MAX_MISSILE_RANGE / 100;
+                const maxDist = typeof g.getMaxMissileRangeWorld === 'function' ? g.getMaxMissileRangeWorld() : (g.config.WORLD_HEIGHT * g.config.MAX_MISSILE_RANGE / 100);
                 const norm = clamp(dist / Math.max(1e-6, maxDist), 0, 1);
                 const exp = g.config.POWER_TO_DISTANCE_EXPONENT || 1;
                 const power = 100 * Math.pow(norm, 1 / exp);

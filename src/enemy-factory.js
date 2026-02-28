@@ -67,9 +67,16 @@
             const bandOffset = (enemyTemplate.yBand || 0) * bandStep;
             const enemyType = enemyTemplate.type || 'saucer';
             const isScout = enemyType === 'scout';
+            const isSwarmer = enemyType === 'swarmer';
             const isBoss = enemyType === 'boss';
+            const isMiniBoss = enemyType === 'miniboss';
             const isTanker = enemyType === 'tanker';
-            const radius = config.ALIEN_RADIUS * sizeMultiplier * (isScout ? 0.62 : (isTanker ? 1.18 : 1));
+            const radius = config.ALIEN_RADIUS * sizeMultiplier * (
+                isScout ? 0.62 :
+                (isSwarmer ? 0.48 :
+                (isTanker ? 1.18 :
+                ((isBoss || isMiniBoss) ? 1.3 : 1)))
+            );
             let x = 10 + Math.random() * (config.WORLD_WIDTH - 20);
             let y = startY - bandOffset;
             if (isSwarm && clusterCenters) {
@@ -103,8 +110,16 @@
                 x,
                 y,
                 speed: spec.speed * (enemyTemplate.speedMultiplier || 1),
-                hp: enemyTemplate.hp ?? (isTanker ? 3 : ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1)),
-                maxHp: enemyTemplate.hp ?? (isTanker ? 3 : ((spec.level >= 8 && !isScout && !isBoss && (i % 5 === 1)) ? 2 : 1)),
+                hp: enemyTemplate.hp ?? (
+                    isMiniBoss ? 3 :
+                    (isTanker ? 3 :
+                    ((spec.level >= 8 && !isScout && !isBoss && !isSwarmer && (i % 5 === 1)) ? 2 : 1))
+                ),
+                maxHp: enemyTemplate.hp ?? (
+                    isMiniBoss ? 3 :
+                    (isTanker ? 3 :
+                    ((spec.level >= 8 && !isScout && !isBoss && !isSwarmer && (i % 5 === 1)) ? 2 : 1))
+                ),
                 damage: config.ALIEN_DAMAGE,
                 radius,
                 type: enemyType,
@@ -114,9 +129,9 @@
                 zigzagDir: isScout ? (Math.random() > 0.5 ? 1 : -1) : 0,
                 zigzagSpeedX: isScout ? (4.2 + (Math.random() * 2.2)) : 0,
                 zigzagRunRemaining: isScout ? (2.6 + (Math.random() * 4.2)) : 0,
-                bossPhase: isBoss ? (Math.random() * Math.PI * 2) : 0,
-                bossDriftAmplitude: isBoss ? (6 + (Math.random() * 2)) : 0,
-                bossDriftSpeed: isBoss ? (0.045 + (Math.random() * 0.02)) : 0
+                bossPhase: (isBoss || isMiniBoss) ? (Math.random() * Math.PI * 2) : 0,
+                bossDriftAmplitude: isBoss ? (6 + (Math.random() * 2)) : (isMiniBoss ? (4.2 + (Math.random() * 1.4)) : 0),
+                bossDriftSpeed: isBoss ? (0.045 + (Math.random() * 0.02)) : (isMiniBoss ? (0.052 + (Math.random() * 0.018)) : 0)
             });
         }
 

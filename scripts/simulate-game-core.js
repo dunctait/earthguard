@@ -58,6 +58,7 @@ function getUpgradePurchaseOrder(game, persona) {
         'missileRacks',
         'energyEfficiency',
         'reactorRegen',
+        'missileRange',
         'energyHarvest',
         'targetAreas',
         'assistantCannonArray',
@@ -112,7 +113,9 @@ function computeIdealPowerForAlien(game, alien) {
     const dx = alien.x - launcher.x;
     const dy = alien.y - launcher.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const maxDist = game.config.WORLD_HEIGHT * game.config.MAX_MISSILE_RANGE / 100;
+    const maxDist = typeof game.getMaxMissileRangeWorld === 'function'
+        ? game.getMaxMissileRangeWorld()
+        : (game.config.WORLD_HEIGHT * game.config.MAX_MISSILE_RANGE / 100);
     const norm = Math.max(0, Math.min(1, dist / Math.max(1e-6, maxDist)));
     const exp = game.config.POWER_TO_DISTANCE_EXPONENT || 1;
     const power = 100 * Math.pow(norm, 1 / exp);

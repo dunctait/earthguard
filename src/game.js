@@ -122,6 +122,14 @@ const EnemyCodexDefinitions = {
         hp: '1',
         notes: 'Low durability but evasive movement. Best intercepted early.'
     },
+    swarmer: {
+        type: 'swarmer',
+        name: 'Swarmer',
+        summary: 'Small assault craft that arrives in packs.',
+        threat: 'Medium',
+        hp: '1',
+        notes: 'Very fast and fragile. Dangerous mainly through clustering and speed.'
+    },
     tanker: {
         type: 'tanker',
         name: 'Tanker',
@@ -129,6 +137,14 @@ const EnemyCodexDefinitions = {
         threat: 'High',
         hp: '3',
         notes: 'Slower and larger; can soak blasts and shield nearby swarms by body-blocking.'
+    },
+    miniboss: {
+        type: 'miniboss',
+        name: 'War Frigate',
+        summary: 'Heavy escort ship that anchors mid-tier invasion waves.',
+        threat: 'High',
+        hp: '3-5',
+        notes: 'A lighter command ship with boss-style drift. Escorts it with conventional pressure units.'
     },
     boss: {
         type: 'boss',
@@ -356,6 +372,26 @@ const UpgradeDefinitions = {
         uiLabelForTier: (tier) => tier.label || `+EN CAP ${tier.maxEnergyBonus || 0}`,
         apply: ({ effects, tier }) => {
             effects.maxEnergyBonus = tier.maxEnergyBonus || 0;
+        }
+    },
+    missileRange: {
+        key: 'missileRange',
+        group: 'core',
+        name: 'Range Calibration',
+        description: 'Extends maximum missile targeting range with diminishing returns.',
+        stackingMode: 'replace',
+        tiers: buildProgressionTiers(10, (i) => {
+            const rangePct = Math.min(100, Math.round(88 + ((i + 1) * 1.2)));
+            return {
+                moneyCost: Math.floor(16 * Math.pow(1.44, i)),
+                energyCost: Math.max(1, Math.floor(2 + (i * 0.6))),
+                rangePct,
+                label: `Range ${rangePct}%`
+            };
+        }),
+        uiLabelForTier: (tier) => tier.label || `Range ${tier.rangePct || 0}%`,
+        apply: ({ effects, tier }) => {
+            effects.missileRangePct = tier.rangePct || GameConfig.MAX_MISSILE_RANGE;
         }
     },
     energyResupply: {
@@ -1067,6 +1103,7 @@ class Game {
             energyRegenBonus: 0,
             maxEnergyBonus: 0,
             trajectoryFadeStrengthMultiplier: 1,
+            missileRangePct: this.config.MAX_MISSILE_RANGE,
             powerMemoryEnabled: false,
             assistantCannonsUnlocked: false,
             assistantCannonCount: 0,
@@ -1178,6 +1215,14 @@ class Game {
     getAssistantCannonRangeWorld() {
         const rangePct = this.upgradeEffects.assistantCannonRangePct || this.config.ASSISTANT_CANNON_BASE_RANGE_PCT || 52;
         return (this.config.WORLD_HEIGHT || 100) * (rangePct / 100);
+    }
+
+    getMaxMissileRangePct() {
+        return this.upgradeEffects.missileRangePct || this.config.MAX_MISSILE_RANGE;
+    }
+
+    getMaxMissileRangeWorld() {
+        return this.config.WORLD_HEIGHT * (this.getMaxMissileRangePct() / 100);
     }
 
     getAssistantCannonMissilesPerCycle() {
@@ -1411,7 +1456,7 @@ class Game {
         const mathAngle = (90 - this.launcherAngle) * Math.PI / 180;
         const normalizedPower = this.utils.clamp(power / 100, 0, 1);
         const curvedPower = Math.pow(normalizedPower, this.config.POWER_TO_DISTANCE_EXPONENT || 1);
-        const distance = curvedPower * (this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100);
+        const distance = curvedPower * this.getMaxMissileRangeWorld();
         const launcher = this.getLauncherOrigin();
 
         return {
@@ -1437,7 +1482,7 @@ class Game {
 
     getTargetDistanceForPower(power = this.power) {
         const progress = this.getTargetRangeProgressForPower(power);
-        const maxDist = this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100;
+        const maxDist = this.getMaxMissileRangeWorld();
         return Math.max(0, progress * maxDist);
     }
 
@@ -1890,11 +1935,34 @@ class Game {
         );
     }
 
+    getProjectedAlienPosition(alien, movementScale = 1) {
+        const projected = {
+            x: alien.x,
+            y: alien.y - (alien.speed * movementScale)
+        };
+        if (alien.type === 'scout') {
+            const direction = alien.cycleZigDir || alien.zigzagDir || 1;
+            const step = direction * (alien.zigzagSpeedX || 4.4) * (movementScale >= 1 ? 1 : 0.65);
+            const edgePad = 4 + (alien.radius || 0);
+            projected.x = this.utils.clamp(projected.x + step, edgePad, this.config.WORLD_WIDTH - edgePad);
+        } else if (alien.type === 'boss' || alien.type === 'miniboss') {
+            const phase = (alien.bossPhase || 0) + ((alien.bossDriftSpeed || 0.05) * movementScale);
+            const centerX = this.config.WORLD_WIDTH / 2;
+            projected.x = this.utils.clamp(
+                centerX + Math.sin(phase) * (alien.bossDriftAmplitude || 6),
+                8 + (alien.radius || 0),
+                this.config.WORLD_WIDTH - 8 - (alien.radius || 0)
+            );
+        }
+        return projected;
+    }
+
     advanceAlien(alien, totalFrames, movementScale = 1) {
         alien.y -= (alien.speed * movementScale) / totalFrames;
         const handlers = {
             scout: () => this.advanceScoutZigZag(alien, totalFrames, movementScale >= 1 ? 1 : 0.65),
-            boss: () => this.advanceBossDrift(alien, movementScale)
+            boss: () => this.advanceBossDrift(alien, movementScale),
+            miniboss: () => this.advanceBossDrift(alien, movementScale)
         };
         const handler = handlers[alien.type];
         if (handler) handler();
@@ -2064,12 +2132,12 @@ class Game {
 
     canAlienBeHitNextCycle(alien) {
         if (!this.isAlienDamageable(alien)) return false;
-        const nextY = alien.y - alien.speed;
+        const projected = this.getProjectedAlienPosition(alien, 1);
         const launcher = this.getLauncherOrigin();
-        const dx = alien.x - launcher.x;
-        const dy = nextY - launcher.y;
+        const dx = projected.x - launcher.x;
+        const dy = projected.y - launcher.y;
         const dist = this.utils.distance(dx, dy);
-        const maxTargetDistance = this.config.WORLD_HEIGHT * this.config.MAX_MISSILE_RANGE / 100;
+        const maxTargetDistance = this.getMaxMissileRangeWorld();
         const maxHitDistance = maxTargetDistance + this.getCurrentExplosionRadius() + alien.radius;
         if (dist > maxHitDistance) return false;
         const mathAngle = Math.atan2(dy, dx) * 180 / Math.PI;

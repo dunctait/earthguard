@@ -23,6 +23,15 @@
                 { type: 'saucer', sizeMultiplier: 1.2 }
             ]
         },
+        5: {
+            enemies: [
+                { type: 'miniboss', sizeMultiplier: 1.35, hp: 3, speedMultiplier: 0.5, yBand: 0 },
+                { type: 'saucer', sizeMultiplier: 1.0, yBand: 1 },
+                { type: 'saucer', sizeMultiplier: 1.0, yBand: 1 },
+                { type: 'scout', sizeMultiplier: 0.72, yBand: 2 },
+                { type: 'scout', sizeMultiplier: 0.72, yBand: 2 }
+            ]
+        },
         10: {
             enemies: [
                 { type: 'boss', sizeMultiplier: 2.3, hp: 7, speedMultiplier: 0.42, yBand: 0 },
@@ -77,6 +86,19 @@
             }));
         }
 
+        if (level % 5 === 0) {
+            const escortCount = Math.min(7, Math.max(3, Math.floor(level * 0.6)));
+            const sizeMultiplier = level >= 15 ? 0.82 : 0.95;
+            return [
+                { type: 'miniboss', sizeMultiplier: Math.max(1.1, sizeMultiplier * 1.35), hp: Math.min(5, 3 + Math.floor(level / 10)), speedMultiplier: 0.54, yBand: 0 },
+                ...Array.from({ length: escortCount }, (_, i) => ({
+                    type: level >= 14 && (i % 4 === 2) ? 'swarmer' : ((i % 4 === 1) ? 'scout' : 'saucer'),
+                    sizeMultiplier: i % 3 === 2 ? Math.max(0.62, sizeMultiplier * 0.78) : sizeMultiplier,
+                    yBand: 1 + (i % 3)
+                }))
+            ];
+        }
+
         let alienCount = Math.min(Math.max(2, level), 10);
         if (level >= 5) alienCount += Math.floor((level - 4) / 2);
         if (level >= 6) alienCount += 1;
@@ -96,9 +118,11 @@
         if (level >= 8) {
             const bandCount = Math.min(3, Math.max(2, Math.ceil(alienCount / 4)));
             return Array.from({ length: alienCount }, (_, i) => ({
-                type: (level >= 11 && (i % 7) === 2)
+                type: (level >= 14 && (i % 8) === 4)
+                    ? 'swarmer'
+                    : ((level >= 11 && (i % 7) === 2)
                     ? 'tanker'
-                    : ((level >= 9 && (i % 6) === 0) ? 'scout' : 'saucer'),
+                    : ((level >= 9 && (i % 6) === 0) ? 'scout' : 'saucer')),
                 sizeMultiplier,
                 yBand: i % bandCount
             }));
