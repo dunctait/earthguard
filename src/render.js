@@ -26,6 +26,7 @@ class Renderer {
             'splash-clear-data-btn',
             'upgrade-menu-btn',
             'ai-upgrade-menu-btn',
+            'ai-focus-mode-btn',
             'codex-menu-btn',
             'upgrade-modal-overlay',
             'upgrade-menu',
@@ -295,6 +296,9 @@ class Renderer {
         }
         if (this.dom['ai-upgrade-menu-btn']) {
             this.dom['ai-upgrade-menu-btn'].addEventListener('click', () => this.game.toggleAICannonUpgradeMenu?.());
+        }
+        if (this.dom['ai-focus-mode-btn']) {
+            this.dom['ai-focus-mode-btn'].addEventListener('click', () => this.game.cycleAssistantFocusMode?.());
         }
         if (this.dom['codex-menu-btn']) {
             this.dom['codex-menu-btn'].addEventListener('click', () => {
@@ -1143,6 +1147,8 @@ class Renderer {
                     this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, true);
                 } else if (alien.type === 'swarmer') {
                     this.drawSwarmerAlien(pos.x, pos.y, size, distanceAlpha, alien, true);
+                } else if (alien.type === 'splitter') {
+                    this.drawSplitterAlien(pos.x, pos.y, size, distanceAlpha, alien, true);
                 } else if (alien.type === 'miniboss') {
                     this.drawMiniBossAlien(pos.x, pos.y, size, distanceAlpha * 0.9, alien);
                 } else if (alien.type === 'boss') {
@@ -1171,6 +1177,8 @@ class Renderer {
                 this.drawScoutAlien(pos.x, pos.y, size, distanceAlpha, alien, false);
             } else if (alien.type === 'swarmer') {
                 this.drawSwarmerAlien(pos.x, pos.y, size, distanceAlpha, alien, false);
+            } else if (alien.type === 'splitter') {
+                this.drawSplitterAlien(pos.x, pos.y, size, distanceAlpha, alien, false);
             } else if (alien.type === 'miniboss') {
                 this.drawMiniBossAlien(pos.x, pos.y, size, distanceAlpha, alien);
             } else if (alien.type === 'boss') {
@@ -1681,6 +1689,41 @@ class Renderer {
         ctx.beginPath();
         ctx.moveTo(x - width * 0.22, drawY);
         ctx.lineTo(x + width * 0.45, drawY);
+        ctx.stroke();
+
+        ctx.restore();
+        this.clearGlow();
+        this.drawAlienHpIndicator(x, drawY, size, alpha, alien);
+    }
+
+    drawSplitterAlien(x, y, size, alpha = 1, alien = null, preview = false) {
+        const ctx = this.ctx;
+        const drawY = y + Math.sin((this.frameCount * 0.06) + (x * 0.03)) * (preview ? 1 : 1.6);
+        const cAlpha = Math.max(0.24, alpha);
+        const width = size * 2.05;
+        const height = size * 0.84;
+
+        ctx.save();
+        this.setGlow(`rgba(255, 90, 105, ${0.22 * cAlpha})`, 8);
+        ctx.strokeStyle = `rgba(255, 95, 108, ${cAlpha})`;
+        ctx.lineWidth = 1.7;
+
+        ctx.beginPath();
+        ctx.moveTo(x - width, drawY);
+        ctx.lineTo(x - width * 0.28, drawY - height);
+        ctx.lineTo(x + width * 0.1, drawY - height * 0.25);
+        ctx.lineTo(x + width, drawY);
+        ctx.lineTo(x + width * 0.1, drawY + height * 0.25);
+        ctx.lineTo(x - width * 0.28, drawY + height);
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(255, 135, 145, ${cAlpha * 0.65})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - width * 0.12, drawY - height * 0.42);
+        ctx.lineTo(x + width * 0.26, drawY);
+        ctx.lineTo(x - width * 0.12, drawY + height * 0.42);
         ctx.stroke();
 
         ctx.restore();

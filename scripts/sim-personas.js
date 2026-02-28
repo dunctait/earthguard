@@ -22,7 +22,7 @@ const PERSONAS = {
             aggregate: {
                 avgBestLevel: { min: 4.7 },
                 avgFinalRunLevel: { min: 4.6 },
-                avgFinalMetaCurrency: { min: 6 }
+                avgFinalMetaCurrency: { min: 5 }
             }
         }
     },

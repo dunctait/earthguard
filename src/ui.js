@@ -41,6 +41,7 @@ class EarthGuardUI {
             'advance-btn',
             'upgrade-menu-btn',
             'ai-upgrade-menu-btn',
+            'ai-focus-mode-btn',
             'codex-menu-btn',
             'upgrade-modal-overlay',
             'upgrade-menu',
@@ -461,6 +462,12 @@ class EarthGuardUI {
             this.el['codex-menu-btn'].textContent = game.isCodexOpen ? 'CLOSE CODEX' : 'CODEX';
             this.el['codex-menu-btn'].classList.toggle('owned', !!game.isCodexOpen);
         }
+        if (this.el['ai-focus-mode-btn']) {
+            const aiUnlocked = typeof game.hasAssistantCannonsUnlocked === 'function' && game.hasAssistantCannonsUnlocked();
+            const label = typeof game.getAssistantFocusMode === 'function' ? game.getAssistantFocusMode().toUpperCase() : 'CLUSTER';
+            this.el['ai-focus-mode-btn'].classList.toggle('is-hidden', !aiUnlocked);
+            this.el['ai-focus-mode-btn'].textContent = `AI MODE: ${label}`;
+        }
     }
 
     renderUpgradeRows(game, upgrades) {
@@ -644,6 +651,7 @@ class EarthGuardUI {
             `;
         }).join('');
         const entry = (typeof game.getCodexEntry === 'function') ? game.getCodexEntry(selectedType) : null;
+        const entryStats = (typeof game.getCodexEntryStats === 'function') ? game.getCodexEntryStats(selectedType) : { seen: 0, destroyed: 0, active: 0 };
         if (!entry) {
             body.innerHTML = '';
             return;
@@ -652,6 +660,9 @@ class EarthGuardUI {
             `<div class="game-over-stat-row"><span class="hud-label">TYPE</span><span class="hud-value">${entry.name}</span></div>`,
             `<div class="game-over-stat-row"><span class="hud-label">THREAT</span><span class="hud-value">${entry.threat}</span></div>`,
             `<div class="game-over-stat-row"><span class="hud-label">HP</span><span class="hud-value">${entry.hp}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">SEEN</span><span class="hud-value">${entryStats.seen}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">DESTROYED</span><span class="hud-value">${entryStats.destroyed}</span></div>`,
+            `<div class="game-over-stat-row"><span class="hud-label">ACTIVE</span><span class="hud-value">${entryStats.active}</span></div>`,
             `<div class="game-over-upgrades"><span class="hud-label">NOTES</span><span class="game-over-upgrade-list">${entry.notes}</span></div>`
         ].join('');
     }

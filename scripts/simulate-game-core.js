@@ -318,6 +318,13 @@ function runGameToEnd(game, persona, options, rng) {
     const simMetrics = { energyBlockedTurns: 0 };
     let turnCount = 0;
 
+    if (typeof game.getAssistantFocusMode === 'function' && typeof game.cycleAssistantFocusMode === 'function' && persona.assistantFocusMode) {
+        let guard = 0;
+        while (game.getAssistantFocusMode() !== persona.assistantFocusMode && guard++ < 5) {
+            game.cycleAssistantFocusMode();
+        }
+    }
+
     if (options.verbose) {
         const s = game.getState();
         console.log(`[sim-core] start level=${s.level} hp=${s.hp} en=${s.missileEnergy} $=${s.money}`);

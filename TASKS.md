@@ -5,11 +5,7 @@ Completed items are removed from this file to keep it current.
 ## Backlog
 
 ### Gameplay / Combat
-- [ ] **T70** - Add `splitter` enemy (splits into scouts on death)
-- [ ] **T74** - Add overkill bonus for multi-kill explosions
 - [ ] **T75** - Add run modifiers/mutators selectable at run start
-- [ ] **T76** - Add assistant cannon focus mode toggle (nearest/weakest/cluster)
-- [ ] **T77** - Add codex panel with enemy descriptions and counters
 
 ### UI / Flow
 - [ ] **T39** - First-time tutorial overlay/onboarding

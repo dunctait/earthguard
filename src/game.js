@@ -130,6 +130,14 @@ const EnemyCodexDefinitions = {
         hp: '1',
         notes: 'Very fast and fragile. Dangerous mainly through clustering and speed.'
     },
+    splitter: {
+        type: 'splitter',
+        name: 'Splitter',
+        summary: 'Fractures into two scouts when destroyed.',
+        threat: 'High',
+        hp: '1',
+        notes: 'Destroying one can create a sudden lateral threat spike. Prefer catching it before the screen gets crowded.'
+    },
     tanker: {
         type: 'tanker',
         name: 'Tanker',
@@ -155,6 +163,8 @@ const EnemyCodexDefinitions = {
         notes: 'Slow drift movement. Defeat expands sector zoom and escalates later waves.'
     }
 };
+
+const AssistantFocusModes = ['cluster', 'nearest', 'weakest'];
 
 const UpgradeDefinitions = {
     assistantCannonsUnlock: {
@@ -767,7 +777,11 @@ class Game {
             missilesTargeted: 0,
             missilesLaunched: 0,
             kills: 0,
-            exactHitKills: 0
+            exactHitKills: 0,
+            overkillEvents: 0,
+            overkillKills: 0,
+            enemySeenByType: {},
+            enemyKillsByType: {}
         };
         this.isUpgradeMenuOpen = false;
         this.isAICannonUpgradeMenuOpen = false;
@@ -777,6 +791,7 @@ class Game {
         this.isGameOverSummaryOpen = false;
         this.isCodexOpen = false;
         this.codexEnemyType = 'saucer';
+        this.assistantFocusMode = 'cluster';
         this.gameOverReason = '';
         this.gameOverAtMs = 0;
         this.gameOverContinueUnlockAtMs = 0;
@@ -1171,10 +1186,25 @@ class Game {
         });
     }
 
+    recordEnemySeen(alienOrType) {
+        const type = typeof alienOrType === 'string' ? alienOrType : alienOrType?.type;
+        if (!type) return;
+        const seen = this.stats.enemySeenByType || (this.stats.enemySeenByType = {});
+        seen[type] = (seen[type] || 0) + 1;
+    }
+
+    recordEnemyKill(alienOrType) {
+        const type = typeof alienOrType === 'string' ? alienOrType : alienOrType?.type;
+        if (!type) return;
+        const kills = this.stats.enemyKillsByType || (this.stats.enemyKillsByType = {});
+        kills[type] = (kills[type] || 0) + 1;
+    }
+
     startWave(level = this.level) {
         this.levelCycles = 0;
         const waveSpec = this.getWaveSpec(level);
         this.aliens = this.createAliensFromWaveSpec(waveSpec, false);
+        for (const alien of this.aliens) this.recordEnemySeen(alien);
         this.fastForwardWaveEntry(this.aliens, waveSpec);
         this.emitStatusFx(`WAVE ${Math.floor(level)}`, '', 55);
     }
@@ -1182,6 +1212,7 @@ class Game {
     primeIncomingWave(level) {
         const waveSpec = this.getWaveSpec(level);
         this.incomingAliens = this.createAliensFromWaveSpec(waveSpec, true);
+        for (const alien of this.incomingAliens) this.recordEnemySeen(alien);
     }
 
     promoteIncomingWaveToActive() {
@@ -1243,6 +1274,20 @@ class Game {
         return this.utils.clamp(baseChance * multiplier, 0.1, 1);
     }
 
+    getAssistantFocusMode() {
+        return AssistantFocusModes.includes(this.assistantFocusMode) ? this.assistantFocusMode : 'cluster';
+    }
+
+    cycleAssistantFocusMode() {
+        const current = this.getAssistantFocusMode();
+        const index = AssistantFocusModes.indexOf(current);
+        this.assistantFocusMode = AssistantFocusModes[(index + 1) % AssistantFocusModes.length];
+        this.emitStatusFx('AI TARGETING MODE', this.assistantFocusMode.toUpperCase(), 48);
+        this.planAssistantTargetsForNextCycle();
+        this.notify();
+        return this.assistantFocusMode;
+    }
+
     refreshAssistantCannons() {
         const count = this.getAssistantCannonCount();
         const existingById = new Map((this.assistantCannons || []).map((c) => [c.id, c]));
@@ -1278,10 +1323,34 @@ class Game {
         if (!inRange.length) return null;
 
         const quality = this.getAssistantCannonTargetingQuality();
+        const mode = this.getAssistantFocusMode();
+        if (mode === 'nearest') {
+            return inRange
+                .slice()
+                .sort((a, b) => (a.y - b.y) || (Math.abs(a.x - cannon.x) - Math.abs(b.x - cannon.x)))[0] || null;
+        }
+        if (mode === 'weakest') {
+            return inRange
+                .slice()
+                .sort((a, b) => (a.hp - b.hp) || (a.y - b.y) || (a.radius - b.radius))[0] || null;
+        }
+
         const poolSize = Math.max(2, Math.round(2 + (quality * 5)));
+        const scoreAlien = (alien) => {
+            let clusterScore = 0;
+            for (const other of inRange) {
+                if (other === alien) continue;
+                const dx = alien.x - other.x;
+                const dy = alien.y - other.y;
+                const dist = this.utils.distance(dx, dy);
+                if (dist <= ((this.getCurrentExplosionRadius() * 1.9) + other.radius)) clusterScore += 1;
+            }
+            const threat = this.config.WORLD_HEIGHT - alien.y;
+            return (clusterScore * 4) + threat - (alien.hp * 0.5);
+        };
         const threatPool = inRange
             .slice()
-            .sort((a, b) => a.y - b.y)
+            .sort((a, b) => scoreAlien(b) - scoreAlien(a))
             .slice(0, Math.min(poolSize, inRange.length));
         return threatPool[Math.floor(Math.random() * threatPool.length)] || threatPool[0];
     }
@@ -1770,6 +1839,13 @@ class Game {
         return EnemyCodexDefinitions[type] || EnemyCodexDefinitions.saucer;
     }
 
+    getCodexEntryStats(type = this.codexEnemyType) {
+        const seen = Math.max(0, Math.floor(this.stats?.enemySeenByType?.[type] || 0));
+        const destroyed = Math.max(0, Math.floor(this.stats?.enemyKillsByType?.[type] || 0));
+        const active = (this.aliens || []).filter((alien) => alien.type === type && this.isAlienDamageable(alien)).length;
+        return { seen, destroyed, active };
+    }
+
     openCodexEntry(type = this.codexEnemyType) {
         const entry = this.getCodexEntry(type);
         if (!entry) return false;
@@ -1796,6 +1872,15 @@ class Game {
         this.planAssistantTargetsForNextCycle();
         this.notify();
         return true;
+    }
+
+    getOverkillBonus(kills = 0) {
+        if (kills <= 1) return { money: 0, score: 0 };
+        const extraKills = Math.max(0, kills - 1);
+        return {
+            money: Math.round(extraKills * 4),
+            score: Math.round(extraKills * 90)
+        };
     }
 
     canPurchaseUpgrade(key) {
@@ -2360,8 +2445,13 @@ class Game {
             missilesTargeted: 0,
             missilesLaunched: 0,
             kills: 0,
-            exactHitKills: 0
+            exactHitKills: 0,
+            overkillEvents: 0,
+            overkillKills: 0,
+            enemySeenByType: {},
+            enemyKillsByType: {}
         };
+        this.assistantFocusMode = 'cluster';
         this.isUpgradeMenuOpen = false;
         this.isAICannonUpgradeMenuOpen = false;
         this.isMetaUpgradeModalOpen = false;
@@ -2395,6 +2485,8 @@ class Game {
     }
 
     applyExplosionDamage(explosion) {
+        const splittersToSpawn = [];
+        let killsFromExplosion = 0;
         for (const alien of this.aliens) {
             if (!this.isAlienDamageable(alien)) continue;
             const dx = alien.x - explosion.x;
@@ -2405,10 +2497,12 @@ class Game {
                 alien.hp -= 1;
                 if (alien.hp <= 0) {
                     const exactHit = dist <= (alien.radius * this.config.EXACT_HIT_RADIUS_FACTOR);
+                    killsFromExplosion += 1;
                     this.stats.kills += 1;
                     this.killsThisCycle += 1;
                     this.comboStreak += 1;
                     if (exactHit) this.stats.exactHitKills += 1;
+                    this.recordEnemyKill(alien);
                     const reward = this.getMoneyPerKillReward(exactHit);
                     this.money += reward;
                     this.score += this.getKillScoreReward(exactHit, alien.type === 'boss');
@@ -2421,12 +2515,73 @@ class Game {
                     if (alien.type === 'boss') {
                         this.handleBossDefeat(alien, exactHit);
                     }
+                    if (alien.type === 'splitter') {
+                        splittersToSpawn.push({
+                            x: alien.x,
+                            y: alien.y,
+                            waveLevel: alien.waveLevel,
+                            speed: alien.speed,
+                            sizeMultiplier: alien.sizeMultiplier || 0.9
+                        });
+                    }
                     this.queueEnemyDeathFx(alien, exactHit);
                     this.triggerCriticalHitBlast(explosion, alien, exactHit);
                 }
             }
         }
         this.aliens = this.aliens.filter(a => a.hp > 0);
+        for (const splitter of splittersToSpawn) {
+            const scouts = [
+                {
+                    x: this.utils.clamp(splitter.x - 2.4, 5, this.config.WORLD_WIDTH - 5),
+                    y: splitter.y + 0.4,
+                    speed: splitter.speed * 1.06,
+                    hp: 1,
+                    maxHp: 1,
+                    damage: this.config.ALIEN_DAMAGE,
+                    radius: this.config.ALIEN_RADIUS * splitter.sizeMultiplier * 0.58,
+                    type: 'scout',
+                    sizeMultiplier: Math.max(0.62, splitter.sizeMultiplier * 0.8),
+                    waveLevel: splitter.waveLevel,
+                    incoming: false,
+                    zigzagDir: -1,
+                    zigzagSpeedX: 4.9,
+                    zigzagRunRemaining: 2.4 + (Math.random() * 1.8),
+                    entryVisualOffsetY: 1.8
+                },
+                {
+                    x: this.utils.clamp(splitter.x + 2.4, 5, this.config.WORLD_WIDTH - 5),
+                    y: splitter.y - 0.2,
+                    speed: splitter.speed * 1.06,
+                    hp: 1,
+                    maxHp: 1,
+                    damage: this.config.ALIEN_DAMAGE,
+                    radius: this.config.ALIEN_RADIUS * splitter.sizeMultiplier * 0.58,
+                    type: 'scout',
+                    sizeMultiplier: Math.max(0.62, splitter.sizeMultiplier * 0.8),
+                    waveLevel: splitter.waveLevel,
+                    incoming: false,
+                    zigzagDir: 1,
+                    zigzagSpeedX: 4.9,
+                    zigzagRunRemaining: 2.4 + (Math.random() * 1.8),
+                    entryVisualOffsetY: 1.8
+                }
+            ];
+            for (const scout of scouts) {
+                this.recordEnemySeen(scout);
+                this.aliens.push(scout);
+            }
+            this.emitStatusFx('SPLITTER FRACTURE', '2 SCOUTS RELEASED', 52);
+        }
+        const overkill = this.getOverkillBonus(killsFromExplosion);
+        if (overkill.money > 0 || overkill.score > 0) {
+            this.stats.overkillEvents += 1;
+            this.stats.overkillKills += killsFromExplosion;
+            this.money += overkill.money;
+            this.score += overkill.score;
+            this.recordBestMoneyForLevel(this.level, this.money);
+            this.emitStatusFx('OVERKILL BONUS', `+$${overkill.money} | +${overkill.score} SCORE`, 58);
+        }
     }
 
     notify() {
@@ -2481,7 +2636,12 @@ class Game {
             totalCycles: this.totalCycles,
             lastWaveClearBonus: this.lastWaveClearBonus,
             lastWaveClearEnergyBonus: this.lastWaveClearEnergyBonus,
-            stats: { ...this.stats },
+            stats: {
+                ...this.stats,
+                enemySeenByType: { ...(this.stats.enemySeenByType || {}) },
+                enemyKillsByType: { ...(this.stats.enemyKillsByType || {}) }
+            },
+            assistantFocusMode: this.getAssistantFocusMode(),
             missilesLocked: this.missilesLockedThisTurn,
             missilesPerTurn: this.getMissilesPerTurn(),
             missilesInFlight: this.missiles.length,

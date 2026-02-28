@@ -68,14 +68,16 @@
             const enemyType = enemyTemplate.type || 'saucer';
             const isScout = enemyType === 'scout';
             const isSwarmer = enemyType === 'swarmer';
+            const isSplitter = enemyType === 'splitter';
             const isBoss = enemyType === 'boss';
             const isMiniBoss = enemyType === 'miniboss';
             const isTanker = enemyType === 'tanker';
             const radius = config.ALIEN_RADIUS * sizeMultiplier * (
                 isScout ? 0.62 :
                 (isSwarmer ? 0.48 :
+                (isSplitter ? 0.82 :
                 (isTanker ? 1.18 :
-                ((isBoss || isMiniBoss) ? 1.3 : 1)))
+                ((isBoss || isMiniBoss) ? 1.3 : 1))))
             );
             let x = 10 + Math.random() * (config.WORLD_WIDTH - 20);
             let y = startY - bandOffset;
@@ -113,12 +115,12 @@
                 hp: enemyTemplate.hp ?? (
                     isMiniBoss ? 3 :
                     (isTanker ? 3 :
-                    ((spec.level >= 8 && !isScout && !isBoss && !isSwarmer && (i % 5 === 1)) ? 2 : 1))
+                    ((spec.level >= 8 && !isScout && !isBoss && !isSwarmer && !isSplitter && (i % 5 === 1)) ? 2 : 1))
                 ),
                 maxHp: enemyTemplate.hp ?? (
                     isMiniBoss ? 3 :
                     (isTanker ? 3 :
-                    ((spec.level >= 8 && !isScout && !isBoss && !isSwarmer && (i % 5 === 1)) ? 2 : 1))
+                    ((spec.level >= 8 && !isScout && !isBoss && !isSwarmer && !isSplitter && (i % 5 === 1)) ? 2 : 1))
                 ),
                 damage: config.ALIEN_DAMAGE,
                 radius,

@@ -92,7 +92,9 @@
             return [
                 { type: 'miniboss', sizeMultiplier: Math.max(1.1, sizeMultiplier * 1.35), hp: Math.min(5, 3 + Math.floor(level / 10)), speedMultiplier: 0.54, yBand: 0 },
                 ...Array.from({ length: escortCount }, (_, i) => ({
-                    type: level >= 14 && (i % 4 === 2) ? 'swarmer' : ((i % 4 === 1) ? 'scout' : 'saucer'),
+                    type: level >= 14 && (i % 5 === 3)
+                        ? 'splitter'
+                        : (level >= 14 && (i % 4 === 2) ? 'swarmer' : ((i % 4 === 1) ? 'scout' : 'saucer')),
                     sizeMultiplier: i % 3 === 2 ? Math.max(0.62, sizeMultiplier * 0.78) : sizeMultiplier,
                     yBand: 1 + (i % 3)
                 }))
@@ -120,9 +122,11 @@
             return Array.from({ length: alienCount }, (_, i) => ({
                 type: (level >= 14 && (i % 8) === 4)
                     ? 'swarmer'
+                    : ((level >= 10 && (i % 9) === 5)
+                    ? 'splitter'
                     : ((level >= 11 && (i % 7) === 2)
                     ? 'tanker'
-                    : ((level >= 9 && (i % 6) === 0) ? 'scout' : 'saucer')),
+                    : ((level >= 9 && (i % 6) === 0) ? 'scout' : 'saucer'))),
                 sizeMultiplier,
                 yBand: i % bandCount
             }));
